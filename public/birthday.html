@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy 40th Birthday</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+/* ========================================
+   RESET & BASE
+   ======================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Lato', sans-serif;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========================================
+   LOADING / START SCREEN
+   ======================================== */
+#start-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0014 70%, #000 100%);
+  cursor: pointer;
+  transition: opacity 1s ease;
+}
+
+#start-screen.hidden { opacity: 0; pointer-events: none; }
+
+.start-title {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  color: #f4d58d;
+  text-shadow: 0 0 40px rgba(244,213,141,0.4);
+  margin-bottom: 0.5rem;
+  animation: floatIn 2s ease forwards;
+}
+
+.start-subtitle {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 3rem;
+  animation: floatIn 2s 0.5s ease both;
+}
+
+.start-play {
+  width: 90px; height: 90px;
+  border: 2px solid rgba(244,213,141,0.5);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  animation: pulse-glow 2s infinite, floatIn 2s 1s ease both;
+  transition: transform 0.3s, border-color 0.3s;
+}
+
+.start-play:hover { transform: scale(1.1); border-color: #f4d58d; }
+
+.start-play svg { width: 32px; height: 32px; fill: #f4d58d; margin-left: 4px; }
+
+.start-hint {
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 2px;
+  animation: floatIn 2s 1.5s ease both;
+}
+
+/* ========================================
+   CINEMA FRAME
+   ======================================== */
+#cinema {
+  position: fixed; inset: 0;
+  display: none;
+}
+
+#cinema.active { display: block; }
+
+/* Letterbox bars */
+.letterbox-top, .letterbox-bottom {
+  position: absolute; left: 0; right: 0;
+  height: 8vh; background: #000; z-index: 50;
+}
+.letterbox-top { top: 0; }
+.letterbox-bottom { bottom: 0; }
+
+/* ========================================
+   SCENE CONTAINER
+   ======================================== */
+.scene {
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  overflow: hidden;
+}
+
+.scene.active { opacity: 1; z-index: 10; }
+.scene.exiting { opacity: 0; z-index: 5; }
+
+/* Scene background */
+.scene-bg {
+  position: absolute; inset: -10%;
+  width: 120%; height: 120%;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.55) saturate(1.2);
+}
+
+/* Ken Burns animations */
+.scene.active .ken-burns-zoom {
+  animation: kenBurnsZoom 12s ease-in-out forwards;
+}
+.scene.active .ken-burns-pan-left {
+  animation: kenBurnsPanLeft 12s ease-in-out forwards;
+}
+.scene.active .ken-burns-pan-right {
+  animation: kenBurnsPanRight 12s ease-in-out forwards;
+}
+.scene.active .ken-burns-zoom-out {
+  animation: kenBurnsZoomOut 12s ease-in-out forwards;
+}
+
+/* Scene overlay gradient */
+.scene-overlay {
+  position: absolute; inset: 0;
+  z-index: 2;
+}
+
+.overlay-bottom {
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%);
+}
+
+.overlay-center {
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%);
+}
+
+.overlay-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+}
+
+/* ========================================
+   SCENE TEXT
+   ======================================== */
+.scene-content {
+  position: absolute;
+  bottom: 12vh;
+  left: 0; right: 0;
+  padding: 0 8vw;
+  z-index: 20;
+  text-align: center;
+}
+
+.scene-chapter {
+  font-family: 'Lato', sans-serif;
+  font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: #f4d58d;
+  margin-bottom: 1rem;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.scene.active .scene-chapter {
+  animation: textReveal 1s 0.5s ease forwards;
+}
+
+.scene-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.scene.active .scene-title {
+  animation: textReveal 1s 1s ease forwards;
+}
+
+.scene-desc {
+  font-family: 'Lato', sans-serif;
+  font-size: clamp(0.85rem, 2vw, 1.15rem);
+  font-weight: 300;
+  line-height: 1.7;
+  max-width: 700px;
+  margin: 0 auto;
+  color: rgba(255,255,255,0.85);
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.scene.active .scene-desc {
+  animation: textReveal 1s 1.5s ease forwards;
+}
+
+/* ========================================
+   SPLIT SCENE (Scene 5)
+   ======================================== */
+.split-container {
+  position: absolute; inset: 0;
+  display: flex;
+}
+
+.split-left, .split-right {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.split-left .scene-bg { filter: brightness(0.5) saturate(1.1); }
+.split-right .scene-bg { filter: brightness(0.5) saturate(1.1); }
+
+.split-divider {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: rgba(244,213,141,0.4);
+  z-index: 30;
+  transform: translateX(-50%);
+}
+
+.split-label {
+  position: absolute;
+  bottom: 25vh;
+  z-index: 25;
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  opacity: 0;
+}
+
+.split-left .split-label { left: 10%; }
+.split-right .split-label { right: 10%; text-align: right; }
+
+.scene.active .split-label {
+  animation: textReveal 1s 1s ease forwards;
+}
+
+/* Phone connection line */
+.phone-line {
+  position: absolute;
+  top: 50%; left: 25%; right: 25%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #f4d58d, transparent);
+  z-index: 25;
+  opacity: 0;
+}
+
+.scene.active .phone-line {
+  animation: phonePulse 3s 1.5s ease-in-out infinite;
+}
+
+/* ========================================
+   BIRTHDAY FINALE (Scene 11)
+   ======================================== */
+.birthday-text {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(3rem, 10vw, 7rem);
+  color: #f4d58d;
+  text-shadow: 0 0 60px rgba(244,213,141,0.5), 0 0 120px rgba(244,213,141,0.2);
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.scene.active .birthday-text {
+  animation: birthdayReveal 2s 0.5s ease forwards;
+}
+
+.birthday-age {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1rem, 3vw, 1.8rem);
+  letter-spacing: 8px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 0.5rem;
+  opacity: 0;
+}
+
+.scene.active .birthday-age {
+  animation: textReveal 1s 2s ease forwards;
+}
+
+/* ========================================
+   PARTICLES / SPARKLES
+   ======================================== */
+.particles-container {
+  position: absolute; inset: 0;
+  z-index: 15;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: #f4d58d;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.scene.active .particle {
+  animation: sparkle var(--duration) var(--delay) ease-in-out infinite;
+}
+
+/* Floating petals for wedding scene */
+.petal {
+  position: absolute;
+  width: 8px; height: 8px;
+  background: rgba(255,200,200,0.6);
+  border-radius: 50% 0 50% 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+
+.scene.active .petal {
+  animation: petalFall var(--duration) var(--delay) linear infinite;
+}
+
+/* Confetti for birthday */
+.confetti {
+  position: absolute;
+  width: 8px; height: 12px;
+  opacity: 0;
+}
+
+.scene.active .confetti {
+  animation: confettiFall var(--duration) var(--delay) linear infinite;
+}
+
+/* ========================================
+   PROGRESS BAR
+   ======================================== */
+#progress-bar {
+  position: fixed;
+  bottom: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f4d58d, #e8a87c, #f4d58d);
+  z-index: 100;
+  transition: width 0.3s linear;
+}
+
+/* ========================================
+   CONTROLS
+   ======================================== */
+#controls {
+  position: fixed;
+  bottom: 2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#cinema:hover #controls,
+#controls:hover { opacity: 1; }
+
+.ctrl-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.ctrl-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+
+.ctrl-btn svg { width: 16px; height: 16px; fill: #fff; }
+
+#scene-counter {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 2px;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* ========================================
+   MUSIC TOGGLE
+   ======================================== */
+#music-toggle {
+  position: fixed;
+  top: 10vh;
+  right: 3vw;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#cinema:hover #music-toggle { opacity: 1; }
+
+/* ========================================
+   GRADIENT BACKGROUNDS (for scenes without photos)
+   ======================================== */
+.grad-college {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+}
+.grad-proposal {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #f4d58d 100%);
+}
+.grad-family {
+  background: linear-gradient(135deg, #4a2c2a 0%, #8b5e3c 50%, #d4a373 100%);
+}
+.grad-hyderabad {
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+}
+.grad-distance {
+  background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+}
+.grad-wedding {
+  background: linear-gradient(135deg, #8b6914 0%, #d4a017 30%, #f4d58d 60%, #d4a017 100%);
+}
+.grad-chennai {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7c59f 40%, #efa94a 100%);
+}
+.grad-switzerland {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 50%, #d4fc79 100%);
+}
+.grad-paris {
+  background: linear-gradient(135deg, #3c3b3f 0%, #605c3c 50%, #868f96 100%);
+}
+.grad-success {
+  background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #2d2d6b 100%);
+}
+.grad-birthday {
+  background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a0a2e 50%, #0a0014 100%);
+}
+
+/* ========================================
+   ILLUSTRATION OVERLAY (SVG scene art)
+   ======================================== */
+.scene-illustration {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.15;
+}
+
+/* ========================================
+   PHOTO FRAME
+   ======================================== */
+.photo-frame {
+  position: absolute;
+  z-index: 15;
+  border: 3px solid rgba(244,213,141,0.3);
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  opacity: 0;
+}
+
+.photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scene.active .photo-frame {
+  animation: photoReveal 1.5s 0.8s ease forwards;
+}
+
+.photo-frame-1 {
+  top: 15vh; right: 6vw;
+  width: clamp(150px, 25vw, 350px);
+  height: clamp(120px, 20vw, 280px);
+}
+
+.photo-frame-2 {
+  top: 20vh; left: 6vw;
+  width: clamp(150px, 25vw, 350px);
+  height: clamp(120px, 20vw, 280px);
+}
+
+.photo-frame-center {
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: clamp(200px, 35vw, 500px);
+  height: clamp(160px, 28vw, 400px);
+}
+
+.scene.active .photo-frame-center {
+  animation: photoCenterReveal 2s 0.5s ease forwards;
+}
+
+/* ========================================
+   KEYFRAMES
+   ======================================== */
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes textReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kenBurnsZoom {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.15) translate(-2%, -1%); }
+}
+
+@keyframes kenBurnsPanLeft {
+  from { transform: scale(1.05) translate(3%, 0); }
+  to { transform: scale(1.1) translate(-3%, -1%); }
+}
+
+@keyframes kenBurnsPanRight {
+  from { transform: scale(1.05) translate(-3%, 0); }
+  to { transform: scale(1.1) translate(3%, -1%); }
+}
+
+@keyframes kenBurnsZoomOut {
+  from { transform: scale(1.2) translate(0, 0); }
+  to { transform: scale(1) translate(0, 0); }
+}
+
+@keyframes birthdayReveal {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(244,213,141,0.2); }
+  50% { box-shadow: 0 0 40px rgba(244,213,141,0.4); }
+}
+
+@keyframes sparkle {
+  0% { opacity: 0; transform: translateY(0) scale(0); }
+  20% { opacity: 1; transform: translateY(-20px) scale(1); }
+  80% { opacity: 0.5; transform: translateY(-60px) scale(0.5); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0); }
+}
+
+@keyframes petalFall {
+  0% { opacity: 0; transform: translate(0, -20px) rotate(0deg); }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.3; }
+  100% { opacity: 0; transform: translate(var(--drift), calc(100vh + 20px)) rotate(720deg); }
+}
+
+@keyframes confettiFall {
+  0% { opacity: 0; transform: translate(0, -30px) rotate(0deg); }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  100% { opacity: 0; transform: translate(var(--drift), calc(100vh + 30px)) rotate(var(--spin)); }
+}
+
+@keyframes photoReveal {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes photoCenterReveal {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes phonePulse {
+  0% { opacity: 0; }
+  30% { opacity: 0.6; }
+  50% { opacity: 1; }
+  70% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+  .letterbox-top, .letterbox-bottom { height: 5vh; }
+  .scene-content { bottom: 8vh; padding: 0 5vw; }
+  .photo-frame-1, .photo-frame-2 { display: none; }
+  .split-container { flex-direction: column; }
+  .split-divider {
+    top: 50%; left: 0; right: 0;
+    width: 100%; height: 1px;
+    transform: translateY(-50%);
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ==========================================
+     START SCREEN
+     ========================================== -->
+<div id="start-screen" onclick="startVideo()">
+  <div class="start-title">A Love Story</div>
+  <div class="start-subtitle">from college to forever</div>
+  <div class="start-play">
+    <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+  </div>
+  <div class="start-hint">tap to begin</div>
+</div>
+
+<!-- ==========================================
+     CINEMA CONTAINER
+     ========================================== -->
+<div id="cinema">
+  <div class="letterbox-top"></div>
+  <div class="letterbox-bottom"></div>
+  <div id="scenes-container"></div>
+  <div id="progress-bar" style="width: 0%"></div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <button class="ctrl-btn" onclick="prevScene()" title="Previous">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="play-pause-btn" onclick="togglePlayPause()" title="Pause">
+      <svg id="pause-icon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      <svg id="play-icon" viewBox="0 0 24 24" style="display:none"><polygon points="5,3 19,12 5,21"/></svg>
+    </button>
+    <button class="ctrl-btn" onclick="nextScene()" title="Next">
+      <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
+    <span id="scene-counter">1 / 11</span>
+  </div>
+
+  <!-- Music toggle -->
+  <div id="music-toggle">
+    <button class="ctrl-btn" onclick="toggleMusic()" title="Toggle music">
+      <svg id="music-on-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      <svg id="music-off-icon" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Background Music (user can replace this src) -->
+<audio id="bg-music" loop preload="auto">
+  <!-- Place your music file at /birthday/photos/music.mp3 -->
+  <source src="/birthday/photos/music.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+// ============================================
+// SCENE DATA
+// ============================================
+const scenes = [
+  {
+    id: 'college',
+    chapter: 'Chapter One',
+    title: 'Where It All Began',
+    desc: 'He was the life of the campus — always surrounded by friends, always making everyone laugh. But in the crowd, one pair of eyes watched with quiet certainty. She had already decided.',
+    gradient: 'grad-college',
+    kenBurns: 'ken-burns-zoom',
+    overlay: 'overlay-bottom',
+    // Replace with actual photo path:
+    photo: '/birthday/photos/scene1-college.jpg',
+    photoPosition: 'photo-frame-1',
+    hasSpark: true,
+  },
+  {
+    id: 'proposal',
+    chapter: 'Chapter Two',
+    title: 'She Chose First',
+    desc: 'In a quiet corner of the campus, she walked up and said what she felt — no games, no waiting. He stood there, surprised, then smiled. He wasn\'t expecting this kind of clarity. But he knew — she was right.',
+    gradient: 'grad-proposal',
+    kenBurns: 'ken-burns-pan-left',
+    overlay: 'overlay-bottom',
+    photo: '/birthday/photos/scene2-proposal.jpg',
+    photoPosition: 'photo-frame-2',
+    hasSpark: true,
+  },
+  {
+    id: 'family',
+    chapter: 'Chapter Three',
+    title: 'Against the Tide',
+    desc: 'Not everyone understood. The families had their worries, their reasons, their fears. But the two of them stood together — hands held tight, calm but unshakeable. Love isn\'t loud. Sometimes it\'s just firm.',
+    gradient: 'grad-family',
+    kenBurns: 'ken-burns-pan-right',
+    overlay: 'overlay-vignette',
+    photo: '/birthday/photos/scene3-family.jpg',
+    photoPosition: 'photo-frame-1',
+  },
+  {
+    id: 'hyderabad',
+    chapter: 'Chapter Four',
+    title: 'The City of Ambition',
+    desc: 'Hyderabad called — a new city, a new beginning. He stood under the shadow of the Charminar at dusk, phone in hand, a thousand things unsaid. The city was big. The distance felt bigger.',
+    gradient: 'grad-hyderabad',
+    kenBurns: 'ken-burns-zoom',
+    overlay: 'overlay-bottom',
+    photo: '/birthday/photos/scene4-hyderabad.jpg',
+    photoPosition: 'photo-frame-center',
+    hasSpark: true,
+  },
+  {
+    id: 'distance',
+    chapter: 'Chapter Five',
+    title: 'Miles Apart, Never Distant',
+    desc: 'Two cities. Two rooms. One phone line. Every night, the world shrank to just two voices — laughing, worrying, dreaming. Distance doesn\'t test love. It reveals it.',
+    gradient: 'grad-distance',
+    kenBurns: 'ken-burns-pan-left',
+    overlay: 'overlay-center',
+    isSplit: true,
+    splitLeftPhoto: '/birthday/photos/scene5-him.jpg',
+    splitRightPhoto: '/birthday/photos/scene5-her.jpg',
+    splitLeftLabel: 'Hyderabad',
+    splitRightLabel: 'Home',
+  },
+  {
+    id: 'wedding',
+    chapter: 'Chapter Six',
+    title: 'They Won',
+    desc: 'The flowers, the gold, the sacred fire — but more than any ritual, it was the look in their eyes. Relief. Joy. Victory. They fought for this. And they won.',
+    gradient: 'grad-wedding',
+    kenBurns: 'ken-burns-zoom-out',
+    overlay: 'overlay-vignette',
+    photo: '/birthday/photos/scene6-wedding.jpg',
+    photoPosition: 'photo-frame-center',
+    hasPetals: true,
+  },
+  {
+    id: 'chennai',
+    chapter: 'Chapter Seven',
+    title: 'Waves and New Beginnings',
+    desc: 'Barefoot on Marina Beach at sunset. The waves whispered promises of a life being built — one step at a time, together. Chennai was their first canvas.',
+    gradient: 'grad-chennai',
+    kenBurns: 'ken-burns-pan-right',
+    overlay: 'overlay-bottom',
+    photo: '/birthday/photos/scene7-chennai.jpg',
+    photoPosition: 'photo-frame-1',
+  },
+  {
+    id: 'switzerland',
+    chapter: 'Chapter Eight',
+    title: 'A World Away, Together',
+    desc: 'Mountains, lakes, and a new country to call home. The kids chasing snowflakes. A family that crossed oceans — not for escape, but for a dream they shared.',
+    gradient: 'grad-switzerland',
+    kenBurns: 'ken-burns-zoom',
+    overlay: 'overlay-bottom',
+    photo: '/birthday/photos/scene8-switzerland.jpg',
+    photoPosition: 'photo-frame-center',
+    hasSpark: true,
+  },
+  {
+    id: 'paris',
+    chapter: 'Chapter Nine',
+    title: 'Milestones Under Iron Arches',
+    desc: 'The Eiffel Tower on a rainy afternoon. Wet cobblestones reflecting a family that made it here — through every storm, every doubt, every mile. This wasn\'t a vacation. It was proof.',
+    gradient: 'grad-paris',
+    kenBurns: 'ken-burns-pan-left',
+    overlay: 'overlay-vignette',
+    photo: '/birthday/photos/scene9-paris.jpg',
+    photoPosition: 'photo-frame-center',
+  },
+  {
+    id: 'success',
+    chapter: 'Chapter Ten',
+    title: 'Because She Stayed',
+    desc: 'He built something meaningful. But every success traces back to one decision — hers. She didn\'t just support him. She made him possible. And in his eyes, you can still see the boy who couldn\'t believe she chose him.',
+    gradient: 'grad-success',
+    kenBurns: 'ken-burns-zoom-out',
+    overlay: 'overlay-bottom',
+    photo: '/birthday/photos/scene10-success.jpg',
+    photoPosition: 'photo-frame-1',
+    hasSpark: true,
+  },
+  {
+    id: 'birthday',
+    chapter: 'Today',
+    title: '',
+    desc: '',
+    gradient: 'grad-birthday',
+    overlay: 'overlay-center',
+    isBirthday: true,
+    hasConfetti: true,
+  },
+];
+
+// ============================================
+// STATE
+// ============================================
+let currentScene = 0;
+let isPlaying = true;
+let autoAdvanceTimer = null;
+let musicPlaying = false;
+const SCENE_DURATION = 10000; // 10 seconds per scene
+
+// ============================================
+// GENERATE SCENE HTML
+// ============================================
+function generateSceneHTML(scene, index) {
+  let html = `<div class="scene" id="scene-${index}" data-scene="${scene.id}">`;
+
+  if (scene.isSplit) {
+    // Split scene layout
+    html += `
+      <div class="split-container">
+        <div class="split-left">
+          <div class="scene-bg ${scene.gradient} ${scene.kenBurns || ''}"
+               style="${scene.splitLeftPhoto ? `background-image: url('${scene.splitLeftPhoto}')` : ''}"></div>
+          <div class="split-label">${scene.splitLeftLabel || ''}</div>
+        </div>
+        <div class="split-right">
+          <div class="scene-bg ${scene.gradient} ${scene.kenBurns || ''}"
+               style="${scene.splitRightPhoto ? `background-image: url('${scene.splitRightPhoto}')` : ''}"></div>
+          <div class="split-label">${scene.splitRightLabel || ''}</div>
+        </div>
+        <div class="split-divider"></div>
+        <div class="phone-line"></div>
+      </div>
+      <div class="scene-overlay ${scene.overlay}"></div>`;
+  } else {
+    // Normal scene layout
+    html += `
+      <div class="scene-bg ${scene.gradient} ${scene.kenBurns || ''}"
+           style="${scene.photo ? `background-image: url('${scene.photo}')` : ''}"></div>
+      <div class="scene-overlay ${scene.overlay}"></div>`;
+  }
+
+  // Photo frame overlay
+  if (scene.photo && scene.photoPosition && !scene.isSplit) {
+    html += `
+      <div class="photo-frame ${scene.photoPosition}">
+        <img src="${scene.photo}" alt="${scene.title}" onerror="this.parentElement.style.display='none'">
+      </div>`;
+  }
+
+  // Particles
+  if (scene.hasSpark) {
+    html += '<div class="particles-container">';
+    for (let i = 0; i < 25; i++) {
+      const left = Math.random() * 100;
+      const top = 30 + Math.random() * 60;
+      const dur = 2 + Math.random() * 3;
+      const delay = Math.random() * 5;
+      html += `<div class="particle" style="left:${left}%;top:${top}%;--duration:${dur}s;--delay:${delay}s"></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Petals (wedding scene)
+  if (scene.hasPetals) {
+    html += '<div class="particles-container">';
+    for (let i = 0; i < 30; i++) {
+      const left = Math.random() * 100;
+      const dur = 4 + Math.random() * 4;
+      const delay = Math.random() * 6;
+      const drift = -40 + Math.random() * 80;
+      const colors = ['rgba(255,200,200,0.6)', 'rgba(255,220,180,0.5)', 'rgba(255,240,200,0.4)', 'rgba(255,180,180,0.5)'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      html += `<div class="petal" style="left:${left}%;top:-5%;--duration:${dur}s;--delay:${delay}s;--drift:${drift}px;background:${color}"></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Confetti (birthday scene)
+  if (scene.hasConfetti) {
+    html += '<div class="particles-container">';
+    for (let i = 0; i < 60; i++) {
+      const left = Math.random() * 100;
+      const dur = 3 + Math.random() * 4;
+      const delay = Math.random() * 8;
+      const drift = -60 + Math.random() * 120;
+      const spin = 360 + Math.random() * 720;
+      const colors = ['#f4d58d', '#e8a87c', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7dc6f', '#bb8fce', '#85c1e9'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const w = 5 + Math.random() * 8;
+      const h = 4 + Math.random() * 10;
+      html += `<div class="confetti" style="left:${left}%;top:-5%;width:${w}px;height:${h}px;background:${color};--duration:${dur}s;--delay:${delay}s;--drift:${drift}px;--spin:${spin}deg;border-radius:2px"></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Scene content
+  if (scene.isBirthday) {
+    html += `
+      <div class="scene-content" style="bottom: auto; top: 50%; transform: translateY(-50%);">
+        <div class="scene-chapter">${scene.chapter}</div>
+        <div class="birthday-text">Happy Birthday</div>
+        <div class="birthday-age">40 & Radiant</div>
+        <div class="scene-desc" style="margin-top: 2rem; max-width: 600px;">
+          From that campus corridor to this moment — every chapter made her who she is today.
+          Youthful. Elegant. Unstoppable.<br><br>
+          <em style="color: #f4d58d; font-family: 'Playfair Display', serif;">
+            The woman who chose love, fought for it, crossed oceans for it, and made it beautiful.
+          </em>
+        </div>
+      </div>`;
+  } else {
+    html += `
+      <div class="scene-content">
+        <div class="scene-chapter">${scene.chapter}</div>
+        <div class="scene-title">${scene.title}</div>
+        <div class="scene-desc">${scene.desc}</div>
+      </div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// ============================================
+// INITIALIZE
+// ============================================
+function init() {
+  const container = document.getElementById('scenes-container');
+  container.innerHTML = scenes.map((s, i) => generateSceneHTML(s, i)).join('');
+}
+
+// ============================================
+// SCENE CONTROL
+// ============================================
+function showScene(index) {
+  if (index < 0 || index >= scenes.length) return;
+
+  const allScenes = document.querySelectorAll('.scene');
+  allScenes.forEach((s, i) => {
+    s.classList.remove('active', 'exiting');
+    if (i === currentScene && i !== index) {
+      s.classList.add('exiting');
+    }
+  });
+
+  currentScene = index;
+  const target = allScenes[index];
+  // Force reflow for animation restart
+  void target.offsetWidth;
+  target.classList.add('active');
+
+  // Update counter
+  document.getElementById('scene-counter').textContent = `${index + 1} / ${scenes.length}`;
+
+  // Update progress bar
+  const pct = ((index + 1) / scenes.length) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  // Reset auto-advance
+  if (isPlaying) {
+    clearTimeout(autoAdvanceTimer);
+    autoAdvanceTimer = setTimeout(() => {
+      if (currentScene < scenes.length - 1) {
+        showScene(currentScene + 1);
+      } else {
+        togglePlayPause(); // Pause at end
+      }
+    }, SCENE_DURATION);
+  }
+}
+
+function nextScene() {
+  if (currentScene < scenes.length - 1) showScene(currentScene + 1);
+}
+
+function prevScene() {
+  if (currentScene > 0) showScene(currentScene - 1);
+}
+
+function togglePlayPause() {
+  isPlaying = !isPlaying;
+  document.getElementById('pause-icon').style.display = isPlaying ? 'block' : 'none';
+  document.getElementById('play-icon').style.display = isPlaying ? 'none' : 'block';
+
+  if (isPlaying) {
+    autoAdvanceTimer = setTimeout(() => {
+      if (currentScene < scenes.length - 1) {
+        showScene(currentScene + 1);
+      } else {
+        togglePlayPause();
+      }
+    }, SCENE_DURATION);
+  } else {
+    clearTimeout(autoAdvanceTimer);
+  }
+}
+
+// ============================================
+// MUSIC
+// ============================================
+function toggleMusic() {
+  const audio = document.getElementById('bg-music');
+  if (musicPlaying) {
+    audio.pause();
+  } else {
+    audio.play().catch(() => {});
+  }
+  musicPlaying = !musicPlaying;
+  document.getElementById('music-on-icon').style.display = musicPlaying ? 'block' : 'none';
+  document.getElementById('music-off-icon').style.display = musicPlaying ? 'none' : 'block';
+}
+
+// ============================================
+// START
+// ============================================
+function startVideo() {
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('cinema').classList.add('active');
+
+  // Try to play music
+  const audio = document.getElementById('bg-music');
+  audio.volume = 0.3;
+  audio.play().then(() => {
+    musicPlaying = true;
+  }).catch(() => {
+    musicPlaying = false;
+    document.getElementById('music-on-icon').style.display = 'none';
+    document.getElementById('music-off-icon').style.display = 'block';
+  });
+
+  showScene(0);
+}
+
+// ============================================
+// KEYBOARD CONTROLS
+// ============================================
+document.addEventListener('keydown', (e) => {
+  switch(e.key) {
+    case 'ArrowRight':
+    case ' ':
+      e.preventDefault();
+      nextScene();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      prevScene();
+      break;
+    case 'p':
+      togglePlayPause();
+      break;
+    case 'm':
+      toggleMusic();
+      break;
+    case 'Escape':
+      if (isPlaying) togglePlayPause();
+      break;
+  }
+});
+
+// Touch swipe support
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+});
+
+document.addEventListener('touchend', (e) => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 60) {
+    if (diff < 0) nextScene();
+    else prevScene();
+  }
+});
+
+// Initialize on load
+init();
+</script>
+</body>
+</html>
