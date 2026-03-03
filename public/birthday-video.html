@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Video Generator</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0014;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #f4d58d;
+}
+
+.subtitle { color: rgba(255,255,255,0.5); margin-bottom: 2rem; font-size: 0.9rem; }
+
+#canvas-container {
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+canvas {
+  display: block;
+  max-width: 90vw;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+button:hover { transform: translateY(-2px); }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+select, input[type="file"] {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.progress-container {
+  width: 100%;
+  max-width: 960px;
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f4d58d, #e8a87c);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+#status {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.photo-upload {
+  background: rgba(255,255,255,0.05);
+  border: 1px dashed rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  max-width: 960px;
+  width: 100%;
+}
+
+.photo-upload h3 {
+  font-size: 0.95rem;
+  color: #f4d58d;
+  margin-bottom: 1rem;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.photo-slot {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.photo-slot label {
+  display: block;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+}
+
+.photo-slot img {
+  max-width: 100%;
+  max-height: 80px;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  display: none;
+}
+
+.photo-slot.has-photo img { display: block; }
+.photo-slot.has-photo { border-color: #f4d58d; }
+
+.music-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.music-upload label { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<h1>Birthday Video Generator</h1>
+<p class="subtitle">Renders your love story as a downloadable MP4/WebM video</p>
+
+<!-- Photo Uploads -->
+<div class="photo-upload">
+  <h3>Upload Scene Photos (optional — gradient backgrounds used if no photo)</h3>
+  <div class="photo-grid" id="photo-grid"></div>
+</div>
+
+<!-- Music Upload -->
+<div class="music-upload">
+  <label>Background Music (optional):</label>
+  <input type="file" id="music-file" accept="audio/*">
+</div>
+
+<!-- Canvas -->
+<div id="canvas-container">
+  <canvas id="video-canvas" width="1920" height="1080"></canvas>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <select id="quality">
+    <option value="1920:1080">1080p (1920x1080)</option>
+    <option value="1280:720">720p (1280x720)</option>
+    <option value="3840:2160">4K (3840x2160)</option>
+  </select>
+  <select id="scene-duration">
+    <option value="8">8 sec/scene</option>
+    <option value="10" selected>10 sec/scene</option>
+    <option value="12">12 sec/scene</option>
+    <option value="15">15 sec/scene</option>
+  </select>
+  <button id="preview-btn" onclick="previewScenes()">Preview</button>
+  <button id="record-btn" onclick="startRecording()">Record Video</button>
+  <button id="download-btn" class="btn-secondary" disabled onclick="downloadVideo()">Download Video</button>
+</div>
+
+<!-- Progress -->
+<div class="progress-container">
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div id="status">Ready. Upload photos and click "Record Video" to generate.</div>
+</div>
+
+<script>
+// ============================================
+// SCENE DEFINITIONS
+// ============================================
+const scenes = [
+  {
+    id: 'college',
+    chapter: 'CHAPTER ONE',
+    title: 'Where It All Began',
+    desc: 'He was the life of the campus — always surrounded by friends.\nBut in the crowd, one pair of eyes watched\nwith quiet certainty. She had already decided.',
+    colors: ['#667eea', '#764ba2', '#f093fb'],
+  },
+  {
+    id: 'proposal',
+    chapter: 'CHAPTER TWO',
+    title: 'She Chose First',
+    desc: 'In a quiet corner of the campus, she walked up\nand said what she felt — no games, no waiting.\nHe wasn\'t expecting this kind of clarity.',
+    colors: ['#f093fb', '#f5576c', '#f4d58d'],
+  },
+  {
+    id: 'family',
+    chapter: 'CHAPTER THREE',
+    title: 'Against the Tide',
+    desc: 'Not everyone understood. The families had their worries.\nBut the two of them stood together —\nhands held tight, calm but unshakeable.',
+    colors: ['#4a2c2a', '#8b5e3c', '#d4a373'],
+  },
+  {
+    id: 'hyderabad',
+    chapter: 'CHAPTER FOUR',
+    title: 'The City of Ambition',
+    desc: 'Hyderabad called — a new city, a new beginning.\nHe stood under the shadow of the Charminar at dusk,\nphone in hand, a thousand things unsaid.',
+    colors: ['#0f0c29', '#302b63', '#24243e'],
+  },
+  {
+    id: 'distance',
+    chapter: 'CHAPTER FIVE',
+    title: 'Miles Apart, Never Distant',
+    desc: 'Two cities. Two rooms. One phone line.\nEvery night, the world shrank to just two voices —\nlaughing, worrying, dreaming together.',
+    colors: ['#141e30', '#243b55', '#141e30'],
+    isSplit: true,
+  },
+  {
+    id: 'wedding',
+    chapter: 'CHAPTER SIX',
+    title: 'They Won',
+    desc: 'The flowers, the gold, the sacred fire —\nbut more than any ritual, it was the look in their eyes.\nRelief. Joy. Victory.',
+    colors: ['#8b6914', '#d4a017', '#f4d58d'],
+  },
+  {
+    id: 'chennai',
+    chapter: 'CHAPTER SEVEN',
+    title: 'Waves and New Beginnings',
+    desc: 'Barefoot on Marina Beach at sunset.\nThe waves whispered promises of a life being built —\none step at a time, together.',
+    colors: ['#ff6b35', '#f7c59f', '#efa94a'],
+  },
+  {
+    id: 'switzerland',
+    chapter: 'CHAPTER EIGHT',
+    title: 'A World Away, Together',
+    desc: 'Mountains, lakes, and a new country to call home.\nThe kids chasing snowflakes.\nA family that crossed oceans for a shared dream.',
+    colors: ['#a8edea', '#fed6e3', '#a8edea'],
+  },
+  {
+    id: 'paris',
+    chapter: 'CHAPTER NINE',
+    title: 'Milestones Under Iron Arches',
+    desc: 'The Eiffel Tower on a rainy afternoon.\nWet cobblestones reflecting a family that made it here —\nthrough every storm, every doubt, every mile.',
+    colors: ['#3c3b3f', '#605c3c', '#868f96'],
+  },
+  {
+    id: 'success',
+    chapter: 'CHAPTER TEN',
+    title: 'Because She Stayed',
+    desc: 'He built something meaningful.\nBut every success traces back to one decision — hers.\nShe didn\'t just support him. She made him possible.',
+    colors: ['#0c0c1d', '#1a1a3e', '#2d2d6b'],
+  },
+  {
+    id: 'birthday',
+    chapter: 'TODAY',
+    title: 'Happy Birthday',
+    desc: 'From that campus corridor to this moment —\nevery chapter made her who she is today.\nYouthful. Elegant. Unstoppable.',
+    colors: ['#2d1b4e', '#1a0a2e', '#0a0014'],
+    isBirthday: true,
+    extraText: '40 & Radiant',
+  },
+];
+
+// ============================================
+// PHOTO SLOTS
+// ============================================
+const photoSlotLabels = [
+  { id: 'college', label: 'Scene 1: College' },
+  { id: 'proposal', label: 'Scene 2: Proposal' },
+  { id: 'family', label: 'Scene 3: Family' },
+  { id: 'hyderabad', label: 'Scene 4: Hyderabad' },
+  { id: 'distance-him', label: 'Scene 5: Him' },
+  { id: 'distance-her', label: 'Scene 5: Her' },
+  { id: 'wedding', label: 'Scene 6: Wedding' },
+  { id: 'chennai', label: 'Scene 7: Chennai' },
+  { id: 'switzerland', label: 'Scene 8: Switzerland' },
+  { id: 'paris', label: 'Scene 9: Paris' },
+  { id: 'success', label: 'Scene 10: Success' },
+  { id: 'birthday', label: 'Scene 11: Birthday' },
+];
+
+const uploadedPhotos = {};
+
+function initPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = photoSlotLabels.map(slot => `
+    <div class="photo-slot" id="slot-${slot.id}">
+      <label>${slot.label}</label>
+      <input type="file" accept="image/*" onchange="handlePhoto('${slot.id}', event)" style="width:100%">
+      <img id="preview-${slot.id}" alt="">
+    </div>
+  `).join('');
+}
+
+function handlePhoto(id, event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      uploadedPhotos[id] = img;
+      const preview = document.getElementById(`preview-${id}`);
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      document.getElementById(`slot-${id}`).classList.add('has-photo');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============================================
+// CANVAS RENDERING
+// ============================================
+let canvas, ctx;
+let W = 1920, H = 1080;
+const FPS = 30;
+
+function initCanvas() {
+  canvas = document.getElementById('video-canvas');
+  const [w, h] = document.getElementById('quality').value.split(':').map(Number);
+  W = w; H = h;
+  canvas.width = W;
+  canvas.height = H;
+  ctx = canvas.getContext('2d');
+}
+
+// Draw gradient background
+function drawGradient(colors, angle = 135) {
+  const rad = (angle * Math.PI) / 180;
+  const x1 = W / 2 - Math.cos(rad) * W;
+  const y1 = H / 2 - Math.sin(rad) * H;
+  const x2 = W / 2 + Math.cos(rad) * W;
+  const y2 = H / 2 + Math.sin(rad) * H;
+  const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+  colors.forEach((c, i) => grad.addColorStop(i / (colors.length - 1), c));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Draw radial gradient (for birthday)
+function drawRadialGradient(colors) {
+  const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7);
+  colors.forEach((c, i) => grad.addColorStop(i / (colors.length - 1), c));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Draw photo with Ken Burns effect
+function drawPhoto(img, progress, kenBurnsType) {
+  if (!img) return;
+
+  ctx.save();
+
+  const imgRatio = img.width / img.height;
+  const canvasRatio = W / H;
+  let drawW, drawH;
+
+  if (imgRatio > canvasRatio) {
+    drawH = H * 1.2;
+    drawW = drawH * imgRatio;
+  } else {
+    drawW = W * 1.2;
+    drawH = drawW / imgRatio;
+  }
+
+  let x = (W - drawW) / 2;
+  let y = (H - drawH) / 2;
+
+  // Ken Burns effect
+  const scale = 1 + progress * 0.15;
+  const panX = progress * W * 0.03;
+  const panY = progress * H * 0.02;
+
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(scale, scale);
+
+  switch (kenBurnsType) {
+    case 0: ctx.translate(-panX, -panY); break;
+    case 1: ctx.translate(panX, -panY); break;
+    case 2: ctx.translate(-panX, panY); break;
+    default: ctx.translate(0, 0);
+  }
+
+  ctx.translate(-W / 2, -H / 2);
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(img, x, y, drawW, drawH);
+  ctx.restore();
+}
+
+// Draw overlay / vignette
+function drawVignette() {
+  const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.2, W / 2, H / 2, W * 0.8);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Draw bottom gradient overlay
+function drawBottomOverlay() {
+  const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.5, 'rgba(0,0,0,0.4)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Draw letterbox bars
+function drawLetterbox() {
+  ctx.fillStyle = '#000';
+  const barH = H * 0.08;
+  ctx.fillRect(0, 0, W, barH);
+  ctx.fillRect(0, H - barH, W, barH);
+}
+
+// Ease functions
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+// Draw animated text
+function drawText(text, x, y, opts = {}) {
+  const {
+    font = `bold ${Math.round(W * 0.035)}px serif`,
+    color = '#fff',
+    alpha = 1,
+    align = 'center',
+    maxWidth = W * 0.7,
+    lineHeight = 1.5,
+    shadow = true,
+  } = opts;
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.font = font;
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'top';
+
+  if (shadow) {
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 4;
+  }
+
+  const lines = text.split('\n');
+  const fontSize = parseFloat(font);
+  const lh = fontSize * lineHeight;
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line.trim(), x, y + i * lh, maxWidth);
+  });
+
+  ctx.restore();
+}
+
+// Draw sparkle particles
+function drawSparkles(progress, count = 30) {
+  ctx.save();
+  for (let i = 0; i < count; i++) {
+    const seed = i * 137.508;
+    const px = (Math.sin(seed) * 0.5 + 0.5) * W;
+    const baseY = 0.3 * H + (Math.cos(seed) * 0.5 + 0.5) * 0.6 * H;
+    const py = baseY - progress * 80 * ((i % 5) + 1);
+    const phase = (progress * 3 + seed) % 1;
+    const alpha = Math.sin(phase * Math.PI) * 0.7;
+    const size = 2 + (i % 3) * 2;
+
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.fillStyle = '#f4d58d';
+    ctx.beginPath();
+    ctx.arc(px % W, ((py % H) + H) % H, size * (W / 1920), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Draw confetti
+function drawConfetti(progress, count = 80) {
+  const confettiColors = ['#f4d58d', '#e8a87c', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7dc6f', '#bb8fce', '#85c1e9'];
+  ctx.save();
+  for (let i = 0; i < count; i++) {
+    const seed = i * 97.31;
+    const px = (Math.sin(seed) * 0.5 + 0.5) * W;
+    const speed = 0.3 + (i % 5) * 0.15;
+    const py = -30 + (progress * speed * H * 2) % (H + 60);
+    const drift = Math.sin(progress * 4 + seed) * 60;
+    const rot = progress * (3 + (i % 4)) * Math.PI;
+    const alpha = py > H * 0.9 ? Math.max(0, 1 - (py - H * 0.9) / (H * 0.1)) : (py < 0 ? 0 : 0.9);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = confettiColors[i % confettiColors.length];
+    ctx.save();
+    ctx.translate(px + drift, py);
+    ctx.rotate(rot);
+    const cw = (5 + (i % 4) * 2) * (W / 1920);
+    const ch = (8 + (i % 3) * 3) * (W / 1920);
+    ctx.fillRect(-cw / 2, -ch / 2, cw, ch);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Draw petals
+function drawPetals(progress, count = 40) {
+  const petalColors = ['rgba(255,200,200,0.6)', 'rgba(255,220,180,0.5)', 'rgba(255,240,200,0.4)'];
+  ctx.save();
+  for (let i = 0; i < count; i++) {
+    const seed = i * 73.17;
+    const px = (Math.sin(seed) * 0.5 + 0.5) * W;
+    const speed = 0.2 + (i % 4) * 0.1;
+    const py = -20 + (progress * speed * H * 1.5) % (H + 40);
+    const drift = Math.sin(progress * 2 + seed) * 50;
+    const rot = progress * (1 + (i % 3)) * Math.PI * 2;
+    const alpha = py > H * 0.85 ? Math.max(0, 1 - (py - H * 0.85) / (H * 0.15)) : (py < 0 ? 0 : 0.7);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = petalColors[i % petalColors.length];
+    ctx.save();
+    ctx.translate(px + drift, py);
+    ctx.rotate(rot);
+    const size = (6 + (i % 4) * 2) * (W / 1920);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size, size * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Draw split scene divider
+function drawSplitDivider(alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = 'rgba(244,213,141,0.4)';
+  ctx.lineWidth = 2 * (W / 1920);
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 0);
+  ctx.lineTo(W / 2, H);
+  ctx.stroke();
+
+  // Phone line pulse
+  const grad = ctx.createLinearGradient(W * 0.25, 0, W * 0.75, 0);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(0.5, 'rgba(244,213,141,0.6)');
+  grad.addColorStop(1, 'transparent');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1 * (W / 1920);
+  ctx.beginPath();
+  ctx.moveTo(W * 0.25, H * 0.5);
+  ctx.lineTo(W * 0.75, H * 0.5);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ============================================
+// SCENE RENDERER
+// ============================================
+function renderFrame(sceneIndex, sceneProgress, transitionProgress) {
+  const scene = scenes[sceneIndex];
+  const dur = parseFloat(document.getElementById('scene-duration').value);
+  const transitionDur = 1.5; // seconds
+  const totalFrames = dur * FPS;
+
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  if (scene.isBirthday) {
+    drawRadialGradient(scene.colors);
+  } else {
+    drawGradient(scene.colors);
+  }
+
+  // Photo (if uploaded)
+  const photoId = scene.id;
+  if (scene.isSplit) {
+    const himPhoto = uploadedPhotos['distance-him'];
+    const herPhoto = uploadedPhotos['distance-her'];
+    if (himPhoto) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W / 2, H);
+      ctx.clip();
+      drawPhoto(himPhoto, sceneProgress, 0);
+      ctx.restore();
+    }
+    if (herPhoto) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(W / 2, 0, W / 2, H);
+      ctx.clip();
+      drawPhoto(herPhoto, sceneProgress, 1);
+      ctx.restore();
+    }
+  } else if (uploadedPhotos[photoId]) {
+    drawPhoto(uploadedPhotos[photoId], sceneProgress, sceneIndex % 3);
+  }
+
+  // Overlays
+  drawBottomOverlay();
+  drawVignette();
+
+  // Scene-specific effects
+  if (scene.id === 'wedding') drawPetals(sceneProgress);
+  if (scene.isBirthday) drawConfetti(sceneProgress);
+  if (['college', 'proposal', 'hyderabad', 'switzerland', 'success'].includes(scene.id)) {
+    drawSparkles(sceneProgress);
+  }
+  if (scene.isSplit) {
+    drawSplitDivider(Math.min(1, sceneProgress * 3));
+  }
+
+  // Text fade-in timing
+  const chapterStart = 0.05;
+  const titleStart = 0.12;
+  const descStart = 0.20;
+  const fadeOutStart = 0.85;
+
+  // Chapter label
+  const chapterAlpha = sceneProgress < chapterStart ? 0 :
+    sceneProgress > fadeOutStart ? Math.max(0, 1 - (sceneProgress - fadeOutStart) / 0.15) :
+    Math.min(1, (sceneProgress - chapterStart) / 0.08);
+  const chapterY = H * 0.58 - easeOutCubic(Math.min(1, (sceneProgress - chapterStart) / 0.1)) * 10;
+
+  // Title
+  const titleAlpha = sceneProgress < titleStart ? 0 :
+    sceneProgress > fadeOutStart ? Math.max(0, 1 - (sceneProgress - fadeOutStart) / 0.15) :
+    Math.min(1, (sceneProgress - titleStart) / 0.1);
+  const titleY = H * 0.63 - easeOutCubic(Math.min(1, (sceneProgress - titleStart) / 0.12)) * 15;
+
+  // Description
+  const descAlpha = sceneProgress < descStart ? 0 :
+    sceneProgress > fadeOutStart ? Math.max(0, 1 - (sceneProgress - fadeOutStart) / 0.15) :
+    Math.min(1, (sceneProgress - descStart) / 0.12);
+  const descY = H * 0.74 - easeOutCubic(Math.min(1, (sceneProgress - descStart) / 0.15)) * 10;
+
+  if (scene.isBirthday) {
+    // Special birthday layout — centered
+    const bAlpha = sceneProgress < 0.05 ? 0 : Math.min(1, (sceneProgress - 0.05) / 0.15);
+    const bScale = 0.8 + easeOutCubic(Math.min(1, (sceneProgress - 0.05) / 0.2)) * 0.2;
+
+    drawText(scene.chapter, W / 2, H * 0.22, {
+      font: `${Math.round(W * 0.012)}px sans-serif`,
+      color: '#f4d58d',
+      alpha: chapterAlpha,
+    });
+
+    // "Happy Birthday" in script font (we approximate with italic serif)
+    ctx.save();
+    ctx.globalAlpha = bAlpha;
+    ctx.translate(W / 2, H * 0.38);
+    ctx.scale(bScale, bScale);
+    ctx.translate(-W / 2, -H * 0.38);
+    drawText(scene.title, W / 2, H * 0.32, {
+      font: `italic bold ${Math.round(W * 0.065)}px serif`,
+      color: '#f4d58d',
+      alpha: 1,
+    });
+    ctx.restore();
+
+    // "40 & Radiant"
+    drawText(scene.extraText, W / 2, H * 0.47, {
+      font: `${Math.round(W * 0.022)}px serif`,
+      color: 'rgba(255,255,255,0.7)',
+      alpha: descAlpha,
+    });
+
+    // Description
+    drawText(scene.desc, W / 2, H * 0.58, {
+      font: `300 ${Math.round(W * 0.018)}px sans-serif`,
+      color: 'rgba(255,255,255,0.85)',
+      alpha: descAlpha,
+      lineHeight: 1.8,
+    });
+
+    // Final dedication
+    const dedAlpha = sceneProgress < 0.5 ? 0 : Math.min(1, (sceneProgress - 0.5) / 0.15);
+    drawText('The woman who chose love, fought for it,\ncrossed oceans for it, and made it beautiful.', W / 2, H * 0.76, {
+      font: `italic ${Math.round(W * 0.016)}px serif`,
+      color: '#f4d58d',
+      alpha: dedAlpha,
+      lineHeight: 1.8,
+    });
+  } else {
+    // Normal scene layout
+    drawText(scene.chapter, W / 2, chapterY, {
+      font: `${Math.round(W * 0.011)}px sans-serif`,
+      color: '#f4d58d',
+      alpha: chapterAlpha,
+    });
+
+    drawText(scene.title, W / 2, titleY, {
+      font: `bold ${Math.round(W * 0.038)}px serif`,
+      color: '#ffffff',
+      alpha: titleAlpha,
+    });
+
+    drawText(scene.desc, W / 2, descY, {
+      font: `300 ${Math.round(W * 0.015)}px sans-serif`,
+      color: 'rgba(255,255,255,0.85)',
+      alpha: descAlpha,
+      lineHeight: 1.8,
+    });
+  }
+
+  // Letterbox bars
+  drawLetterbox();
+
+  // Crossfade transition overlay (fade to black between scenes)
+  if (transitionProgress > 0) {
+    ctx.save();
+    ctx.globalAlpha = transitionProgress;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
+// ============================================
+// RECORDING
+// ============================================
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+
+async function startRecording() {
+  initCanvas();
+  const recordBtn = document.getElementById('record-btn');
+  const downloadBtn = document.getElementById('download-btn');
+  const previewBtn = document.getElementById('preview-btn');
+
+  recordBtn.disabled = true;
+  previewBtn.disabled = true;
+  downloadBtn.disabled = true;
+  recordedChunks = [];
+
+  // Set up MediaRecorder on canvas stream
+  const stream = canvas.captureStream(FPS);
+
+  // Try to use VP9 or VP8
+  const mimeTypes = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4',
+  ];
+
+  let selectedMime = '';
+  for (const mime of mimeTypes) {
+    if (MediaRecorder.isTypeSupported(mime)) {
+      selectedMime = mime;
+      break;
+    }
+  }
+
+  if (!selectedMime) {
+    alert('Your browser does not support video recording. Try Chrome or Firefox.');
+    recordBtn.disabled = false;
+    previewBtn.disabled = false;
+    return;
+  }
+
+  mediaRecorder = new MediaRecorder(stream, {
+    mimeType: selectedMime,
+    videoBitsPerSecond: 8000000,
+  });
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: selectedMime });
+    const url = URL.createObjectURL(blob);
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `birthday-video-${Date.now()}.webm`;
+      a.click();
+    };
+    downloadBtn.disabled = false;
+    recordBtn.disabled = false;
+    previewBtn.disabled = false;
+    setStatus('Video ready! Click "Download Video" to save.');
+  };
+
+  mediaRecorder.start();
+  isRecording = true;
+
+  await renderAllScenes(true);
+
+  mediaRecorder.stop();
+  isRecording = false;
+}
+
+async function previewScenes() {
+  initCanvas();
+  document.getElementById('preview-btn').disabled = true;
+  document.getElementById('record-btn').disabled = true;
+  await renderAllScenes(false);
+  document.getElementById('preview-btn').disabled = false;
+  document.getElementById('record-btn').disabled = false;
+  setStatus('Preview complete. Click "Record Video" to save.');
+}
+
+async function renderAllScenes(recording) {
+  const sceneDur = parseFloat(document.getElementById('scene-duration').value);
+  const transitionDur = 1.5;
+  const totalScenes = scenes.length;
+  const framesPerScene = Math.round(sceneDur * FPS);
+  const transitionFrames = Math.round(transitionDur * FPS);
+  const totalFrames = framesPerScene * totalScenes;
+
+  let frameCount = 0;
+
+  for (let s = 0; s < totalScenes; s++) {
+    for (let f = 0; f < framesPerScene; f++) {
+      const sceneProgress = f / framesPerScene;
+
+      // Transition: fade out at end, fade in at start
+      let transitionAlpha = 0;
+      if (f < transitionFrames / 2 && s > 0) {
+        // Fade in from black
+        transitionAlpha = 1 - (f / (transitionFrames / 2));
+      } else if (f > framesPerScene - transitionFrames / 2) {
+        // Fade out to black
+        transitionAlpha = (f - (framesPerScene - transitionFrames / 2)) / (transitionFrames / 2);
+      }
+
+      renderFrame(s, sceneProgress, transitionAlpha);
+      frameCount++;
+
+      // Update progress
+      const pct = (frameCount / totalFrames) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      setStatus(`${recording ? 'Recording' : 'Preview'}: Scene ${s + 1}/${totalScenes} — ${Math.round(pct)}%`);
+
+      // Yield to browser so UI updates and frames are captured
+      await new Promise(r => setTimeout(r, recording ? 1000 / FPS : 0));
+    }
+  }
+
+  // Hold final frame for 2 seconds
+  if (recording) {
+    const holdFrames = FPS * 2;
+    for (let i = 0; i < holdFrames; i++) {
+      renderFrame(totalScenes - 1, 0.95, 0);
+      await new Promise(r => setTimeout(r, 1000 / FPS));
+    }
+  }
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+function downloadVideo() {}
+
+// ============================================
+// INIT
+// ============================================
+initPhotoGrid();
+initCanvas();
+// Draw first frame as preview
+renderFrame(0, 0.3, 0);
+</script>
+</body>
+</html>
