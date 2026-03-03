@@ -1,0 +1,188 @@
+/* Cartoon Story Styles */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif;
+  background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 25%, #e8eaf6 50%, #e0f7fa 75%, #fff9c4 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.story-header {
+  text-align: center;
+  padding: 40px 20px 20px;
+  position: relative;
+}
+
+.story-header h1 {
+  font-size: 3rem;
+  background: linear-gradient(135deg, #e91e63, #9c27b0, #673ab7, #3f51b5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  margin-bottom: 8px;
+}
+
+.story-header p {
+  font-size: 1.2rem;
+  color: #7b1fa2;
+  font-style: italic;
+}
+
+.story-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.scene {
+  background: white;
+  border-radius: 24px;
+  margin: 40px 0;
+  padding: 0;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.scene:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+
+.scene-number {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+}
+
+.scene-svg {
+  width: 100%;
+  display: block;
+}
+
+.scene-caption {
+  padding: 24px 32px 32px;
+  text-align: center;
+}
+
+.scene-caption h2 {
+  font-size: 1.8rem;
+  color: #4a148c;
+  margin-bottom: 8px;
+}
+
+.scene-caption p {
+  font-size: 1.1rem;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Floating hearts animation */
+.floating-hearts {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  top: 0;
+  left: 0;
+}
+
+.heart {
+  position: absolute;
+  font-size: 20px;
+  animation: floatUp 6s ease-in infinite;
+  opacity: 0;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+
+/* To be continued */
+.to-be-continued {
+  text-align: center;
+  padding: 60px 20px 80px;
+  position: relative;
+}
+
+.to-be-continued h2 {
+  font-size: 2.5rem;
+  color: #e91e63;
+  margin-bottom: 12px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.to-be-continued p {
+  font-size: 1.2rem;
+  color: #7b1fa2;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Sparkle animations for scene 1 */
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes flyWave {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes colorShift {
+  0% { stop-color: #ff6b9d; }
+  25% { stop-color: #c084fc; }
+  50% { stop-color: #60a5fa; }
+  75% { stop-color: #34d399; }
+  100% { stop-color: #ff6b9d; }
+}
+
+/* Nav link */
+.back-link {
+  display: inline-block;
+  margin: 20px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 30px;
+  color: #7b1fa2;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s;
+}
+
+.back-link:hover {
+  background: #7b1fa2;
+  color: white;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .story-header h1 { font-size: 2rem; }
+  .scene-caption h2 { font-size: 1.4rem; }
+  .scene-caption p { font-size: 1rem; }
+  .to-be-continued h2 { font-size: 1.8rem; }
+}

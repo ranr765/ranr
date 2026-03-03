@@ -524,6 +524,731 @@ app.get('/api/mock/:userId', async (c) => {
 })
 
 // ============================================
+// Cartoon Love Story Page
+// ============================================
+app.get('/story', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>A Love Story in Colors</title>
+      <link rel="stylesheet" href="/static/story.css">
+    </head>
+    <body>
+      <a href="/" class="back-link">&#8592; Back Home</a>
+
+      <!-- Floating hearts background -->
+      <div class="floating-hearts" id="hearts-container"></div>
+
+      <div class="story-header">
+        <h1>A Love Story in Colors</h1>
+        <p>Where two souls found each other across the world...</p>
+      </div>
+
+      <div class="story-container">
+
+        <!-- =============================== -->
+        <!-- SCENE 1: Girl Flying in Colors  -->
+        <!-- =============================== -->
+        <div class="scene">
+          <div class="scene-number">1</div>
+          <svg class="scene-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sky1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#667eea"/>
+                <stop offset="30%" style="stop-color:#c084fc"/>
+                <stop offset="60%" style="stop-color:#f472b6"/>
+                <stop offset="100%" style="stop-color:#fbbf24"/>
+              </linearGradient>
+              <linearGradient id="rainbow1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#ef4444"/>
+                <stop offset="16%" style="stop-color:#f97316"/>
+                <stop offset="32%" style="stop-color:#eab308"/>
+                <stop offset="48%" style="stop-color:#22c55e"/>
+                <stop offset="64%" style="stop-color:#3b82f6"/>
+                <stop offset="80%" style="stop-color:#6366f1"/>
+                <stop offset="100%" style="stop-color:#a855f7"/>
+              </linearGradient>
+              <linearGradient id="dress1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#fbbf24"/>
+                <stop offset="100%" style="stop-color:#f59e0b"/>
+              </linearGradient>
+              <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style="stop-color:#fde68a;stop-opacity:0.8"/>
+                <stop offset="100%" style="stop-color:#fde68a;stop-opacity:0"/>
+              </radialGradient>
+              <filter id="softGlow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Sky background -->
+            <rect width="800" height="500" fill="url(#sky1)"/>
+
+            <!-- Stars twinkling -->
+            <circle cx="100" cy="60" r="3" fill="white" opacity="0.8">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="250" cy="100" r="2" fill="white" opacity="0.6">
+              <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="680" cy="80" r="3" fill="white" opacity="0.7">
+              <animate attributeName="opacity" values="0.4;1;0.4" dur="1.8s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="550" cy="40" r="2" fill="white" opacity="0.9">
+              <animate attributeName="opacity" values="0.2;1;0.2" dur="2.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="420" cy="70" r="2.5" fill="white" opacity="0.6">
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="1.2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="730" cy="150" r="2" fill="white" opacity="0.5">
+              <animate attributeName="opacity" values="0.3;0.9;0.3" dur="3s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Rainbow trail -->
+            <path d="M 100 350 Q 200 200 350 250 Q 500 300 400 180" stroke="url(#rainbow1)" stroke-width="20" fill="none" opacity="0.6" stroke-linecap="round">
+              <animate attributeName="stroke-dashoffset" from="600" to="0" dur="3s" repeatCount="indefinite"/>
+            </path>
+            <path d="M 120 370 Q 220 220 370 270 Q 520 320 420 200" stroke="url(#rainbow1)" stroke-width="12" fill="none" opacity="0.4" stroke-linecap="round"/>
+
+            <!-- Color swirls around the girl -->
+            <ellipse cx="400" cy="200" rx="120" ry="100" fill="url(#glow1)" opacity="0.5">
+              <animate attributeName="rx" values="120;140;120" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="ry" values="100;115;100" dur="3s" repeatCount="indefinite"/>
+            </ellipse>
+
+            <!-- Sparkle particles -->
+            <circle cx="320" cy="150" r="4" fill="#fbbf24" opacity="0">
+              <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+              <animate attributeName="r" values="2;6;2" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+            </circle>
+            <circle cx="480" cy="170" r="4" fill="#f472b6" opacity="0">
+              <animate attributeName="opacity" values="0;1;0" dur="1.8s" repeatCount="indefinite" begin="0.3s"/>
+              <animate attributeName="r" values="2;5;2" dur="1.8s" repeatCount="indefinite" begin="0.3s"/>
+            </circle>
+            <circle cx="360" cy="120" r="4" fill="#60a5fa" opacity="0">
+              <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.6s"/>
+              <animate attributeName="r" values="2;7;2" dur="2s" repeatCount="indefinite" begin="0.6s"/>
+            </circle>
+            <circle cx="440" cy="260" r="3" fill="#34d399" opacity="0">
+              <animate attributeName="opacity" values="0;1;0" dur="1.3s" repeatCount="indefinite" begin="0.9s"/>
+            </circle>
+            <circle cx="350" cy="230" r="3" fill="#c084fc" opacity="0">
+              <animate attributeName="opacity" values="0;1;0" dur="1.6s" repeatCount="indefinite" begin="0.2s"/>
+            </circle>
+
+            <!-- THE GIRL - flying pose -->
+            <g transform="translate(370, 180)" filter="url(#softGlow)">
+              <animateTransform attributeName="transform" type="translate" values="370,180;370,165;370,180" dur="4s" repeatCount="indefinite"/>
+
+              <!-- Hair flowing behind -->
+              <path d="M -5 -35 Q -40 -20 -55 10 Q -65 30 -50 15 Q -30 -5 -5 -20" fill="#1a1a2e" opacity="0.9"/>
+              <path d="M 5 -35 Q -30 -15 -45 15 Q -55 35 -40 20 Q -25 0 5 -15" fill="#2d2d44" opacity="0.8"/>
+              <path d="M 10 -30 Q 35 -20 50 5 Q 55 15 40 10 Q 25 0 10 -15" fill="#1a1a2e" opacity="0.85"/>
+
+              <!-- Head -->
+              <ellipse cx="0" cy="-25" rx="22" ry="26" fill="#f5c6a0"/>
+
+              <!-- Face features -->
+              <ellipse cx="-8" cy="-28" rx="3.5" ry="4" fill="#2d2d44"/>
+              <ellipse cx="8" cy="-28" rx="3.5" ry="4" fill="#2d2d44"/>
+              <ellipse cx="-8" cy="-28" rx="1.5" ry="2" fill="white"/>
+              <ellipse cx="8" cy="-28" rx="1.5" ry="2" fill="white"/>
+              <!-- Blush -->
+              <ellipse cx="-14" cy="-20" rx="6" ry="3" fill="#f9a8d4" opacity="0.5"/>
+              <ellipse cx="14" cy="-20" rx="6" ry="3" fill="#f9a8d4" opacity="0.5"/>
+              <!-- Smile -->
+              <path d="M -8 -16 Q 0 -8 8 -16" stroke="#c2410c" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <!-- Eyebrows -->
+              <path d="M -13 -35 Q -8 -38 -4 -35" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+              <path d="M 4 -35 Q 8 -38 13 -35" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+
+              <!-- Earrings -->
+              <circle cx="-20" cy="-20" r="3" fill="#fbbf24"/>
+              <circle cx="20" cy="-20" r="3" fill="#fbbf24"/>
+
+              <!-- Yellow/Green dress (like the photo) -->
+              <path d="M -15 0 Q -25 40 -30 70 L 30 70 Q 25 40 15 0 Z" fill="url(#dress1)"/>
+              <!-- Dress details -->
+              <path d="M -10 10 Q 0 20 10 10" stroke="#d97706" stroke-width="1" fill="none" opacity="0.5"/>
+              <path d="M -15 30 Q 0 42 15 30" stroke="#d97706" stroke-width="1" fill="none" opacity="0.5"/>
+
+              <!-- Arms spread out (flying) -->
+              <path d="M -15 10 Q -40 -10 -65 -5" stroke="#f5c6a0" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M 15 10 Q 40 -10 65 -5" stroke="#f5c6a0" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <!-- Hands -->
+              <circle cx="-65" cy="-5" r="6" fill="#f5c6a0"/>
+              <circle cx="65" cy="-5" r="6" fill="#f5c6a0"/>
+
+              <!-- Legs -->
+              <path d="M -10 70 Q -15 95 -20 110" stroke="#f5c6a0" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <path d="M 10 70 Q 15 95 25 105" stroke="#f5c6a0" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <!-- Shoes -->
+              <ellipse cx="-22" cy="113" rx="8" ry="5" fill="#e91e63"/>
+              <ellipse cx="27" cy="108" rx="8" ry="5" fill="#e91e63"/>
+            </g>
+
+            <!-- Colorful clouds -->
+            <g opacity="0.5">
+              <ellipse cx="120" cy="420" rx="80" ry="30" fill="#f9a8d4"/>
+              <ellipse cx="160" cy="410" rx="60" ry="25" fill="#c4b5fd"/>
+              <ellipse cx="650" cy="440" rx="90" ry="28" fill="#93c5fd"/>
+              <ellipse cx="700" cy="430" rx="60" ry="22" fill="#a5f3fc"/>
+              <ellipse cx="400" cy="460" rx="100" ry="25" fill="#fde68a"/>
+            </g>
+
+            <!-- Text bubble -->
+            <g transform="translate(560, 100)">
+              <rect x="-70" y="-25" width="140" height="50" rx="25" fill="white" opacity="0.9"/>
+              <polygon points="0,25 -15,25 5,45" fill="white" opacity="0.9"/>
+              <text x="0" y="5" text-anchor="middle" font-size="14" font-family="Comic Sans MS, cursive" fill="#7b1fa2" font-weight="bold">Free as colors!</text>
+            </g>
+          </svg>
+          <div class="scene-caption">
+            <h2>She Flew in Colors</h2>
+            <p>A vibrant girl, full of life and dreams, soaring through a world painted in every shade of the rainbow. She was magic, she was free, she was everything the world needed to see.</p>
+          </div>
+        </div>
+
+        <!-- =============================== -->
+        <!-- SCENE 2: Boy Flirting with Girls -->
+        <!-- =============================== -->
+        <div class="scene">
+          <div class="scene-number">2</div>
+          <svg class="scene-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sky2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#1e1b4b"/>
+                <stop offset="50%" style="stop-color:#312e81"/>
+                <stop offset="100%" style="stop-color:#4c1d95"/>
+              </linearGradient>
+              <linearGradient id="plaid1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#dc2626"/>
+                <stop offset="50%" style="stop-color:#b91c1c"/>
+                <stop offset="100%" style="stop-color:#991b1b"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Night scene / party background -->
+            <rect width="800" height="500" fill="url(#sky2)"/>
+
+            <!-- Disco / city lights -->
+            <circle cx="150" cy="50" r="40" fill="#fbbf24" opacity="0.15">
+              <animate attributeName="opacity" values="0.1;0.25;0.1" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="650" cy="80" r="35" fill="#ec4899" opacity="0.15">
+              <animate attributeName="opacity" values="0.15;0.3;0.15" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="400" cy="40" r="45" fill="#8b5cf6" opacity="0.12">
+              <animate attributeName="opacity" values="0.1;0.2;0.1" dur="2.5s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Floor -->
+            <rect x="0" y="380" width="800" height="120" fill="#1e1b4b" opacity="0.8"/>
+            <line x1="0" y1="380" x2="800" y2="380" stroke="#6366f1" stroke-width="2" opacity="0.3"/>
+
+            <!-- Background girl 1 (left) -->
+            <g transform="translate(180, 240)">
+              <!-- Hair -->
+              <path d="M -5 -30 Q -25 -35 -20 0 Q -18 15 -10 10" fill="#92400e"/>
+              <path d="M 5 -30 Q 25 -35 20 0 Q 18 15 10 10" fill="#92400e"/>
+              <!-- Head -->
+              <ellipse cx="0" cy="-20" rx="18" ry="22" fill="#deb887"/>
+              <!-- Eyes -->
+              <ellipse cx="-6" cy="-22" rx="3" ry="3.5" fill="#2d2d44"/>
+              <ellipse cx="6" cy="-22" rx="3" ry="3.5" fill="#2d2d44"/>
+              <circle cx="-5" cy="-22.5" r="1.2" fill="white"/>
+              <circle cx="7" cy="-22.5" r="1.2" fill="white"/>
+              <!-- Eyelashes -->
+              <path d="M -10 -25 L -12 -28" stroke="#2d2d44" stroke-width="1"/>
+              <path d="M 10 -25 L 12 -28" stroke="#2d2d44" stroke-width="1"/>
+              <!-- Smile -->
+              <path d="M -5 -14 Q 0 -9 5 -14" stroke="#c2410c" stroke-width="1.5" fill="none"/>
+              <!-- Blush -->
+              <ellipse cx="-12" cy="-16" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+              <ellipse cx="12" cy="-16" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+              <!-- Dress -->
+              <path d="M -12 5 Q -20 50 -25 90 L 25 90 Q 20 50 12 5 Z" fill="#ec4899"/>
+              <!-- Arms -->
+              <path d="M -12 15 Q -25 25 -20 35" stroke="#deb887" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <path d="M 12 15 Q 25 25 20 35" stroke="#deb887" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <!-- Legs -->
+              <line x1="-8" y1="90" x2="-10" y2="130" stroke="#deb887" stroke-width="6" stroke-linecap="round"/>
+              <line x1="8" y1="90" x2="10" y2="130" stroke="#deb887" stroke-width="6" stroke-linecap="round"/>
+              <!-- Heart emoji floating -->
+              <text x="25" y="-35" font-size="18" opacity="0.7">&#x1F495;</text>
+            </g>
+
+            <!-- THE BOY (center, with plaid shirt like photo) -->
+            <g transform="translate(400, 230)">
+              <!-- Hair (short, styled) -->
+              <path d="M -18 -45 Q -5 -55 18 -45 Q 22 -40 20 -35 L -20 -35 Q -22 -40 -18 -45" fill="#1a1a2e"/>
+              <!-- Head -->
+              <ellipse cx="0" cy="-22" rx="20" ry="24" fill="#d4a574"/>
+              <!-- Beard stubble -->
+              <ellipse cx="0" cy="-5" rx="14" ry="8" fill="#c4956a" opacity="0.3"/>
+              <!-- Eyes (confident look) -->
+              <ellipse cx="-7" cy="-25" rx="3.5" ry="3" fill="#2d2d44"/>
+              <ellipse cx="7" cy="-25" rx="3.5" ry="3" fill="#2d2d44"/>
+              <circle cx="-6" cy="-25.5" r="1.3" fill="white"/>
+              <circle cx="8" cy="-25.5" r="1.3" fill="white"/>
+              <!-- Eyebrows (raised, confident) -->
+              <path d="M -12 -32 Q -7 -36 -3 -32" stroke="#1a1a2e" stroke-width="2" fill="none"/>
+              <path d="M 3 -32 Q 7 -36 12 -32" stroke="#1a1a2e" stroke-width="2" fill="none"/>
+              <!-- Smirk -->
+              <path d="M -6 -12 Q 2 -5 10 -10" stroke="#8b4513" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <!-- Plaid Shirt (red like in photo) -->
+              <path d="M -18 5 Q -22 50 -25 100 L 25 100 Q 22 50 18 5 Z" fill="url(#plaid1)"/>
+              <!-- Plaid pattern lines -->
+              <line x1="-18" y1="20" x2="18" y2="20" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-20" y1="40" x2="20" y2="40" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-22" y1="60" x2="22" y2="60" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-10" y1="5" x2="-14" y2="100" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="10" y1="5" x2="14" y2="100" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <!-- Arms out (gesturing) -->
+              <path d="M -18 15 Q -45 10 -60 25" stroke="#d4a574" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <path d="M 18 15 Q 45 10 60 25" stroke="#d4a574" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <!-- Hands -->
+              <circle cx="-60" cy="25" r="6" fill="#d4a574"/>
+              <circle cx="60" cy="25" r="6" fill="#d4a574"/>
+              <!-- Jeans -->
+              <path d="M -14 100 L -16 150" stroke="#1e40af" stroke-width="12" stroke-linecap="round"/>
+              <path d="M 14 100 L 16 150" stroke="#1e40af" stroke-width="12" stroke-linecap="round"/>
+              <!-- Sunglasses on head -->
+              <path d="M -16 -42 Q 0 -46 16 -42" stroke="#1a1a2e" stroke-width="2" fill="none"/>
+              <rect x="-18" y="-44" width="14" height="8" rx="4" fill="#1a1a2e" opacity="0.6"/>
+              <rect x="4" y="-44" width="14" height="8" rx="4" fill="#1a1a2e" opacity="0.6"/>
+            </g>
+
+            <!-- Background girl 2 (right) -->
+            <g transform="translate(600, 245)">
+              <!-- Hair (long, blonde) -->
+              <path d="M -5 -30 Q -20 -35 -22 10 Q -20 25 -12 15" fill="#fbbf24"/>
+              <path d="M 5 -30 Q 20 -35 22 10 Q 20 25 12 15" fill="#fbbf24"/>
+              <!-- Head -->
+              <ellipse cx="0" cy="-18" rx="17" ry="21" fill="#fde8d0"/>
+              <!-- Eyes -->
+              <ellipse cx="-6" cy="-20" rx="3" ry="3.5" fill="#2d2d44"/>
+              <ellipse cx="6" cy="-20" rx="3" ry="3.5" fill="#2d2d44"/>
+              <circle cx="-5" cy="-20.5" r="1.2" fill="white"/>
+              <circle cx="7" cy="-20.5" r="1.2" fill="white"/>
+              <!-- Smile -->
+              <path d="M -5 -12 Q 0 -7 5 -12" stroke="#c2410c" stroke-width="1.5" fill="none"/>
+              <!-- Blush -->
+              <ellipse cx="-11" cy="-14" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+              <ellipse cx="11" cy="-14" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+              <!-- Dress -->
+              <path d="M -11 5 Q -18 45 -22 85 L 22 85 Q 18 45 11 5 Z" fill="#8b5cf6"/>
+              <!-- Arms -->
+              <path d="M -11 12 Q -25 5 -30 15" stroke="#fde8d0" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <path d="M 11 12 Q 22 8 28 18" stroke="#fde8d0" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <!-- Legs -->
+              <line x1="-7" y1="85" x2="-9" y2="125" stroke="#fde8d0" stroke-width="6" stroke-linecap="round"/>
+              <line x1="7" y1="85" x2="9" y2="125" stroke="#fde8d0" stroke-width="6" stroke-linecap="round"/>
+              <!-- Heart -->
+              <text x="-35" y="-30" font-size="16" opacity="0.7">&#x1F496;</text>
+            </g>
+
+            <!-- Chat bubbles / phone notification emojis -->
+            <g opacity="0.6">
+              <text x="300" y="180" font-size="20">&#x1F4AC;</text>
+              <text x="480" y="175" font-size="18">&#x1F4AC;</text>
+              <text x="350" y="150" font-size="14">&#x1F60E;</text>
+            </g>
+
+            <!-- "Mr. Popular" text -->
+            <g transform="translate(400, 440)">
+              <rect x="-80" y="-20" width="160" height="36" rx="18" fill="rgba(255,255,255,0.15)"/>
+              <text x="0" y="2" text-anchor="middle" font-size="16" font-family="Comic Sans MS, cursive" fill="white" font-weight="bold">Mr. Popular &#x1F60E;</text>
+            </g>
+          </svg>
+          <div class="scene-caption">
+            <h2>Meanwhile, He Was Busy...</h2>
+            <p>The boy? Oh, he was a charmer alright. Surrounded by attention, living the social life, not knowing that destiny had someone special waiting for him. He was Mr. Popular... but his heart was still empty.</p>
+          </div>
+        </div>
+
+        <!-- =============================== -->
+        <!-- SCENE 3: Girl Enters His Life   -->
+        <!-- =============================== -->
+        <div class="scene">
+          <div class="scene-number">3</div>
+          <svg class="scene-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sky3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#fce4ec"/>
+                <stop offset="50%" style="stop-color:#f8bbd0"/>
+                <stop offset="100%" style="stop-color:#f48fb1"/>
+              </linearGradient>
+              <radialGradient id="heartGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style="stop-color:#ff1744;stop-opacity:0.3"/>
+                <stop offset="100%" style="stop-color:#ff1744;stop-opacity:0"/>
+              </radialGradient>
+              <filter id="glow3">
+                <feGaussianBlur stdDeviation="4" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Warm, romantic background -->
+            <rect width="800" height="500" fill="url(#sky3)"/>
+
+            <!-- Soft bokeh circles -->
+            <circle cx="100" cy="80" r="30" fill="#e91e63" opacity="0.08"/>
+            <circle cx="700" cy="120" r="40" fill="#e91e63" opacity="0.06"/>
+            <circle cx="300" cy="50" r="25" fill="#f48fb1" opacity="0.1"/>
+            <circle cx="600" cy="60" r="35" fill="#f48fb1" opacity="0.07"/>
+            <circle cx="500" cy="100" r="20" fill="#fce4ec" opacity="0.15"/>
+
+            <!-- Ground / park setting -->
+            <ellipse cx="400" cy="450" rx="500" ry="80" fill="#81c784" opacity="0.3"/>
+            <ellipse cx="400" cy="470" rx="450" ry="60" fill="#66bb6a" opacity="0.2"/>
+
+            <!-- Heart glow between them -->
+            <circle cx="400" cy="230" r="100" fill="url(#heartGlow)">
+              <animate attributeName="r" values="80;110;80" dur="3s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Floating hearts -->
+            <text x="350" y="120" font-size="24" opacity="0.3">&#x2764;&#xFE0F;</text>
+            <text x="440" y="100" font-size="18" opacity="0.25">&#x2764;&#xFE0F;</text>
+            <text x="380" y="80" font-size="20" opacity="0.2">&#x1F49D;</text>
+            <text x="300" y="150" font-size="14" opacity="0.35">&#x1F495;</text>
+            <text x="480" y="140" font-size="16" opacity="0.3">&#x1F496;</text>
+
+            <!-- THE GIRL (left side, entering) -->
+            <g transform="translate(280, 220)">
+              <!-- Hair -->
+              <path d="M -5 -30 Q -25 -30 -20 5 Q -18 20 -8 12" fill="#1a1a2e"/>
+              <path d="M 5 -30 Q 20 -28 18 5 Q 16 18 8 12" fill="#1a1a2e"/>
+              <!-- Head -->
+              <ellipse cx="0" cy="-20" rx="20" ry="24" fill="#f5c6a0"/>
+              <!-- Eyes (looking right, shy) -->
+              <ellipse cx="-5" cy="-22" rx="3.5" ry="4" fill="#2d2d44"/>
+              <ellipse cx="8" cy="-22" rx="3.5" ry="4" fill="#2d2d44"/>
+              <circle cx="-3.5" cy="-22.5" r="1.5" fill="white"/>
+              <circle cx="9.5" cy="-22.5" r="1.5" fill="white"/>
+              <!-- Blush (shy) -->
+              <ellipse cx="-14" cy="-15" rx="7" ry="4" fill="#f9a8d4" opacity="0.6"/>
+              <ellipse cx="14" cy="-15" rx="7" ry="4" fill="#f9a8d4" opacity="0.6"/>
+              <!-- Shy smile -->
+              <path d="M -5 -10 Q 0 -5 5 -10" stroke="#c2410c" stroke-width="1.5" fill="none"/>
+              <!-- Earrings -->
+              <circle cx="-18" cy="-16" r="3" fill="#fbbf24"/>
+              <circle cx="18" cy="-16" r="3" fill="#fbbf24"/>
+              <!-- Yellow dress -->
+              <path d="M -14 5 Q -22 50 -28 100 L 28 100 Q 22 50 14 5 Z" fill="#fbbf24"/>
+              <path d="M -14 5 Q -22 50 -28 100 L 28 100 Q 22 50 14 5 Z" fill="#f59e0b" opacity="0.3"/>
+              <!-- Left arm (holding dupatta/scarf) -->
+              <path d="M -14 15 Q -28 20 -30 35" stroke="#f5c6a0" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <!-- Right arm (waving slightly) -->
+              <path d="M 14 15 Q 30 10 38 20" stroke="#f5c6a0" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <circle cx="38" cy="20" r="5" fill="#f5c6a0"/>
+              <!-- Legs -->
+              <line x1="-8" y1="100" x2="-10" y2="145" stroke="#f5c6a0" stroke-width="7" stroke-linecap="round"/>
+              <line x1="8" y1="100" x2="10" y2="145" stroke="#f5c6a0" stroke-width="7" stroke-linecap="round"/>
+              <!-- Shoes -->
+              <ellipse cx="-12" cy="148" rx="9" ry="5" fill="#e91e63"/>
+              <ellipse cx="12" cy="148" rx="9" ry="5" fill="#e91e63"/>
+              <!-- Colorful scarf/dupatta flowing -->
+              <path d="M -14 5 Q -40 -10 -55 10 Q -60 25 -45 30 Q -30 20 -14 15" fill="#c084fc" opacity="0.7"/>
+            </g>
+
+            <!-- THE BOY (right side, stunned) -->
+            <g transform="translate(520, 218)">
+              <!-- Hair -->
+              <path d="M -18 -43 Q -5 -52 18 -43 Q 22 -38 20 -33 L -20 -33 Q -22 -38 -18 -43" fill="#1a1a2e"/>
+              <!-- Head -->
+              <ellipse cx="0" cy="-20" rx="20" ry="24" fill="#d4a574"/>
+              <!-- Eyes WIDE (surprised/smitten) -->
+              <ellipse cx="-7" cy="-23" rx="5" ry="5.5" fill="white"/>
+              <ellipse cx="7" cy="-23" rx="5" ry="5.5" fill="white"/>
+              <ellipse cx="-7" cy="-23" rx="3" ry="3.5" fill="#2d2d44"/>
+              <ellipse cx="7" cy="-23" rx="3" ry="3.5" fill="#2d2d44"/>
+              <circle cx="-6" cy="-24" r="1.2" fill="white"/>
+              <circle cx="8" cy="-24" r="1.2" fill="white"/>
+              <!-- Raised eyebrows (surprise) -->
+              <path d="M -13 -33 Q -7 -38 -2 -33" stroke="#1a1a2e" stroke-width="2" fill="none"/>
+              <path d="M 2 -33 Q 7 -38 13 -33" stroke="#1a1a2e" stroke-width="2" fill="none"/>
+              <!-- Open mouth (wow) -->
+              <ellipse cx="0" cy="-10" rx="6" ry="5" fill="#8b4513" opacity="0.6"/>
+              <!-- Blush -->
+              <ellipse cx="-14" cy="-15" rx="6" ry="3" fill="#f9a8d4" opacity="0.5"/>
+              <ellipse cx="14" cy="-15" rx="6" ry="3" fill="#f9a8d4" opacity="0.5"/>
+              <!-- Plaid Shirt -->
+              <path d="M -18 5 Q -22 50 -25 100 L 25 100 Q 22 50 18 5 Z" fill="#dc2626"/>
+              <line x1="-18" y1="20" x2="18" y2="20" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-20" y1="40" x2="20" y2="40" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-22" y1="60" x2="22" y2="60" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="-10" y1="5" x2="-14" y2="100" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <line x1="10" y1="5" x2="14" y2="100" stroke="#450a0a" stroke-width="1" opacity="0.3"/>
+              <!-- Arms (one hand on heart) -->
+              <path d="M -18 15 Q -30 25 -22 35" stroke="#d4a574" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <path d="M 18 15 Q 10 30 5 25" stroke="#d4a574" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <circle cx="5" cy="25" r="5" fill="#d4a574"/>
+              <!-- Jeans -->
+              <path d="M -14 100 L -16 150" stroke="#1e40af" stroke-width="12" stroke-linecap="round"/>
+              <path d="M 14 100 L 16 150" stroke="#1e40af" stroke-width="12" stroke-linecap="round"/>
+            </g>
+
+            <!-- Thought bubble from boy: heart eyes -->
+            <g transform="translate(580, 120)">
+              <ellipse cx="0" cy="0" rx="35" ry="25" fill="white" opacity="0.9"/>
+              <circle cx="-15" cy="30" r="8" fill="white" opacity="0.9"/>
+              <circle cx="-8" cy="42" r="5" fill="white" opacity="0.9"/>
+              <text x="0" y="8" text-anchor="middle" font-size="28">&#x1F60D;</text>
+            </g>
+
+            <!-- Sparkle where their eyes meet -->
+            <g transform="translate(400, 230)" filter="url(#glow3)">
+              <polygon points="0,-15 4,-4 15,-4 6,3 9,15 0,8 -9,15 -6,3 -15,-4 -4,-4" fill="#fbbf24" opacity="0.8">
+                <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
+                <animateTransform attributeName="transform" type="rotate" values="0;180;360" dur="4s" repeatCount="indefinite"/>
+              </polygon>
+            </g>
+          </svg>
+          <div class="scene-caption">
+            <h2>Then She Walked Into His World</h2>
+            <p>And just like that... everything changed. The moment their eyes met, the whole world stopped spinning. She walked in like a dream he never knew he had. His heart skipped beats it didn't know it could skip.</p>
+          </div>
+        </div>
+
+        <!-- =============================== -->
+        <!-- SCENE 4: Long Distance / Phone  -->
+        <!-- =============================== -->
+        <div class="scene">
+          <div class="scene-number">4</div>
+          <svg class="scene-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="nightSky" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#0f0c29"/>
+                <stop offset="50%" style="stop-color:#302b63"/>
+                <stop offset="100%" style="stop-color:#24243e"/>
+              </linearGradient>
+              <linearGradient id="phoneGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#60a5fa"/>
+                <stop offset="100%" style="stop-color:#3b82f6"/>
+              </linearGradient>
+              <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style="stop-color:#fef9c3"/>
+                <stop offset="60%" style="stop-color:#fef08a;stop-opacity:0.3"/>
+                <stop offset="100%" style="stop-color:#fef08a;stop-opacity:0"/>
+              </radialGradient>
+            </defs>
+
+            <!-- Night sky -->
+            <rect width="800" height="500" fill="url(#nightSky)"/>
+
+            <!-- Moon -->
+            <circle cx="400" cy="60" r="50" fill="url(#moonGlow)"/>
+            <circle cx="400" cy="60" r="30" fill="#fef9c3"/>
+            <circle cx="390" cy="50" r="8" fill="#fde68a" opacity="0.5"/>
+            <circle cx="410" cy="65" r="5" fill="#fde68a" opacity="0.4"/>
+
+            <!-- Stars -->
+            <circle cx="80" cy="50" r="2" fill="white" opacity="0.8">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="200" cy="100" r="1.5" fill="white" opacity="0.6">
+              <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="650" cy="40" r="2" fill="white" opacity="0.7">
+              <animate attributeName="opacity" values="0.4;1;0.4" dur="1.8s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="720" cy="100" r="1.5" fill="white" opacity="0.9">
+              <animate attributeName="opacity" values="0.2;1;0.2" dur="2.5s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="550" cy="30" r="1" fill="white" opacity="0.6"/>
+            <circle cx="300" cy="25" r="1.5" fill="white" opacity="0.7"/>
+            <circle cx="150" cy="140" r="1" fill="white" opacity="0.5"/>
+            <circle cx="500" cy="80" r="1.5" fill="white" opacity="0.8"/>
+
+            <!-- Divider - shows distance -->
+            <line x1="400" y1="130" x2="400" y2="500" stroke="white" stroke-width="1" stroke-dasharray="8,8" opacity="0.15"/>
+
+            <!-- LEFT SIDE: Girl at window -->
+            <g transform="translate(0,0)">
+              <!-- Window frame -->
+              <rect x="80" y="200" width="220" height="250" rx="12" fill="#1e3a5f" opacity="0.8"/>
+              <rect x="90" y="210" width="200" height="230" rx="8" fill="#1e293b"/>
+              <!-- Window glow from phone -->
+              <rect x="90" y="210" width="200" height="230" rx="8" fill="#60a5fa" opacity="0.05"/>
+              <!-- Curtain -->
+              <path d="M 90 210 Q 120 220 90 280" fill="#c084fc" opacity="0.4"/>
+              <path d="M 290 210 Q 260 220 290 280" fill="#c084fc" opacity="0.4"/>
+
+              <!-- Girl sitting -->
+              <g transform="translate(190, 310)">
+                <!-- Hair (loose, nighttime) -->
+                <path d="M -5 -28 Q -28 -25 -25 10 Q -22 30 -12 20" fill="#1a1a2e"/>
+                <path d="M 5 -28 Q 22 -25 20 10 Q 18 25 10 18" fill="#1a1a2e"/>
+                <!-- Head -->
+                <ellipse cx="0" cy="-18" rx="18" ry="22" fill="#f5c6a0"/>
+                <!-- Eyes (looking at phone, happy) -->
+                <path d="M -9 -20 Q -6 -16 -3 -20" stroke="#2d2d44" stroke-width="2" fill="none"/>
+                <path d="M 3 -20 Q 6 -16 9 -20" stroke="#2d2d44" stroke-width="2" fill="none"/>
+                <!-- Happy smile -->
+                <path d="M -7 -10 Q 0 -3 7 -10" stroke="#c2410c" stroke-width="2" fill="none"/>
+                <!-- Blush -->
+                <ellipse cx="-12" cy="-13" rx="5" ry="3" fill="#f9a8d4" opacity="0.6"/>
+                <ellipse cx="12" cy="-13" rx="5" ry="3" fill="#f9a8d4" opacity="0.6"/>
+                <!-- PJs / comfortable top -->
+                <path d="M -12 5 Q -16 30 -18 60 L 18 60 Q 16 30 12 5 Z" fill="#e879f9"/>
+                <!-- Arms holding phone -->
+                <path d="M -12 12 Q -8 30 0 35" stroke="#f5c6a0" stroke-width="6" fill="none" stroke-linecap="round"/>
+                <path d="M 12 12 Q 8 30 0 35" stroke="#f5c6a0" stroke-width="6" fill="none" stroke-linecap="round"/>
+                <!-- Phone in hands -->
+                <rect x="-10" y="28" width="20" height="32" rx="4" fill="#1e293b" stroke="#60a5fa" stroke-width="1"/>
+                <rect x="-7" y="31" width="14" height="22" rx="2" fill="url(#phoneGlow)" opacity="0.8"/>
+                <!-- Phone glow on face -->
+                <ellipse cx="0" cy="0" rx="25" ry="30" fill="#60a5fa" opacity="0.05"/>
+                <!-- His photo on phone screen -->
+                <circle cx="0" cy="40" r="5" fill="#d4a574"/>
+                <text x="0" y="50" text-anchor="middle" font-size="5" fill="white">&#x2764;</text>
+              </g>
+
+              <!-- City skyline behind her -->
+              <rect x="70" y="430" width="30" height="70" fill="#1e293b" opacity="0.5"/>
+              <rect x="105" y="410" width="25" height="90" fill="#1e293b" opacity="0.4"/>
+              <rect x="60" y="445" width="20" height="55" fill="#1e293b" opacity="0.3"/>
+              <!-- City lights -->
+              <rect x="75" y="440" r="1" width="4" height="4" fill="#fbbf24" opacity="0.6"/>
+              <rect x="112" y="425" r="1" width="4" height="4" fill="#fbbf24" opacity="0.5"/>
+            </g>
+
+            <!-- RIGHT SIDE: Boy at window -->
+            <g transform="translate(0,0)">
+              <!-- Window frame -->
+              <rect x="500" y="200" width="220" height="250" rx="12" fill="#1e3a5f" opacity="0.8"/>
+              <rect x="510" y="210" width="200" height="230" rx="8" fill="#1e293b"/>
+              <rect x="510" y="210" width="200" height="230" rx="8" fill="#60a5fa" opacity="0.05"/>
+              <!-- Curtain -->
+              <path d="M 510 210 Q 540 220 510 280" fill="#6366f1" opacity="0.3"/>
+              <path d="M 710 210 Q 680 220 710 280" fill="#6366f1" opacity="0.3"/>
+
+              <!-- Boy sitting -->
+              <g transform="translate(610, 310)">
+                <!-- Hair -->
+                <path d="M -16 -40 Q -5 -48 16 -40 Q 20 -35 18 -30 L -18 -30 Q -20 -35 -16 -40" fill="#1a1a2e"/>
+                <!-- Head -->
+                <ellipse cx="0" cy="-18" rx="18" ry="22" fill="#d4a574"/>
+                <!-- Eyes (looking at phone, happy) -->
+                <path d="M -9 -20 Q -6 -16 -3 -20" stroke="#2d2d44" stroke-width="2" fill="none"/>
+                <path d="M 3 -20 Q 6 -16 9 -20" stroke="#2d2d44" stroke-width="2" fill="none"/>
+                <!-- Happy grin -->
+                <path d="M -8 -9 Q 0 -1 8 -9" stroke="#8b4513" stroke-width="2" fill="none"/>
+                <!-- Blush -->
+                <ellipse cx="-12" cy="-12" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+                <ellipse cx="12" cy="-12" rx="5" ry="3" fill="#f9a8d4" opacity="0.4"/>
+                <!-- T-shirt (casual) -->
+                <path d="M -14 5 Q -18 30 -20 60 L 20 60 Q 18 30 14 5 Z" fill="#6366f1"/>
+                <!-- Arms holding phone -->
+                <path d="M -14 12 Q -8 30 0 35" stroke="#d4a574" stroke-width="6" fill="none" stroke-linecap="round"/>
+                <path d="M 14 12 Q 8 30 0 35" stroke="#d4a574" stroke-width="6" fill="none" stroke-linecap="round"/>
+                <!-- Phone -->
+                <rect x="-10" y="28" width="20" height="32" rx="4" fill="#1e293b" stroke="#60a5fa" stroke-width="1"/>
+                <rect x="-7" y="31" width="14" height="22" rx="2" fill="url(#phoneGlow)" opacity="0.8"/>
+                <!-- Phone glow -->
+                <ellipse cx="0" cy="0" rx="25" ry="30" fill="#60a5fa" opacity="0.05"/>
+                <!-- Her photo on phone screen -->
+                <circle cx="0" cy="40" r="5" fill="#f5c6a0"/>
+                <text x="0" y="50" text-anchor="middle" font-size="5" fill="white">&#x2764;</text>
+              </g>
+
+              <!-- Mountain skyline behind him -->
+              <path d="M 490 460 L 530 420 L 560 450 L 590 400 L 630 440 L 670 410 L 720 460 Z" fill="#1e293b" opacity="0.4"/>
+            </g>
+
+            <!-- CONNECTION: Signal waves between phones -->
+            <g opacity="0.4">
+              <path d="M 200 360 Q 300 300 400 280 Q 500 300 600 360" stroke="#f472b6" stroke-width="2" fill="none" stroke-dasharray="6,4">
+                <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1s" repeatCount="indefinite"/>
+              </path>
+              <path d="M 210 370 Q 310 290 400 265 Q 490 290 590 370" stroke="#c084fc" stroke-width="1.5" fill="none" stroke-dasharray="4,6">
+                <animate attributeName="stroke-dashoffset" from="0" to="20" dur="1.2s" repeatCount="indefinite"/>
+              </path>
+            </g>
+
+            <!-- Hearts traveling between them -->
+            <text font-size="16" fill="#e91e63">
+              <textPath>&#x2764;&#xFE0F;</textPath>
+              <animateMotion dur="4s" repeatCount="indefinite" path="M 200,350 Q 400,200 600,350"/>
+            </text>
+            <text font-size="14" fill="#f472b6">
+              <textPath>&#x1F49C;</textPath>
+              <animateMotion dur="4s" repeatCount="indefinite" begin="2s" path="M 600,350 Q 400,200 200,350"/>
+            </text>
+
+            <!-- "Miles apart, hearts together" -->
+            <g transform="translate(400, 170)">
+              <rect x="-120" y="-18" width="240" height="36" rx="18" fill="rgba(255,255,255,0.1)"/>
+              <text x="0" y="5" text-anchor="middle" font-size="14" font-family="Comic Sans MS, cursive" fill="white" font-weight="bold">Miles apart, hearts together &#x1F49E;</text>
+            </g>
+
+            <!-- Chat bubbles -->
+            <g transform="translate(240, 240)">
+              <rect x="-45" y="-14" width="90" height="24" rx="12" fill="white" opacity="0.15"/>
+              <text x="0" y="2" text-anchor="middle" font-size="10" fill="white">Good night &#x1F31C;</text>
+            </g>
+            <g transform="translate(560, 240)">
+              <rect x="-55" y="-14" width="110" height="24" rx="12" fill="white" opacity="0.15"/>
+              <text x="0" y="2" text-anchor="middle" font-size="10" fill="white">Miss you so much &#x2764;</text>
+            </g>
+          </svg>
+          <div class="scene-caption">
+            <h2>Connected Across the Miles</h2>
+            <p>Different cities, different time zones, but the same heartbeat. Every night, under the same moon, they'd talk for hours. The phone became their bridge, their lifeline, their love letter written in real time.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- To Be Continued -->
+      <div class="to-be-continued">
+        <h2>To Be Continued...</h2>
+        <p>The best love stories are the ones still being written &#x2764;&#xFE0F;</p>
+      </div>
+
+      <script>
+        // Create floating hearts in background
+        const container = document.getElementById('hearts-container');
+        const heartEmojis = ['&#x2764;', '&#x1F495;', '&#x1F496;', '&#x1F49C;', '&#x1F49B;', '&#x2728;'];
+
+        function createHeart() {
+          const heart = document.createElement('div');
+          heart.className = 'heart';
+          heart.innerHTML = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
+          heart.style.left = Math.random() * 100 + '%';
+          heart.style.animationDuration = (4 + Math.random() * 4) + 's';
+          heart.style.animationDelay = Math.random() * 3 + 's';
+          heart.style.fontSize = (12 + Math.random() * 16) + 'px';
+          container.appendChild(heart);
+
+          setTimeout(() => heart.remove(), 10000);
+        }
+
+        // Create hearts periodically
+        setInterval(createHeart, 800);
+        // Initial batch
+        for (let i = 0; i < 8; i++) {
+          setTimeout(createHeart, i * 200);
+        }
+      </script>
+    </body>
+    </html>
+  `)
+})
+
+// ============================================
 // Main HTML Page
 // ============================================
 app.get('/', (c) => {
@@ -624,6 +1349,12 @@ app.get('/', (c) => {
                         <h3 class="font-bold text-lg mb-2">Swiss Contexts</h3>
                         <p class="text-gray-600 text-sm">Real scenarios: housing, doctors, Gemeinde, work</p>
                     </div>
+                </div>
+
+                <div class="text-center mt-8">
+                    <a href="/story" class="inline-block px-8 py-4 rounded-xl text-white font-bold text-lg" style="background: linear-gradient(135deg, #e91e63, #9c27b0); box-shadow: 0 4px 15px rgba(233,30,99,0.4); transition: all 0.3s;">
+                        <i class="fas fa-heart mr-2"></i> View Our Love Story
+                    </a>
                 </div>
             </div>
 
