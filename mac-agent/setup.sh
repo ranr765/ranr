@@ -35,15 +35,21 @@ npm install
 # 3. Create data directory
 mkdir -p data
 
-# 4. Optional: Set API key
+# 4. Auth token
 echo ""
 echo "▶ Security setup"
-if [ -z "$AGENT_API_KEY" ]; then
-  echo "  No API key set. The dashboard will be open access."
-  echo "  To secure it, set AGENT_API_KEY before starting:"
-  echo "    export AGENT_API_KEY=your-secret-key"
-  echo ""
+TOKEN_FILE="$(dirname "$0")/data/auth-token"
+if [ -f "$TOKEN_FILE" ]; then
+  echo "  ✓ Auth token already exists"
+  echo "  Token: $(cat "$TOKEN_FILE")"
+else
+  echo "  Auth token will be auto-generated on first start."
+  echo "  Check the server terminal output for your token."
 fi
+echo ""
+echo "  The dashboard requires this token to log in."
+echo "  You can also override it: export AGENT_API_KEY=your-custom-key"
+echo ""
 
 # 5. Check for cloudflared (optional, for remote access)
 echo "▶ Remote access setup (optional)"

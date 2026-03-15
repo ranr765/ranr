@@ -159,6 +159,37 @@
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
     .empty p { font-size: 15px; }
 
+    /* Login screen */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-box {
+      width: 100%; max-width: 360px; text-align: center;
+    }
+    .login-box h2 {
+      font-size: 24px; font-weight: 700; margin-bottom: 6px;
+    }
+    .login-box h2 span { color: var(--accent2); }
+    .login-box p {
+      color: var(--text2); font-size: 14px; margin-bottom: 24px;
+    }
+    .login-box input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; color: var(--text);
+      font-size: 16px; font-family: 'SF Mono', monospace;
+      text-align: center; outline: none; letter-spacing: 1px;
+    }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-box .btn { width: 100%; margin-top: 12px; padding: 14px; }
+    .login-error {
+      color: var(--red); font-size: 13px; margin-top: 10px;
+      min-height: 20px;
+    }
+
     /* Safe area for iPhone notch */
     @supports (padding-top: env(safe-area-inset-top)) {
       .header { padding-top: calc(16px + env(safe-area-inset-top)); }
@@ -168,11 +199,22 @@
 </head>
 <body>
 
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2><span>Mac</span> Agent</h2>
+    <p>Enter your auth token to continue.<br>Find it in your server terminal output.</p>
+    <input id="tokenInput" type="password" placeholder="Paste token here" autocomplete="off" spellcheck="false">
+    <button class="btn" onclick="doLogin()">Unlock</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
 <div class="header">
   <h1><span>Mac</span> Agent</h1>
   <div class="status-badge">
     <span id="statusText">Connecting...</span>
     <span class="status-dot" id="statusDot"></span>
+    <button class="btn small" style="background:var(--surface2); margin-left: 8px;" onclick="logout()">Logout</button>
   </div>
 </div>
 
@@ -207,18 +249,69 @@
 </div>
 
 <script>
-  const API = '';
   let tasks = [];
   let expandedTaskId = null;
+  let pollTimer = null;
 
+  // ── Auth ──────────────────────────────────────────────
+  function getToken() { return localStorage.getItem('mac-agent-token') || ''; }
+  function setToken(t) { localStorage.setItem('mac-agent-token', t); }
+
+  async function doLogin() {
+    const input = document.getElementById('tokenInput');
+    const error = document.getElementById('loginError');
+    const token = input.value.trim();
+    if (!token) { error.textContent = 'Please enter a token.'; return; }
+
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      if (res.ok) {
+        setToken(token);
+        error.textContent = '';
+        document.getElementById('loginOverlay').classList.add('hidden');
+        startApp();
+      } else {
+        error.textContent = 'Invalid token. Check your server terminal.';
+        input.value = '';
+        input.focus();
+      }
+    } catch {
+      error.textContent = 'Cannot reach server.';
+    }
+  }
+
+  // Submit token on Enter key
+  document.getElementById('tokenInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+  });
+
+  function logout() {
+    localStorage.removeItem('mac-agent-token');
+    if (pollTimer) clearInterval(pollTimer);
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('tokenInput').value = '';
+    document.getElementById('tokenInput').focus();
+  }
+
+  // ── API helper (includes auth token) ──────────────────
   async function api(path, opts = {}) {
-    const res = await fetch(API + path, {
+    const res = await fetch(path, {
       ...opts,
-      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getToken(),
+        ...opts.headers,
+      },
     });
+    if (res.status === 401) { logout(); throw new Error('Session expired'); }
     return res.json();
   }
 
+  // ── Task actions ──────────────────────────────────────
   async function submitTask() {
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) return;
@@ -234,7 +327,7 @@
       document.getElementById('promptInput').value = '';
       await refresh();
     } catch (err) {
-      alert('Failed to submit task: ' + err.message);
+      if (err.message !== 'Session expired') alert('Failed: ' + err.message);
     } finally {
       document.getElementById('submitBtn').disabled = false;
     }
@@ -255,6 +348,7 @@
     renderTasks();
   }
 
+  // ── Rendering ─────────────────────────────────────────
   function timeAgo(dateStr) {
     const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
     if (s < 60) return `${s}s ago`;
@@ -345,17 +439,37 @@
     }
   }
 
-  // Submit on Cmd/Ctrl + Enter
-  document.getElementById('promptInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      submitTask();
-    }
-  });
+  // ── App startup ───────────────────────────────────────
+  function startApp() {
+    document.getElementById('promptInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        submitTask();
+      }
+    });
+    refresh();
+    pollTimer = setInterval(refresh, 3000);
+  }
 
-  // Poll every 3 seconds
-  refresh();
-  setInterval(refresh, 3000);
+  // Auto-login if token exists
+  (async () => {
+    const saved = getToken();
+    if (saved) {
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: saved }),
+        });
+        if (res.ok) {
+          document.getElementById('loginOverlay').classList.add('hidden');
+          startApp();
+          return;
+        }
+      } catch {}
+    }
+    document.getElementById('tokenInput').focus();
+  })();
 </script>
 
 </body>

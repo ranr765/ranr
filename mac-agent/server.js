@@ -1,12 +1,27 @@
 import express from 'express';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { TaskStore } from './task-store.js';
 import { ClaudeRunner } from './claude-runner.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3456;
-const API_KEY = process.env.AGENT_API_KEY || '';
+const DATA_DIR = join(__dirname, 'data');
+const TOKEN_FILE = join(DATA_DIR, 'auth-token');
+
+// Generate or load auth token
+mkdirSync(DATA_DIR, { recursive: true });
+let AUTH_TOKEN = process.env.AGENT_API_KEY || '';
+if (!AUTH_TOKEN) {
+  if (existsSync(TOKEN_FILE)) {
+    AUTH_TOKEN = readFileSync(TOKEN_FILE, 'utf-8').trim();
+  } else {
+    AUTH_TOKEN = randomBytes(24).toString('base64url');
+    writeFileSync(TOKEN_FILE, AUTH_TOKEN, { mode: 0o600 });
+  }
+}
 
 const app = express();
 const store = new TaskStore();
@@ -15,13 +30,22 @@ const runner = new ClaudeRunner();
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
-// Simple API key auth (skip if no key is set)
+// Auth middleware — all /api routes except /api/auth/verify require token
 function auth(req, res, next) {
-  if (!API_KEY) return next();
   const key = req.headers['x-api-key'] || req.query.key;
-  if (key !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  if (key !== AUTH_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
+
+// Verify token (public endpoint — used by login screen)
+app.post('/api/auth/verify', (req, res) => {
+  const { token } = req.body || {};
+  if (token === AUTH_TOKEN) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, error: 'Invalid token' });
+  }
+});
 
 // ── API Routes ──────────────────────────────────────────
 
@@ -151,7 +175,10 @@ app.listen(PORT, () => {
 │  Dashboard: http://localhost:${PORT}       │
 │  API:       http://localhost:${PORT}/api   │
 │                                         │
-│  ${API_KEY ? 'API Key: SET ✓' : 'API Key: NOT SET (open access)'}              │
+│  Auth token (enter on first login):     │
+│  ${AUTH_TOKEN}  │
+│                                         │
+│  Token saved to: data/auth-token        │
 │                                         │
 │  To expose remotely:                    │
 │  cloudflared tunnel --url localhost:${PORT}│
