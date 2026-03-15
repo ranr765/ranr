@@ -298,6 +298,7 @@
   }
 
   // ── API helper (includes auth token) ──────────────────
+  let consecutiveFailures = 0;
   async function api(path, opts = {}) {
     const res = await fetch(path, {
       ...opts,
@@ -308,7 +309,13 @@
       },
     });
     if (res.status === 401) { logout(); throw new Error('Session expired'); }
-    return res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Non-JSON response');
+    }
   }
 
   // ── Task actions ──────────────────────────────────────
@@ -416,6 +423,7 @@
         api('/api/tasks'),
         api('/api/status'),
       ]);
+      consecutiveFailures = 0;
       tasks = taskData;
 
       document.getElementById('statQueued').textContent = status.queued;
@@ -433,9 +441,14 @@
       }
 
       renderTasks();
-    } catch {
-      document.getElementById('statusDot').className = 'status-dot offline';
-      document.getElementById('statusText').textContent = 'Offline';
+    } catch (err) {
+      consecutiveFailures++;
+      console.warn('Refresh failed:', err.message, `(attempt ${consecutiveFailures})`);
+      // Only show offline after 3 consecutive failures to handle tunnel hiccups
+      if (consecutiveFailures >= 3) {
+        document.getElementById('statusDot').className = 'status-dot offline';
+        document.getElementById('statusText').textContent = 'Offline';
+      }
     }
   }
 
@@ -448,7 +461,7 @@
       }
     });
     refresh();
-    pollTimer = setInterval(refresh, 3000);
+    pollTimer = setInterval(refresh, 5000);
   }
 
   // Auto-login if token exists

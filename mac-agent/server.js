@@ -47,6 +47,11 @@ app.post('/api/auth/verify', (req, res) => {
   }
 });
 
+// Health check (no auth — used to verify tunnel connectivity)
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, time: Date.now() });
+});
+
 // ── API Routes ──────────────────────────────────────────
 
 // Submit a new task
