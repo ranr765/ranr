@@ -71,7 +71,10 @@ export class TaskStore {
   }
 
   nextQueued() {
-    return [...this.tasks.values()].find((t) => t.status === 'queued') || null;
+    const queued = [...this.tasks.values()]
+      .filter((t) => t.status === 'queued')
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    return queued[0] || null;
   }
 
   appendOutput(id, text) {
