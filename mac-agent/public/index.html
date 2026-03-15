@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Mac Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0a; --surface: #161616; --surface2: #1e1e1e;
+      --border: #2a2a2a; --text: #e5e5e5; --text2: #888;
+      --accent: #6366f1; --accent2: #818cf8;
+      --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(10,10,10,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header h1 span { color: var(--accent2); }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--green); display: inline-block;
+      box-shadow: 0 0 8px var(--green);
+    }
+    .status-dot.busy { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .status-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text2);
+    }
+
+    /* New Task Form */
+    .new-task {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .new-task textarea {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; color: var(--text);
+      font-size: 15px; font-family: inherit; resize: none;
+      min-height: 80px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .new-task textarea:focus { border-color: var(--accent); }
+    .new-task textarea::placeholder { color: var(--text2); }
+
+    .form-row {
+      display: flex; gap: 10px; margin-top: 10px; align-items: center;
+    }
+    .form-row input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; color: var(--text);
+      font-size: 14px; font-family: inherit; outline: none;
+    }
+    .form-row input:focus { border-color: var(--accent); }
+    .form-row input::placeholder { color: var(--text2); }
+
+    .btn {
+      background: var(--accent); color: white; border: none;
+      border-radius: 10px; padding: 10px 20px; font-size: 15px;
+      font-weight: 600; cursor: pointer; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.danger { background: var(--red); }
+    .btn.small { padding: 6px 14px; font-size: 13px; border-radius: 8px; }
+
+    /* Task List */
+    .section-title {
+      padding: 16px 20px 8px; font-size: 13px;
+      color: var(--text2); text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 600;
+    }
+    .task-list { padding: 0 12px; }
+
+    .task-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px; margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .task-card.running { border-color: var(--yellow); }
+    .task-card.completed { border-color: var(--green); opacity: 0.8; }
+    .task-card.failed { border-color: var(--red); }
+
+    .task-header {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 10px;
+    }
+    .task-prompt {
+      font-size: 14px; line-height: 1.5;
+      word-break: break-word; flex: 1;
+    }
+    .task-status {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+    }
+    .task-status.queued { background: var(--surface2); color: var(--text2); }
+    .task-status.running { background: #422006; color: var(--yellow); }
+    .task-status.completed { background: #052e16; color: var(--green); }
+    .task-status.failed { background: #450a0a; color: var(--red); }
+    .task-status.aborted { background: var(--surface2); color: var(--text2); }
+
+    .task-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px; font-size: 12px; color: var(--text2);
+    }
+    .task-dir {
+      font-family: 'SF Mono', monospace; font-size: 11px;
+      background: var(--surface2); padding: 2px 8px; border-radius: 4px;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+    /* Output panel */
+    .task-output {
+      margin-top: 10px; background: var(--bg); border-radius: 10px;
+      padding: 12px; font-family: 'SF Mono', Menlo, monospace;
+      font-size: 12px; line-height: 1.6; color: var(--text2);
+      max-height: 300px; overflow-y: auto; white-space: pre-wrap;
+      word-break: break-word; display: none;
+    }
+    .task-output.visible { display: block; }
+
+    /* Stats bar */
+    .stats {
+      display: flex; gap: 0; padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      flex: 1; text-align: center; padding: 8px;
+    }
+    .stat-value { font-size: 22px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+    /* Loading spinner */
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .running .task-status { animation: pulse 1.5s ease-in-out infinite; }
+
+    /* Empty state */
+    .empty {
+      text-align: center; padding: 60px 20px; color: var(--text2);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 15px; }
+
+    /* Safe area for iPhone notch */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      .header { padding-top: calc(16px + env(safe-area-inset-top)); }
+      body { padding-bottom: env(safe-area-inset-bottom); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>Mac</span> Agent</h1>
+  <div class="status-badge">
+    <span id="statusText">Connecting...</span>
+    <span class="status-dot" id="statusDot"></span>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-value" id="statQueued">-</div>
+    <div class="stat-label">Queued</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="statRunning">-</div>
+    <div class="stat-label">Running</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="statDone">-</div>
+    <div class="stat-label">Done</div>
+  </div>
+</div>
+
+<div class="new-task">
+  <textarea id="promptInput" placeholder="What should Claude do?&#10;e.g. Refactor auth to use JWT in ~/projects/myapp" rows="3"></textarea>
+  <div class="form-row">
+    <input id="projectDir" type="text" placeholder="Project dir (optional, e.g. ~/projects/myapp)">
+    <button class="btn" id="submitBtn" onclick="submitTask()">Run</button>
+  </div>
+</div>
+
+<div id="taskContainer">
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">&#9654;</div>
+    <p>No tasks yet. Send your first command above.</p>
+  </div>
+</div>
+
+<script>
+  const API = '';
+  let tasks = [];
+  let expandedTaskId = null;
+
+  async function api(path, opts = {}) {
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+    });
+    return res.json();
+  }
+
+  async function submitTask() {
+    const prompt = document.getElementById('promptInput').value.trim();
+    if (!prompt) return;
+
+    const projectDir = document.getElementById('projectDir').value.trim() || undefined;
+    document.getElementById('submitBtn').disabled = true;
+
+    try {
+      await api('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ prompt, projectDir }),
+      });
+      document.getElementById('promptInput').value = '';
+      await refresh();
+    } catch (err) {
+      alert('Failed to submit task: ' + err.message);
+    } finally {
+      document.getElementById('submitBtn').disabled = false;
+    }
+  }
+
+  async function abortTask(id) {
+    await api(`/api/tasks/${id}/abort`, { method: 'POST' });
+    await refresh();
+  }
+
+  async function deleteTask(id) {
+    await api(`/api/tasks/${id}`, { method: 'DELETE' });
+    await refresh();
+  }
+
+  function toggleOutput(id) {
+    expandedTaskId = expandedTaskId === id ? null : id;
+    renderTasks();
+  }
+
+  function timeAgo(dateStr) {
+    const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderTasks() {
+    const container = document.getElementById('taskContainer');
+    const empty = document.getElementById('emptyState');
+
+    if (tasks.length === 0) {
+      empty.style.display = 'block';
+      container.innerHTML = '';
+      container.appendChild(empty);
+      return;
+    }
+
+    empty.style.display = 'none';
+    let html = '<div class="task-list">';
+
+    for (const t of tasks) {
+      const expanded = expandedTaskId === t.id;
+      const shortPrompt = t.prompt.length > 120 ? t.prompt.slice(0, 120) + '...' : t.prompt;
+
+      html += `
+        <div class="task-card ${t.status}" onclick="toggleOutput('${t.id}')">
+          <div class="task-header">
+            <div class="task-prompt">${escapeHtml(shortPrompt)}</div>
+            <span class="task-status ${t.status}">${t.status}</span>
+          </div>
+          <div class="task-meta">
+            <span class="task-dir">${escapeHtml(t.projectDir)}</span>
+            <span>${timeAgo(t.createdAt)}</span>
+          </div>
+          ${t.status === 'running' || t.status === 'queued' ? `
+            <div class="task-actions">
+              <button class="btn danger small" onclick="event.stopPropagation(); abortTask('${t.id}')">Abort</button>
+            </div>
+          ` : ''}
+          ${(t.status === 'completed' || t.status === 'failed') && t.output ? `
+            <div class="task-output ${expanded ? 'visible' : ''}">${escapeHtml(t.output)}</div>
+          ` : ''}
+          ${t.status === 'completed' || t.status === 'failed' || t.status === 'aborted' ? `
+            <div class="task-actions">
+              <button class="btn small" style="background:var(--surface2)" onclick="event.stopPropagation(); deleteTask('${t.id}')">Delete</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  async function refresh() {
+    try {
+      const [taskData, status] = await Promise.all([
+        api('/api/tasks'),
+        api('/api/status'),
+      ]);
+      tasks = taskData;
+
+      document.getElementById('statQueued').textContent = status.queued;
+      document.getElementById('statRunning').textContent = status.running ? '1' : '0';
+      document.getElementById('statDone').textContent = status.completed;
+
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      if (status.running) {
+        dot.className = 'status-dot busy';
+        text.textContent = 'Working...';
+      } else {
+        dot.className = 'status-dot';
+        text.textContent = 'Ready';
+      }
+
+      renderTasks();
+    } catch {
+      document.getElementById('statusDot').className = 'status-dot offline';
+      document.getElementById('statusText').textContent = 'Offline';
+    }
+  }
+
+  // Submit on Cmd/Ctrl + Enter
+  document.getElementById('promptInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitTask();
+    }
+  });
+
+  // Poll every 3 seconds
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+
+</body>
+</html>
