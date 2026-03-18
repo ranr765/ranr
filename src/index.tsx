@@ -524,6 +524,605 @@ app.get('/api/mock/:userId', async (c) => {
 })
 
 // ============================================
+// Distribution Request Form (Microsoft Form style)
+// ============================================
+app.get('/distribution-form', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Distribution Request Form</title>
+        <link href="/static/distribution-form.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="form-banner"></div>
+        <div class="form-container">
+
+            <!-- Header -->
+            <div class="form-header">
+                <h1>Distribution Request Form</h1>
+                <p>Complete all sections below. Fields marked with * are required. Auto-calculated fields will update automatically.</p>
+            </div>
+
+            <form id="distribution-form">
+
+                <!-- Section 1: Submitter Information -->
+                <div class="form-section">
+                    <h2>Submitter Information</h2>
+
+                    <div class="field-group">
+                        <label>Name of submitter <span class="required">*</span></label>
+                        <div class="guidance">Country Head of Finance</div>
+                        <input type="text" name="submitter_name" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Company Code <span class="required">*</span></label>
+                        <div class="guidance">SAP company code</div>
+                        <input type="text" name="company_code" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Company Name <span class="required">*</span></label>
+                        <div class="guidance">Full registered legal name</div>
+                        <input type="text" name="company_name" required>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="field-group">
+                            <label>Country <span class="required">*</span></label>
+                            <select name="country" required>
+                                <option value="">-- Select Country --</option>
+                                <option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Argentina</option><option>Australia</option>
+                                <option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option>
+                                <option>China</option><option>Colombia</option><option>Czech Republic</option><option>Denmark</option><option>Egypt</option>
+                                <option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>Hong Kong</option>
+                                <option>Hungary</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Israel</option>
+                                <option>Italy</option><option>Japan</option><option>Kenya</option><option>Luxembourg</option><option>Malaysia</option>
+                                <option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option>
+                                <option>Norway</option><option>Pakistan</option><option>Peru</option><option>Philippines</option><option>Poland</option>
+                                <option>Portugal</option><option>Qatar</option><option>Romania</option><option>Russia</option><option>Saudi Arabia</option>
+                                <option>Singapore</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option>
+                                <option>Switzerland</option><option>Taiwan</option><option>Thailand</option><option>Turkey</option><option>UAE</option>
+                                <option>United Kingdom</option><option>United States</option><option>Vietnam</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Local Currency <span class="required">*</span></label>
+                            <select name="local_currency" required>
+                                <option value="">-- Select Currency --</option>
+                                <option>AED</option><option>ARS</option><option>AUD</option><option>BRL</option><option>CAD</option>
+                                <option>CHF</option><option>CLP</option><option>CNY</option><option>COP</option><option>CZK</option>
+                                <option>DKK</option><option>EGP</option><option>EUR</option><option>GBP</option><option>HKD</option>
+                                <option>HUF</option><option>IDR</option><option>ILS</option><option>INR</option><option>JPY</option>
+                                <option>KES</option><option>KRW</option><option>MAD</option><option>MXN</option><option>MYR</option>
+                                <option>NGN</option><option>NOK</option><option>NZD</option><option>PEN</option><option>PHP</option>
+                                <option>PKR</option><option>PLN</option><option>QAR</option><option>RON</option><option>RUB</option>
+                                <option>SAR</option><option>SEK</option><option>SGD</option><option>THB</option><option>TRY</option>
+                                <option>TWD</option><option>USD</option><option>VND</option><option>ZAR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Parent Company Information -->
+                <div class="form-section">
+                    <h2>Parent Company Information</h2>
+
+                    <div class="parent-block">
+                        <h3>Parent Company 1</h3>
+                        <div class="two-col">
+                            <div class="field-group">
+                                <label>Parent Company Code 1</label>
+                                <input type="text" name="parent_code_1">
+                            </div>
+                            <div class="field-group">
+                                <label>Parent Company Name 1</label>
+                                <div class="guidance">Full registered legal name</div>
+                                <input type="text" name="parent_name_1">
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            <label>Country</label>
+                            <select name="parent_country_1">
+                                <option value="">-- Select Country --</option>
+                                <option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Argentina</option><option>Australia</option>
+                                <option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option>
+                                <option>China</option><option>Colombia</option><option>Czech Republic</option><option>Denmark</option><option>Egypt</option>
+                                <option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>Hong Kong</option>
+                                <option>Hungary</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Israel</option>
+                                <option>Italy</option><option>Japan</option><option>Kenya</option><option>Luxembourg</option><option>Malaysia</option>
+                                <option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option>
+                                <option>Norway</option><option>Pakistan</option><option>Peru</option><option>Philippines</option><option>Poland</option>
+                                <option>Portugal</option><option>Qatar</option><option>Romania</option><option>Russia</option><option>Saudi Arabia</option>
+                                <option>Singapore</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option>
+                                <option>Switzerland</option><option>Taiwan</option><option>Thailand</option><option>Turkey</option><option>UAE</option>
+                                <option>United Kingdom</option><option>United States</option><option>Vietnam</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="parent-block">
+                        <h3>Parent Company 2</h3>
+                        <div class="two-col">
+                            <div class="field-group">
+                                <label>Parent Company Code 2</label>
+                                <input type="text" name="parent_code_2">
+                            </div>
+                            <div class="field-group">
+                                <label>Parent Company Name 2</label>
+                                <div class="guidance">Full registered legal name</div>
+                                <input type="text" name="parent_name_2">
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            <label>Country</label>
+                            <select name="parent_country_2">
+                                <option value="">-- Select Country --</option>
+                                <option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Argentina</option><option>Australia</option>
+                                <option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option>
+                                <option>China</option><option>Colombia</option><option>Czech Republic</option><option>Denmark</option><option>Egypt</option>
+                                <option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>Hong Kong</option>
+                                <option>Hungary</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Israel</option>
+                                <option>Italy</option><option>Japan</option><option>Kenya</option><option>Luxembourg</option><option>Malaysia</option>
+                                <option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option>
+                                <option>Norway</option><option>Pakistan</option><option>Peru</option><option>Philippines</option><option>Poland</option>
+                                <option>Portugal</option><option>Qatar</option><option>Romania</option><option>Russia</option><option>Saudi Arabia</option>
+                                <option>Singapore</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option>
+                                <option>Switzerland</option><option>Taiwan</option><option>Thailand</option><option>Turkey</option><option>UAE</option>
+                                <option>United Kingdom</option><option>United States</option><option>Vietnam</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="parent-block">
+                        <h3>Parent Company 3</h3>
+                        <div class="two-col">
+                            <div class="field-group">
+                                <label>Parent Company Code 3</label>
+                                <input type="text" name="parent_code_3">
+                            </div>
+                            <div class="field-group">
+                                <label>Parent Company Name 3</label>
+                                <div class="guidance">Full registered legal name</div>
+                                <input type="text" name="parent_name_3">
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            <label>Country</label>
+                            <select name="parent_country_3">
+                                <option value="">-- Select Country --</option>
+                                <option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Argentina</option><option>Australia</option>
+                                <option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option>
+                                <option>China</option><option>Colombia</option><option>Czech Republic</option><option>Denmark</option><option>Egypt</option>
+                                <option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>Hong Kong</option>
+                                <option>Hungary</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Israel</option>
+                                <option>Italy</option><option>Japan</option><option>Kenya</option><option>Luxembourg</option><option>Malaysia</option>
+                                <option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option>
+                                <option>Norway</option><option>Pakistan</option><option>Peru</option><option>Philippines</option><option>Poland</option>
+                                <option>Portugal</option><option>Qatar</option><option>Romania</option><option>Russia</option><option>Saudi Arabia</option>
+                                <option>Singapore</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option>
+                                <option>Switzerland</option><option>Taiwan</option><option>Thailand</option><option>Turkey</option><option>UAE</option>
+                                <option>United Kingdom</option><option>United States</option><option>Vietnam</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Proposal -->
+                <div class="form-section">
+                    <h2>Proposal</h2>
+
+                    <div class="field-group">
+                        <label>Maximum Theoretical Payout <span class="required">*</span></label>
+                        <div class="guidance">Per statutory accounts and local law</div>
+                        <input type="number" name="max_theoretical_payout" step="0.01" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Total Proposed Amount <span class="required">*</span></label>
+                        <input type="number" name="total_proposed_amount" step="0.01" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Proposed Action Type <span class="required">*</span></label>
+                        <div class="guidance">Dividend / Capital Reduction / In-kind</div>
+                        <select name="proposed_action_type" required>
+                            <option value="">-- Select Action Type --</option>
+                            <option>Dividend</option>
+                            <option>Capital Reduction</option>
+                            <option>In-kind</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Rationale / Justification <span class="required">*</span></label>
+                        <div class="guidance">Why this distribution, how is it linked to group capital allocation strategy</div>
+                        <textarea name="rationale" required></textarea>
+                    </div>
+
+                    <div class="field-group">
+                        <label>If In-Kind, provide details of assets to be distributed</label>
+                        <textarea name="inkind_details"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 4: Payment Tranches -->
+                <div class="form-section">
+                    <h2>Payment Tranches</h2>
+                    <div class="section-note">Combined tranches should equal to total proposed amount</div>
+
+                    <div class="two-col">
+                        <div class="field-group">
+                            <label>Proposed 1st Payment Date</label>
+                            <input type="date" name="payment_date_1">
+                        </div>
+                        <div class="field-group">
+                            <label>Proposed 1st Payment Amount</label>
+                            <input type="number" name="payment_amount_1" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="field-group">
+                            <label>Proposed 2nd Payment Date</label>
+                            <input type="date" name="payment_date_2">
+                        </div>
+                        <div class="field-group">
+                            <label>Proposed 2nd Payment Amount</label>
+                            <input type="number" name="payment_amount_2" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Financials (Dual columns: Prior Year & Current Year) -->
+                <div class="form-section">
+                    <h2>Financials</h2>
+
+                    <div class="financials-dual">
+                        <!-- Prior Year -->
+                        <div class="fin-column">
+                            <h3>Prior Year</h3>
+
+                            <div class="field-group">
+                                <label>Balance Sheet Date</label>
+                                <div class="guidance">Date of the accounts used</div>
+                                <input type="date" name="prior_bs_date">
+                            </div>
+                            <div class="field-group">
+                                <label>Reporting basis</label>
+                                <select name="prior_reporting_basis">
+                                    <option value="">-- Select --</option>
+                                    <option>Local Statutory GAAP</option>
+                                    <option>IFRS</option>
+                                    <option>Both</option>
+                                </select>
+                            </div>
+                            <div class="field-group">
+                                <label>Are these accounts audited?</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="prior_audited" value="Yes"> Yes</label>
+                                    <label><input type="radio" name="prior_audited" value="No"> No</label>
+                                </div>
+                            </div>
+
+                            <h3>Assets</h3>
+                            <div class="field-group">
+                                <label>Cash & Cash Equivalents</label>
+                                <input type="number" id="prior_cash" name="prior_cash" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intercompany Loan Receivables</label>
+                                <input type="number" id="prior_ic_receivables" name="prior_ic_receivables" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Current Assets</label>
+                                <input type="number" id="prior_other_current" name="prior_other_current" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Fixed Assets</label>
+                                <input type="number" id="prior_fixed" name="prior_fixed" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intangible Assets</label>
+                                <input type="number" id="prior_intangible" name="prior_intangible" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Non-Current Assets</label>
+                                <input type="number" id="prior_other_noncurrent" name="prior_other_noncurrent" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Assets</strong></label>
+                                <div class="guidance">Auto-calculated: Sum of assets above</div>
+                                <input type="text" id="prior_total_assets" name="prior_total_assets" readonly>
+                            </div>
+
+                            <h3>Liabilities</h3>
+                            <div class="field-group">
+                                <label>Bank Debt (short-term)</label>
+                                <div class="guidance">Split from original single line</div>
+                                <input type="number" id="prior_bank_short" name="prior_bank_short" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Bank Debt (long-term)</label>
+                                <input type="number" id="prior_bank_long" name="prior_bank_long" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intercompany Loan Payables</label>
+                                <input type="number" id="prior_ic_payables" name="prior_ic_payables" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Liabilities</label>
+                                <input type="number" id="prior_other_liabilities" name="prior_other_liabilities" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Contingent Liabilities / Guarantees Outstanding</label>
+                                <input type="number" id="prior_contingent" name="prior_contingent" step="0.01">
+                            </div>
+
+                            <h3>Shareholders' Equity &mdash; Breakdown</h3>
+                            <div class="section-note">Full breakdown required</div>
+                            <div class="field-group">
+                                <label>Share Capital</label>
+                                <input type="number" id="prior_share_capital" name="prior_share_capital" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Share Premium</label>
+                                <input type="number" id="prior_share_premium" name="prior_share_premium" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Legal / Statutory Reserves</label>
+                                <div class="guidance">Non-distributable</div>
+                                <input type="number" id="prior_legal_reserves" name="prior_legal_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Retained Earnings</label>
+                                <input type="number" id="prior_retained_earnings" name="prior_retained_earnings" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Reserves (specify)</label>
+                                <div class="guidance">e.g. revaluation, translation</div>
+                                <input type="number" id="prior_other_reserves" name="prior_other_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Shareholders' Equity</strong></label>
+                                <input type="text" id="prior_total_equity" name="prior_total_equity" readonly>
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Liabilities & Equity</strong></label>
+                                <input type="text" id="prior_total_liab_equity" name="prior_total_liab_equity" readonly>
+                            </div>
+
+                            <div class="field-group">
+                                <label>Distributable Reserves per Local Statutory Accounts</label>
+                                <div class="guidance">This is the legal ceiling &mdash; explain basis in comments</div>
+                                <input type="number" name="prior_distributable_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Basis for Distributable Reserves Calculation</label>
+                                <div class="guidance">Reference to applicable local company law</div>
+                                <textarea name="prior_distributable_basis"></textarea>
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Net Working Capital</strong></label>
+                                <div class="guidance">Auto-calculated: Current assets minus current liabilities</div>
+                                <input type="text" id="prior_nwc" name="prior_nwc" readonly>
+                            </div>
+                            <div class="field-group">
+                                <label>Minimum Cash Balance Required for Operations</label>
+                                <div class="guidance">As estimated by Country Finance</div>
+                                <input type="number" name="prior_min_cash" step="0.01">
+                            </div>
+                        </div>
+
+                        <!-- Current Year -->
+                        <div class="fin-column">
+                            <h3>Current Year</h3>
+
+                            <div class="field-group">
+                                <label>Balance Sheet Date</label>
+                                <div class="guidance">Date of the accounts used</div>
+                                <input type="date" name="current_bs_date">
+                            </div>
+                            <div class="field-group">
+                                <label>Reporting basis</label>
+                                <select name="current_reporting_basis">
+                                    <option value="">-- Select --</option>
+                                    <option>Local Statutory GAAP</option>
+                                    <option>IFRS</option>
+                                    <option>Both</option>
+                                </select>
+                            </div>
+                            <div class="field-group">
+                                <label>Are these accounts audited?</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="current_audited" value="Yes"> Yes</label>
+                                    <label><input type="radio" name="current_audited" value="No"> No</label>
+                                </div>
+                            </div>
+
+                            <h3>Assets</h3>
+                            <div class="field-group">
+                                <label>Cash & Cash Equivalents</label>
+                                <input type="number" id="current_cash" name="current_cash" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intercompany Loan Receivables</label>
+                                <input type="number" id="current_ic_receivables" name="current_ic_receivables" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Current Assets</label>
+                                <input type="number" id="current_other_current" name="current_other_current" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Fixed Assets</label>
+                                <input type="number" id="current_fixed" name="current_fixed" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intangible Assets</label>
+                                <input type="number" id="current_intangible" name="current_intangible" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Non-Current Assets</label>
+                                <input type="number" id="current_other_noncurrent" name="current_other_noncurrent" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Assets</strong></label>
+                                <div class="guidance">Auto-calculated: Sum of assets above</div>
+                                <input type="text" id="current_total_assets" name="current_total_assets" readonly>
+                            </div>
+
+                            <h3>Liabilities</h3>
+                            <div class="field-group">
+                                <label>Bank Debt (short-term)</label>
+                                <div class="guidance">Split from original single line</div>
+                                <input type="number" id="current_bank_short" name="current_bank_short" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Bank Debt (long-term)</label>
+                                <input type="number" id="current_bank_long" name="current_bank_long" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Intercompany Loan Payables</label>
+                                <input type="number" id="current_ic_payables" name="current_ic_payables" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Liabilities</label>
+                                <input type="number" id="current_other_liabilities" name="current_other_liabilities" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Contingent Liabilities / Guarantees Outstanding</label>
+                                <input type="number" id="current_contingent" name="current_contingent" step="0.01">
+                            </div>
+
+                            <h3>Shareholders' Equity &mdash; Breakdown</h3>
+                            <div class="section-note">Full breakdown required</div>
+                            <div class="field-group">
+                                <label>Share Capital</label>
+                                <input type="number" id="current_share_capital" name="current_share_capital" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Share Premium</label>
+                                <input type="number" id="current_share_premium" name="current_share_premium" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Legal / Statutory Reserves</label>
+                                <div class="guidance">Non-distributable</div>
+                                <input type="number" id="current_legal_reserves" name="current_legal_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Retained Earnings</label>
+                                <input type="number" id="current_retained_earnings" name="current_retained_earnings" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Other Reserves (specify)</label>
+                                <div class="guidance">e.g. revaluation, translation</div>
+                                <input type="number" id="current_other_reserves" name="current_other_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Shareholders' Equity</strong></label>
+                                <input type="text" id="current_total_equity" name="current_total_equity" readonly>
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Total Liabilities & Equity</strong></label>
+                                <input type="text" id="current_total_liab_equity" name="current_total_liab_equity" readonly>
+                            </div>
+
+                            <div class="field-group">
+                                <label>Distributable Reserves per Local Statutory Accounts</label>
+                                <div class="guidance">This is the legal ceiling &mdash; explain basis in comments</div>
+                                <input type="number" name="current_distributable_reserves" step="0.01">
+                            </div>
+                            <div class="field-group">
+                                <label>Basis for Distributable Reserves Calculation</label>
+                                <div class="guidance">Reference to applicable local company law</div>
+                                <textarea name="current_distributable_basis"></textarea>
+                            </div>
+                            <div class="field-group">
+                                <label><strong>Net Working Capital</strong></label>
+                                <div class="guidance">Auto-calculated: Current assets minus current liabilities</div>
+                                <input type="text" id="current_nwc" name="current_nwc" readonly>
+                            </div>
+                            <div class="field-group">
+                                <label>Minimum Cash Balance Required for Operations</label>
+                                <div class="guidance">As estimated by Country Finance</div>
+                                <input type="number" name="current_min_cash" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: P&L Forecast -->
+                <div class="form-section">
+                    <h2>P&L Forecast</h2>
+
+                    <div class="field-group">
+                        <label>P&L Forecast Period</label>
+                        <select name="pl_forecast_period">
+                            <option value="">-- Select --</option>
+                            <option>Full-Year Forecast</option>
+                            <option>Half-Year Forecast</option>
+                            <option>Quarter Forecast</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Net Profit / (Loss)</label>
+                        <input type="number" name="net_profit_loss" step="0.01">
+                    </div>
+                </div>
+
+                <!-- Section 7: Free Cash Flow Build -->
+                <div class="form-section">
+                    <h2>Free Cash Flow Build</h2>
+
+                    <div class="field-group">
+                        <label>Net Operational Cash Flow</label>
+                        <div class="guidance">Total cash inflow from operations less total cash outflow from operations</div>
+                        <input type="number" id="net_op_cashflow" name="net_op_cashflow" step="0.01">
+                    </div>
+
+                    <div class="field-group">
+                        <label>Net Non-Operational Cash Flow</label>
+                        <div class="guidance">Exclude dividends</div>
+                        <input type="number" id="net_nonop_cashflow" name="net_nonop_cashflow" step="0.01">
+                    </div>
+
+                    <div class="field-group">
+                        <label>Net Investments (Capex, acquisitions, disposals)</label>
+                        <input type="number" id="net_investments" name="net_investments" step="0.01">
+                    </div>
+
+                    <div class="field-group">
+                        <label><strong>Free Cash Flow</strong></label>
+                        <div class="guidance">Auto-calculated</div>
+                        <input type="text" id="free_cash_flow" name="free_cash_flow" readonly>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Scheduled Debt Service Obligations</label>
+                        <div class="guidance">Principal repayments on bank and IC loans falling due within 12 months</div>
+                        <input type="number" name="scheduled_debt_service" step="0.01">
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="submit-section">
+                    <button type="submit" class="btn-submit">Submit Form</button>
+                </div>
+
+            </form>
+        </div>
+
+        <script src="/static/distribution-form.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// ============================================
 // Main HTML Page
 // ============================================
 app.get('/', (c) => {
