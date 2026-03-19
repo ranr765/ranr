@@ -44,18 +44,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Show/Hide Pages
 function showPage(page) {
-  const pages = ['welcome', 'diagnostic', 'dashboard', 'session', 'progress'];
+  const pages = ['welcome', 'diagnostic', 'dashboard', 'session', 'progress', 'agents'];
   pages.forEach(p => {
     document.getElementById(`${p}-screen`).classList.add('hidden');
   });
   document.getElementById(`${page}-screen`).classList.remove('hidden');
-  
+
   if (page !== 'welcome') {
     document.getElementById('nav-links').classList.remove('hidden');
   }
-  
+
   if (page === 'progress') {
     loadProgress();
+  }
+  if (page === 'agents') {
+    loadAgents();
   }
 }
 
@@ -822,5 +825,110 @@ async function startMock(type) {
   } catch (error) {
     console.error('Error loading mock:', error);
     alert('Error loading mock exam. Please try again.');
+  }
+}
+
+// ========================================
+// Agents Overview
+// ========================================
+const agentTypeIcons = {
+  writing_feedback: 'pen',
+  speaking_coach: 'microphone',
+  reading_tutor: 'book',
+  listening_tutor: 'headphones',
+  conversation: 'comments'
+};
+
+const agentTypeColors = {
+  writing_feedback: 'orange',
+  speaking_coach: 'green',
+  reading_tutor: 'purple',
+  listening_tutor: 'blue',
+  conversation: 'pink'
+};
+
+async function loadAgents() {
+  try {
+    const response = await axios.get('/api/agents');
+    const agents = response.data.agents;
+
+    // Update summary stats
+    const activeCount = agents.filter(a => a.status === 'active').length;
+    const totalInteractions = agents.reduce((sum, a) => sum + (a.total_interactions || 0), 0);
+    const ratedAgents = agents.filter(a => a.avg_rating > 0);
+    const avgRating = ratedAgents.length > 0
+      ? (ratedAgents.reduce((sum, a) => sum + a.avg_rating, 0) / ratedAgents.length).toFixed(1)
+      : '--';
+
+    document.getElementById('active-agents-count').textContent = activeCount;
+    document.getElementById('total-interactions-count').textContent = totalInteractions;
+    document.getElementById('avg-agent-rating').textContent = avgRating;
+
+    // Render agent cards
+    const grid = document.getElementById('agents-grid');
+    grid.innerHTML = agents.map(agent => {
+      const icon = agentTypeIcons[agent.type] || 'robot';
+      const color = agentTypeColors[agent.type] || 'gray';
+      const levels = JSON.parse(agent.levels || '[]');
+      const isActive = agent.status === 'active';
+
+      return `
+        <div class="card p-6 relative">
+          <div class="absolute top-4 right-4">
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" ${isActive ? 'checked' : ''} class="sr-only peer" onchange="toggleAgentStatus('${agent.id}', this.checked)">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
+          </div>
+
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 rounded-full bg-${color}-100 flex items-center justify-center mr-4">
+              <i class="fas fa-${icon} text-${color}-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">${agent.name}</h3>
+              <span class="text-xs px-2 py-1 rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${agent.status}</span>
+            </div>
+          </div>
+
+          <p class="text-sm text-gray-600 mb-4">${agent.description || ''}</p>
+
+          ${agent.skill ? `<div class="mb-3"><span class="skill-badge" style="background: #f3f4f6; color: #374151;">Skill: ${agent.skill}</span></div>` : ''}
+
+          <div class="mb-3">
+            ${levels.map(l => `<span class="skill-badge level-${l.toLowerCase()}">${l}</span>`).join('')}
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+            <div class="text-center">
+              <div class="text-lg font-bold text-purple-600">${agent.total_interactions || 0}</div>
+              <div class="text-xs text-gray-500">Interactions</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-yellow-600">${agent.avg_rating > 0 ? agent.avg_rating.toFixed(1) + '/5' : '--'}</div>
+              <div class="text-xs text-gray-500">Rating</div>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-400 mt-3">Model: ${agent.model || 'default'}</div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Error loading agents:', error);
+    document.getElementById('agents-grid').innerHTML = '<p class="text-gray-500 col-span-3 text-center">Could not load agents.</p>';
+  }
+}
+
+async function toggleAgentStatus(agentId, isActive) {
+  try {
+    await axios.patch(`/api/agents/${agentId}/status`, {
+      status: isActive ? 'active' : 'inactive'
+    });
+    loadAgents();
+  } catch (error) {
+    console.error('Error toggling agent:', error);
+    loadAgents();
   }
 }

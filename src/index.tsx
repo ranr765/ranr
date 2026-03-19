@@ -524,6 +524,73 @@ app.get('/api/mock/:userId', async (c) => {
 })
 
 // ============================================
+// Agent Routes
+// ============================================
+
+// List all agents
+app.get('/api/agents', async (c) => {
+  const agents = await c.env.DB.prepare(`
+    SELECT * FROM agents ORDER BY created_at ASC
+  `).all()
+
+  return c.json({ agents: agents.results })
+})
+
+// Get single agent with recent stats
+app.get('/api/agents/:agentId', async (c) => {
+  const agentId = c.req.param('agentId')
+
+  const agent = await c.env.DB.prepare(`
+    SELECT * FROM agents WHERE id = ?
+  `).bind(agentId).first()
+
+  if (!agent) {
+    return c.json({ error: 'Agent not found' }, 404)
+  }
+
+  const recentInteractions = await c.env.DB.prepare(`
+    SELECT COUNT(*) as count, AVG(rating) as avg_rating, AVG(duration_ms) as avg_duration
+    FROM agent_interactions
+    WHERE agent_id = ? AND created_at > datetime('now', '-7 days')
+  `).bind(agentId).first()
+
+  return c.json({ agent, stats: recentInteractions })
+})
+
+// Toggle agent status
+app.patch('/api/agents/:agentId/status', async (c) => {
+  const agentId = c.req.param('agentId')
+  const { status } = await c.req.json()
+
+  if (!['active', 'inactive'].includes(status)) {
+    return c.json({ error: 'Invalid status' }, 400)
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE agents SET status = ?, updated_at = datetime('now') WHERE id = ?
+  `).bind(status, agentId).run()
+
+  return c.json({ success: true, status })
+})
+
+// Get agent interaction history
+app.get('/api/agents/:agentId/interactions', async (c) => {
+  const agentId = c.req.param('agentId')
+  const limit = parseInt(c.req.query('limit') || '20')
+
+  const interactions = await c.env.DB.prepare(`
+    SELECT ai.*, u.name as user_name
+    FROM agent_interactions ai
+    LEFT JOIN users u ON ai.user_id = u.id
+    WHERE ai.agent_id = ?
+    ORDER BY ai.created_at DESC
+    LIMIT ?
+  `).bind(agentId, limit).all()
+
+  return c.json({ interactions: interactions.results })
+})
+
+// ============================================
 // Main HTML Page
 // ============================================
 app.get('/', (c) => {
@@ -574,6 +641,7 @@ app.get('/', (c) => {
                 <div id="nav-links" class="hidden space-x-4">
                     <a href="#" onclick="showPage('dashboard')" class="hover:underline">Dashboard</a>
                     <a href="#" onclick="showPage('session')" class="hover:underline">Daily Session</a>
+                    <a href="#" onclick="showPage('agents')" class="hover:underline">Agents</a>
                     <a href="#" onclick="showPage('progress')" class="hover:underline">Progress</a>
                     <a href="#" onclick="logout()" class="hover:underline">Logout</a>
                 </div>
@@ -806,6 +874,48 @@ app.get('/', (c) => {
                 </div>
             </div>
         </div>
+
+            <!-- Agents Overview Screen -->
+            <div id="agents-screen" class="hidden">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold mb-2">
+                        <i class="fas fa-robot"></i> AI Agents
+                    </h2>
+                    <p class="text-gray-600">Your AI-powered learning assistants</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4 mb-8" id="agents-stats">
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-semibold">Active Agents</h3>
+                                <p class="text-3xl font-bold text-green-600" id="active-agents-count">0</p>
+                            </div>
+                            <i class="fas fa-check-circle text-4xl text-green-400"></i>
+                        </div>
+                    </div>
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-semibold">Total Interactions</h3>
+                                <p class="text-3xl font-bold text-purple-600" id="total-interactions-count">0</p>
+                            </div>
+                            <i class="fas fa-comments text-4xl text-purple-400"></i>
+                        </div>
+                    </div>
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-semibold">Avg Rating</h3>
+                                <p class="text-3xl font-bold text-yellow-600" id="avg-agent-rating">--</p>
+                            </div>
+                            <i class="fas fa-star text-4xl text-yellow-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="agents-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/app.js"></script>
