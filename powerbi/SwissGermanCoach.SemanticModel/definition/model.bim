@@ -1,0 +1,455 @@
+{
+  "compatibilityLevel": 1567,
+  "model": {
+    "name": "SwissGermanCoach",
+    "culture": "en-US",
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "annotations": [
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"UsersOverview\",\"SkillLevels\",\"Sessions\",\"MasteryNodes\",\"VocabularyProgress\",\"MockResults\",\"SRSHealth\",\"ContentLibrary\"]"
+      },
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "1"
+      }
+    ],
+    "tables": [
+      {
+        "name": "UsersOverview",
+        "columns": [
+          { "name": "id", "dataType": "string", "sourceColumn": "id" },
+          { "name": "name", "dataType": "string", "sourceColumn": "name" },
+          { "name": "current_level", "dataType": "string", "sourceColumn": "current_level" },
+          { "name": "target_level", "dataType": "string", "sourceColumn": "target_level" },
+          { "name": "streak_days", "dataType": "int64", "sourceColumn": "streak_days" },
+          { "name": "daily_goal_minutes", "dataType": "int64", "sourceColumn": "daily_goal_minutes" },
+          { "name": "onboarding_completed", "dataType": "int64", "sourceColumn": "onboarding_completed" },
+          { "name": "last_session_date", "dataType": "string", "sourceColumn": "last_session_date" },
+          { "name": "created_at", "dataType": "dateTime", "sourceColumn": "created_at" },
+          { "name": "total_sessions", "dataType": "int64", "sourceColumn": "total_sessions" },
+          { "name": "total_practice_seconds", "dataType": "int64", "sourceColumn": "total_practice_seconds" },
+          { "name": "avg_accuracy", "dataType": "double", "sourceColumn": "avg_accuracy" },
+          { "name": "total_items_completed", "dataType": "int64", "sourceColumn": "total_items_completed" }
+        ],
+        "measures": [
+          {
+            "name": "Total Learners",
+            "expression": "COUNTROWS(UsersOverview)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Active Learners",
+            "expression": "CALCULATE(COUNTROWS(UsersOverview), UsersOverview[total_sessions] > 0)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Avg Streak Days",
+            "expression": "AVERAGE(UsersOverview[streak_days])",
+            "formatString": "#,0.0"
+          },
+          {
+            "name": "Total Practice Hours",
+            "expression": "DIVIDE(SUM(UsersOverview[total_practice_seconds]), 3600, 0)",
+            "formatString": "#,0.0"
+          },
+          {
+            "name": "Platform Avg Accuracy",
+            "expression": "AVERAGE(UsersOverview[avg_accuracy])",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Onboarding Rate",
+            "expression": "DIVIDE(CALCULATE(COUNTROWS(UsersOverview), UsersOverview[onboarding_completed] = 1), COUNTROWS(UsersOverview), 0)",
+            "formatString": "0.0%"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "UsersOverview",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/users\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"id\", \"name\", \"current_level\", \"target_level\", \"streak_days\", \"daily_goal_minutes\", \"onboarding_completed\", \"last_session_date\", \"created_at\", \"total_sessions\", \"total_practice_seconds\", \"avg_accuracy\", \"total_items_completed\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "SkillLevels",
+        "columns": [
+          { "name": "user_id", "dataType": "string", "sourceColumn": "user_id" },
+          { "name": "user_name", "dataType": "string", "sourceColumn": "user_name" },
+          { "name": "skill", "dataType": "string", "sourceColumn": "skill" },
+          { "name": "level", "dataType": "string", "sourceColumn": "level" },
+          { "name": "mastery_score", "dataType": "double", "sourceColumn": "mastery_score" },
+          { "name": "updated_at", "dataType": "dateTime", "sourceColumn": "updated_at" }
+        ],
+        "measures": [
+          {
+            "name": "Avg Mastery Score",
+            "expression": "AVERAGE(SkillLevels[mastery_score])",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Learners at B1",
+            "expression": "CALCULATE(DISTINCTCOUNT(SkillLevels[user_id]), SkillLevels[level] = \"B1\")",
+            "formatString": "#,0"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "SkillLevels",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/skills\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"user_id\", \"user_name\", \"skill\", \"level\", \"mastery_score\", \"updated_at\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Sessions",
+        "columns": [
+          { "name": "session_id", "dataType": "int64", "sourceColumn": "session_id" },
+          { "name": "user_id", "dataType": "string", "sourceColumn": "user_id" },
+          { "name": "user_name", "dataType": "string", "sourceColumn": "user_name" },
+          { "name": "current_level", "dataType": "string", "sourceColumn": "current_level" },
+          { "name": "session_type", "dataType": "string", "sourceColumn": "session_type" },
+          { "name": "started_at", "dataType": "dateTime", "sourceColumn": "started_at" },
+          { "name": "completed_at", "dataType": "dateTime", "sourceColumn": "completed_at" },
+          { "name": "duration_seconds", "dataType": "int64", "sourceColumn": "duration_seconds" },
+          { "name": "items_completed", "dataType": "int64", "sourceColumn": "items_completed" },
+          { "name": "accuracy", "dataType": "double", "sourceColumn": "accuracy" }
+        ],
+        "measures": [
+          {
+            "name": "Total Sessions",
+            "expression": "COUNTROWS(Sessions)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Completed Sessions",
+            "expression": "CALCULATE(COUNTROWS(Sessions), NOT(ISBLANK(Sessions[completed_at])))",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Session Completion Rate",
+            "expression": "DIVIDE([Completed Sessions], [Total Sessions], 0)",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Avg Session Duration (min)",
+            "expression": "DIVIDE(AVERAGE(Sessions[duration_seconds]), 60, 0)",
+            "formatString": "#,0.0"
+          },
+          {
+            "name": "Avg Session Accuracy",
+            "expression": "AVERAGE(Sessions[accuracy])",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Daily Active Sessions",
+            "expression": "CALCULATE(COUNTROWS(Sessions), DATESINPERIOD(Sessions[started_at], MAX(Sessions[started_at]), -1, DAY))",
+            "formatString": "#,0"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Sessions",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/sessions\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"session_id\", \"user_id\", \"user_name\", \"current_level\", \"session_type\", \"started_at\", \"completed_at\", \"duration_seconds\", \"items_completed\", \"accuracy\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "MasteryNodes",
+        "columns": [
+          { "name": "user_id", "dataType": "string", "sourceColumn": "user_id" },
+          { "name": "user_name", "dataType": "string", "sourceColumn": "user_name" },
+          { "name": "skill", "dataType": "string", "sourceColumn": "skill" },
+          { "name": "theme", "dataType": "string", "sourceColumn": "theme" },
+          { "name": "tactic", "dataType": "string", "sourceColumn": "tactic" },
+          { "name": "level", "dataType": "string", "sourceColumn": "level" },
+          { "name": "mastery_score", "dataType": "double", "sourceColumn": "mastery_score" },
+          { "name": "attempts", "dataType": "int64", "sourceColumn": "attempts" },
+          { "name": "correct_count", "dataType": "int64", "sourceColumn": "correct_count" },
+          { "name": "last_practiced", "dataType": "dateTime", "sourceColumn": "last_practiced" },
+          { "name": "accuracy_pct", "dataType": "double", "sourceColumn": "accuracy_pct" }
+        ],
+        "measures": [
+          {
+            "name": "Avg Mastery",
+            "expression": "AVERAGE(MasteryNodes[mastery_score])",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Total Attempts",
+            "expression": "SUM(MasteryNodes[attempts])",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Weak Areas Count",
+            "expression": "CALCULATE(COUNTROWS(MasteryNodes), MasteryNodes[mastery_score] < 0.4)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Mastered Areas Count",
+            "expression": "CALCULATE(COUNTROWS(MasteryNodes), MasteryNodes[mastery_score] >= 0.8)",
+            "formatString": "#,0"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "MasteryNodes",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/mastery\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"user_id\", \"user_name\", \"skill\", \"theme\", \"tactic\", \"level\", \"mastery_score\", \"attempts\", \"correct_count\", \"last_practiced\", \"accuracy_pct\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "VocabularyProgress",
+        "columns": [
+          { "name": "vocab_id", "dataType": "int64", "sourceColumn": "vocab_id" },
+          { "name": "word", "dataType": "string", "sourceColumn": "word" },
+          { "name": "translation", "dataType": "string", "sourceColumn": "translation" },
+          { "name": "level", "dataType": "string", "sourceColumn": "level" },
+          { "name": "theme", "dataType": "string", "sourceColumn": "theme" },
+          { "name": "learner_count", "dataType": "int64", "sourceColumn": "learner_count" },
+          { "name": "avg_mastery", "dataType": "double", "sourceColumn": "avg_mastery" },
+          { "name": "total_reviews", "dataType": "int64", "sourceColumn": "total_reviews" },
+          { "name": "count_new", "dataType": "int64", "sourceColumn": "count_new" },
+          { "name": "count_learning", "dataType": "int64", "sourceColumn": "count_learning" },
+          { "name": "count_known", "dataType": "int64", "sourceColumn": "count_known" },
+          { "name": "count_mastered", "dataType": "int64", "sourceColumn": "count_mastered" }
+        ],
+        "measures": [
+          {
+            "name": "Total Vocabulary",
+            "expression": "COUNTROWS(VocabularyProgress)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Mastered Vocab %",
+            "expression": "DIVIDE(SUM(VocabularyProgress[count_mastered]), SUM(VocabularyProgress[learner_count]), 0)",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Total Reviews",
+            "expression": "SUM(VocabularyProgress[total_reviews])",
+            "formatString": "#,0"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "VocabularyProgress",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/vocabulary\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"vocab_id\", \"word\", \"translation\", \"level\", \"theme\", \"learner_count\", \"avg_mastery\", \"total_reviews\", \"count_new\", \"count_learning\", \"count_known\", \"count_mastered\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "MockResults",
+        "columns": [
+          { "name": "mock_id", "dataType": "int64", "sourceColumn": "mock_id" },
+          { "name": "user_id", "dataType": "string", "sourceColumn": "user_id" },
+          { "name": "user_name", "dataType": "string", "sourceColumn": "user_name" },
+          { "name": "mock_type", "dataType": "string", "sourceColumn": "mock_type" },
+          { "name": "target_level", "dataType": "string", "sourceColumn": "target_level" },
+          { "name": "reading_score", "dataType": "double", "sourceColumn": "reading_score" },
+          { "name": "listening_score", "dataType": "double", "sourceColumn": "listening_score" },
+          { "name": "speaking_score", "dataType": "double", "sourceColumn": "speaking_score" },
+          { "name": "writing_score", "dataType": "double", "sourceColumn": "writing_score" },
+          { "name": "overall_score", "dataType": "double", "sourceColumn": "overall_score" },
+          { "name": "passed", "dataType": "int64", "sourceColumn": "passed" },
+          { "name": "completed_at", "dataType": "dateTime", "sourceColumn": "completed_at" }
+        ],
+        "measures": [
+          {
+            "name": "Total Mocks",
+            "expression": "COUNTROWS(MockResults)",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Mock Pass Rate",
+            "expression": "DIVIDE(CALCULATE(COUNTROWS(MockResults), MockResults[passed] = 1), COUNTROWS(MockResults), 0)",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Avg Mock Score",
+            "expression": "AVERAGE(MockResults[overall_score])",
+            "formatString": "0.0%"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "MockResults",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/mocks\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"mock_id\", \"user_id\", \"user_name\", \"mock_type\", \"target_level\", \"reading_score\", \"listening_score\", \"speaking_score\", \"writing_score\", \"overall_score\", \"passed\", \"completed_at\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "SRSHealth",
+        "columns": [
+          { "name": "user_id", "dataType": "string", "sourceColumn": "user_id" },
+          { "name": "user_name", "dataType": "string", "sourceColumn": "user_name" },
+          { "name": "item_type", "dataType": "string", "sourceColumn": "item_type" },
+          { "name": "queue_size", "dataType": "int64", "sourceColumn": "queue_size" },
+          { "name": "overdue_count", "dataType": "int64", "sourceColumn": "overdue_count" },
+          { "name": "upcoming_count", "dataType": "int64", "sourceColumn": "upcoming_count" },
+          { "name": "avg_easiness", "dataType": "double", "sourceColumn": "avg_easiness" },
+          { "name": "avg_repetitions", "dataType": "double", "sourceColumn": "avg_repetitions" },
+          { "name": "avg_interval_days", "dataType": "double", "sourceColumn": "avg_interval_days" }
+        ],
+        "measures": [
+          {
+            "name": "Total Queue Size",
+            "expression": "SUM(SRSHealth[queue_size])",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Total Overdue",
+            "expression": "SUM(SRSHealth[overdue_count])",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Overdue Rate",
+            "expression": "DIVIDE([Total Overdue], [Total Queue Size], 0)",
+            "formatString": "0.0%"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "SRSHealth",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/srs\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"user_id\", \"user_name\", \"item_type\", \"queue_size\", \"overdue_count\", \"upcoming_count\", \"avg_easiness\", \"avg_repetitions\", \"avg_interval_days\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ContentLibrary",
+        "columns": [
+          { "name": "content_type", "dataType": "string", "sourceColumn": "content_type" },
+          { "name": "level", "dataType": "string", "sourceColumn": "level" },
+          { "name": "theme", "dataType": "string", "sourceColumn": "theme" },
+          { "name": "tactic", "dataType": "string", "sourceColumn": "tactic" },
+          { "name": "item_count", "dataType": "int64", "sourceColumn": "item_count" },
+          { "name": "avg_difficulty", "dataType": "double", "sourceColumn": "avg_difficulty" },
+          { "name": "avg_time_estimate", "dataType": "double", "sourceColumn": "avg_time_estimate" },
+          { "name": "times_used", "dataType": "int64", "sourceColumn": "times_used" },
+          { "name": "success_rate", "dataType": "double", "sourceColumn": "success_rate" }
+        ],
+        "measures": [
+          {
+            "name": "Total Content Items",
+            "expression": "SUM(ContentLibrary[item_count])",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Avg Content Difficulty",
+            "expression": "AVERAGE(ContentLibrary[avg_difficulty])",
+            "formatString": "0.00"
+          },
+          {
+            "name": "Content Success Rate",
+            "expression": "AVERAGE(ContentLibrary[success_rate])",
+            "formatString": "0.0%"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "ContentLibrary",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = Json.Document(Web.Contents(API_BASE_URL & \"/api/analytics/content\")),\n    data = Source[data],\n    toTable = Table.FromList(data, Splitter.SplitByNothing(), null, null, ExtraValues.Error),\n    expanded = Table.ExpandRecordColumn(toTable, \"Column1\", {\"content_type\", \"level\", \"theme\", \"tactic\", \"item_count\", \"avg_difficulty\", \"avg_time_estimate\", \"times_used\", \"success_rate\"})\nin\n    expanded"
+            }
+          }
+        ]
+      },
+      {
+        "name": "CEFR Levels",
+        "columns": [
+          { "name": "Level", "dataType": "string", "sourceColumn": "Level" },
+          { "name": "Level Order", "dataType": "int64", "sourceColumn": "Level Order" },
+          { "name": "Description", "dataType": "string", "sourceColumn": "Description" }
+        ],
+        "partitions": [
+          {
+            "name": "CEFR Levels",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let\n    Source = #table(\n        {\"Level\", \"Level Order\", \"Description\"},\n        {\n            {\"A0\", 1, \"Beginner - No prior knowledge\"},\n            {\"A1\", 2, \"Elementary - Basic phrases and expressions\"},\n            {\"A2\", 3, \"Pre-Intermediate - Routine tasks and direct exchanges\"},\n            {\"B1\", 4, \"Intermediate - Independent user, main points understood\"}\n        }\n    )\nin\n    Source"
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "UsersOverview_SkillLevels",
+        "fromTable": "SkillLevels",
+        "fromColumn": "user_id",
+        "toTable": "UsersOverview",
+        "toColumn": "id"
+      },
+      {
+        "name": "UsersOverview_Sessions",
+        "fromTable": "Sessions",
+        "fromColumn": "user_id",
+        "toTable": "UsersOverview",
+        "toColumn": "id"
+      },
+      {
+        "name": "UsersOverview_MasteryNodes",
+        "fromTable": "MasteryNodes",
+        "fromColumn": "user_id",
+        "toTable": "UsersOverview",
+        "toColumn": "id"
+      },
+      {
+        "name": "UsersOverview_MockResults",
+        "fromTable": "MockResults",
+        "fromColumn": "user_id",
+        "toTable": "UsersOverview",
+        "toColumn": "id"
+      },
+      {
+        "name": "UsersOverview_SRSHealth",
+        "fromTable": "SRSHealth",
+        "fromColumn": "user_id",
+        "toTable": "UsersOverview",
+        "toColumn": "id"
+      }
+    ],
+    "expressions": [
+      {
+        "name": "API_BASE_URL",
+        "kind": "m",
+        "expression": "\"https://your-app-url.example.com\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
+        "description": "Base URL of the Schweizer Deutsch Coach API (e.g. https://your-app.pages.dev)"
+      }
+    ]
+  }
+}

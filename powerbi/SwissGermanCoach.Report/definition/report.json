@@ -1,0 +1,579 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/1.0.0/schema.json",
+  "themeCollection": {
+    "baseTheme": {
+      "name": "SwissGermanCoach",
+      "dataColors": [
+        "#667eea", "#764ba2", "#f59e0b", "#10b981",
+        "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899",
+        "#14b8a6", "#f97316", "#06b6d4", "#84cc16"
+      ],
+      "background": "#f8fafc",
+      "foreground": "#1e293b",
+      "tableAccent": "#667eea"
+    }
+  },
+  "pages": [
+    {
+      "name": "ExecutiveOverview",
+      "displayName": "Executive Overview",
+      "displayOption": "FitToPage",
+      "visualContainers": [
+        {
+          "name": "PageTitle",
+          "position": { "x": 20, "y": 10, "width": 1240, "height": 60 },
+          "visual": {
+            "visualType": "textbox",
+            "config": {
+              "paragraphs": [
+                {
+                  "textRuns": [
+                    {
+                      "value": "Schweizer Deutsch Coach - Executive Overview",
+                      "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": 24, "color": "#1e293b" }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "KPI_TotalLearners",
+          "position": { "x": 20, "y": 80, "width": 290, "height": 130 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "UsersOverview.Total Learners" }] },
+            "config": {
+              "title": "Total Learners",
+              "background": { "color": "#ffffff" },
+              "border": { "color": "#e2e8f0", "width": 1 }
+            }
+          }
+        },
+        {
+          "name": "KPI_ActiveLearners",
+          "position": { "x": 330, "y": 80, "width": 290, "height": 130 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "UsersOverview.Active Learners" }] },
+            "config": {
+              "title": "Active Learners",
+              "background": { "color": "#ffffff" }
+            }
+          }
+        },
+        {
+          "name": "KPI_AvgAccuracy",
+          "position": { "x": 640, "y": 80, "width": 290, "height": 130 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "UsersOverview.Platform Avg Accuracy" }] },
+            "config": {
+              "title": "Platform Avg Accuracy",
+              "background": { "color": "#ffffff" }
+            }
+          }
+        },
+        {
+          "name": "KPI_PracticeHours",
+          "position": { "x": 950, "y": 80, "width": 290, "height": 130 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "UsersOverview.Total Practice Hours" }] },
+            "config": {
+              "title": "Total Practice Hours",
+              "background": { "color": "#ffffff" }
+            }
+          }
+        },
+        {
+          "name": "LevelDistribution",
+          "position": { "x": 20, "y": 230, "width": 600, "height": 350 },
+          "visual": {
+            "visualType": "donutChart",
+            "projections": {
+              "Category": [{ "queryRef": "UsersOverview.current_level" }],
+              "Y": [{ "queryRef": "UsersOverview.Total Learners" }]
+            },
+            "config": {
+              "title": "Learner Distribution by CEFR Level"
+            }
+          }
+        },
+        {
+          "name": "OnboardingFunnel",
+          "position": { "x": 640, "y": 230, "width": 600, "height": 350 },
+          "visual": {
+            "visualType": "barChart",
+            "projections": {
+              "Category": [{ "queryRef": "Sessions.session_type" }],
+              "Y": [{ "queryRef": "Sessions.Total Sessions" }]
+            },
+            "config": {
+              "title": "Sessions by Type"
+            }
+          }
+        },
+        {
+          "name": "StreakLeaderboard",
+          "position": { "x": 20, "y": 600, "width": 1220, "height": 140 },
+          "visual": {
+            "visualType": "table",
+            "projections": {
+              "Values": [
+                { "queryRef": "UsersOverview.name" },
+                { "queryRef": "UsersOverview.current_level" },
+                { "queryRef": "UsersOverview.streak_days" },
+                { "queryRef": "UsersOverview.total_sessions" },
+                { "queryRef": "UsersOverview.avg_accuracy" }
+              ]
+            },
+            "config": {
+              "title": "Learner Leaderboard"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "LearnerProgress",
+      "displayName": "Learner Progress",
+      "displayOption": "FitToPage",
+      "visualContainers": [
+        {
+          "name": "PageTitle",
+          "position": { "x": 20, "y": 10, "width": 1240, "height": 60 },
+          "visual": {
+            "visualType": "textbox",
+            "config": {
+              "paragraphs": [
+                {
+                  "textRuns": [
+                    {
+                      "value": "Learner Progress & Skill Breakdown",
+                      "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": 24, "color": "#1e293b" }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "UserSlicer",
+          "position": { "x": 20, "y": 80, "width": 250, "height": 660 },
+          "visual": {
+            "visualType": "slicer",
+            "projections": {
+              "Values": [{ "queryRef": "UsersOverview.name" }]
+            },
+            "config": {
+              "title": "Select Learner"
+            }
+          }
+        },
+        {
+          "name": "SkillRadar",
+          "position": { "x": 290, "y": 80, "width": 480, "height": 320 },
+          "visual": {
+            "visualType": "clusteredBarChart",
+            "projections": {
+              "Category": [{ "queryRef": "SkillLevels.skill" }],
+              "Y": [{ "queryRef": "SkillLevels.Avg Mastery Score" }]
+            },
+            "config": {
+              "title": "Skill Mastery Scores"
+            }
+          }
+        },
+        {
+          "name": "SkillByLevel",
+          "position": { "x": 790, "y": 80, "width": 450, "height": 320 },
+          "visual": {
+            "visualType": "stackedBarChart",
+            "projections": {
+              "Category": [{ "queryRef": "SkillLevels.skill" }],
+              "Y": [{ "queryRef": "SkillLevels.Avg Mastery Score" }],
+              "Series": [{ "queryRef": "SkillLevels.level" }]
+            },
+            "config": {
+              "title": "Skill Levels by CEFR"
+            }
+          }
+        },
+        {
+          "name": "MasteryHeatmap",
+          "position": { "x": 290, "y": 420, "width": 950, "height": 320 },
+          "visual": {
+            "visualType": "matrix",
+            "projections": {
+              "Rows": [
+                { "queryRef": "MasteryNodes.theme" }
+              ],
+              "Columns": [
+                { "queryRef": "MasteryNodes.skill" }
+              ],
+              "Values": [
+                { "queryRef": "MasteryNodes.Avg Mastery" }
+              ]
+            },
+            "config": {
+              "title": "Mastery Heatmap: Theme x Skill",
+              "conditionalFormatting": {
+                "enabled": true,
+                "rules": [
+                  { "min": { "value": 0, "color": "#fee2e2" }, "max": { "value": 1, "color": "#dcfce7" } }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionAnalytics",
+      "displayName": "Session Analytics",
+      "displayOption": "FitToPage",
+      "visualContainers": [
+        {
+          "name": "PageTitle",
+          "position": { "x": 20, "y": 10, "width": 1240, "height": 60 },
+          "visual": {
+            "visualType": "textbox",
+            "config": {
+              "paragraphs": [
+                {
+                  "textRuns": [
+                    {
+                      "value": "Session Analytics & Engagement",
+                      "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": 24, "color": "#1e293b" }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "KPI_TotalSessions",
+          "position": { "x": 20, "y": 80, "width": 230, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "Sessions.Total Sessions" }] },
+            "config": { "title": "Total Sessions" }
+          }
+        },
+        {
+          "name": "KPI_CompletionRate",
+          "position": { "x": 270, "y": 80, "width": 230, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "Sessions.Session Completion Rate" }] },
+            "config": { "title": "Completion Rate" }
+          }
+        },
+        {
+          "name": "KPI_AvgDuration",
+          "position": { "x": 520, "y": 80, "width": 230, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "Sessions.Avg Session Duration (min)" }] },
+            "config": { "title": "Avg Duration (min)" }
+          }
+        },
+        {
+          "name": "KPI_AvgSessionAccuracy",
+          "position": { "x": 770, "y": 80, "width": 230, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "Sessions.Avg Session Accuracy" }] },
+            "config": { "title": "Avg Accuracy" }
+          }
+        },
+        {
+          "name": "KPI_OnboardingRate",
+          "position": { "x": 1020, "y": 80, "width": 220, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "UsersOverview.Onboarding Rate" }] },
+            "config": { "title": "Onboarding Rate" }
+          }
+        },
+        {
+          "name": "SessionTimeline",
+          "position": { "x": 20, "y": 220, "width": 750, "height": 300 },
+          "visual": {
+            "visualType": "lineChart",
+            "projections": {
+              "Category": [{ "queryRef": "Sessions.started_at" }],
+              "Y": [{ "queryRef": "Sessions.Total Sessions" }]
+            },
+            "config": {
+              "title": "Sessions Over Time"
+            }
+          }
+        },
+        {
+          "name": "AccuracyByType",
+          "position": { "x": 790, "y": 220, "width": 450, "height": 300 },
+          "visual": {
+            "visualType": "clusteredBarChart",
+            "projections": {
+              "Category": [{ "queryRef": "Sessions.session_type" }],
+              "Y": [{ "queryRef": "Sessions.Avg Session Accuracy" }]
+            },
+            "config": {
+              "title": "Accuracy by Session Type"
+            }
+          }
+        },
+        {
+          "name": "SessionDetailTable",
+          "position": { "x": 20, "y": 540, "width": 1220, "height": 200 },
+          "visual": {
+            "visualType": "table",
+            "projections": {
+              "Values": [
+                { "queryRef": "Sessions.user_name" },
+                { "queryRef": "Sessions.session_type" },
+                { "queryRef": "Sessions.started_at" },
+                { "queryRef": "Sessions.duration_seconds" },
+                { "queryRef": "Sessions.items_completed" },
+                { "queryRef": "Sessions.accuracy" }
+              ]
+            },
+            "config": {
+              "title": "Session Details"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "VocabularySRS",
+      "displayName": "Vocabulary & SRS",
+      "displayOption": "FitToPage",
+      "visualContainers": [
+        {
+          "name": "PageTitle",
+          "position": { "x": 20, "y": 10, "width": 1240, "height": 60 },
+          "visual": {
+            "visualType": "textbox",
+            "config": {
+              "paragraphs": [
+                {
+                  "textRuns": [
+                    {
+                      "value": "Vocabulary & Spaced Repetition Health",
+                      "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": 24, "color": "#1e293b" }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "KPI_TotalVocab",
+          "position": { "x": 20, "y": 80, "width": 300, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "VocabularyProgress.Total Vocabulary" }] },
+            "config": { "title": "Total Vocabulary Words" }
+          }
+        },
+        {
+          "name": "KPI_MasteredPct",
+          "position": { "x": 340, "y": 80, "width": 300, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "VocabularyProgress.Mastered Vocab %" }] },
+            "config": { "title": "Mastered %" }
+          }
+        },
+        {
+          "name": "KPI_SRSOverdue",
+          "position": { "x": 660, "y": 80, "width": 290, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "SRSHealth.Total Overdue" }] },
+            "config": { "title": "Overdue SRS Items" }
+          }
+        },
+        {
+          "name": "KPI_OverdueRate",
+          "position": { "x": 970, "y": 80, "width": 270, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "SRSHealth.Overdue Rate" }] },
+            "config": { "title": "Overdue Rate" }
+          }
+        },
+        {
+          "name": "VocabByLevel",
+          "position": { "x": 20, "y": 220, "width": 600, "height": 280 },
+          "visual": {
+            "visualType": "stackedColumnChart",
+            "projections": {
+              "Category": [{ "queryRef": "VocabularyProgress.level" }],
+              "Y": [
+                { "queryRef": "VocabularyProgress.count_new" },
+                { "queryRef": "VocabularyProgress.count_learning" },
+                { "queryRef": "VocabularyProgress.count_known" },
+                { "queryRef": "VocabularyProgress.count_mastered" }
+              ]
+            },
+            "config": {
+              "title": "Vocabulary Mastery by CEFR Level"
+            }
+          }
+        },
+        {
+          "name": "VocabByTheme",
+          "position": { "x": 640, "y": 220, "width": 600, "height": 280 },
+          "visual": {
+            "visualType": "clusteredBarChart",
+            "projections": {
+              "Category": [{ "queryRef": "VocabularyProgress.theme" }],
+              "Y": [{ "queryRef": "VocabularyProgress.Total Reviews" }]
+            },
+            "config": {
+              "title": "Review Activity by Theme"
+            }
+          }
+        },
+        {
+          "name": "VocabTable",
+          "position": { "x": 20, "y": 520, "width": 1220, "height": 220 },
+          "visual": {
+            "visualType": "table",
+            "projections": {
+              "Values": [
+                { "queryRef": "VocabularyProgress.word" },
+                { "queryRef": "VocabularyProgress.translation" },
+                { "queryRef": "VocabularyProgress.level" },
+                { "queryRef": "VocabularyProgress.theme" },
+                { "queryRef": "VocabularyProgress.avg_mastery" },
+                { "queryRef": "VocabularyProgress.total_reviews" }
+              ]
+            },
+            "config": {
+              "title": "Vocabulary Details"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MockExams",
+      "displayName": "Mock Exam Results",
+      "displayOption": "FitToPage",
+      "visualContainers": [
+        {
+          "name": "PageTitle",
+          "position": { "x": 20, "y": 10, "width": 1240, "height": 60 },
+          "visual": {
+            "visualType": "textbox",
+            "config": {
+              "paragraphs": [
+                {
+                  "textRuns": [
+                    {
+                      "value": "Mock Exam Results & Readiness",
+                      "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": 24, "color": "#1e293b" }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "KPI_TotalMocks",
+          "position": { "x": 20, "y": 80, "width": 390, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "MockResults.Total Mocks" }] },
+            "config": { "title": "Total Mock Exams" }
+          }
+        },
+        {
+          "name": "KPI_PassRate",
+          "position": { "x": 430, "y": 80, "width": 390, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "MockResults.Mock Pass Rate" }] },
+            "config": { "title": "Pass Rate" }
+          }
+        },
+        {
+          "name": "KPI_AvgScore",
+          "position": { "x": 840, "y": 80, "width": 400, "height": 120 },
+          "visual": {
+            "visualType": "card",
+            "projections": { "Values": [{ "queryRef": "MockResults.Avg Mock Score" }] },
+            "config": { "title": "Average Score" }
+          }
+        },
+        {
+          "name": "MockScoresBySkill",
+          "position": { "x": 20, "y": 220, "width": 600, "height": 300 },
+          "visual": {
+            "visualType": "clusteredColumnChart",
+            "projections": {
+              "Category": [{ "queryRef": "MockResults.mock_type" }],
+              "Y": [
+                { "queryRef": "MockResults.reading_score" },
+                { "queryRef": "MockResults.listening_score" },
+                { "queryRef": "MockResults.speaking_score" },
+                { "queryRef": "MockResults.writing_score" }
+              ]
+            },
+            "config": {
+              "title": "Average Scores by Skill & Mock Type"
+            }
+          }
+        },
+        {
+          "name": "MockPassTrend",
+          "position": { "x": 640, "y": 220, "width": 600, "height": 300 },
+          "visual": {
+            "visualType": "lineChart",
+            "projections": {
+              "Category": [{ "queryRef": "MockResults.completed_at" }],
+              "Y": [{ "queryRef": "MockResults.overall_score" }]
+            },
+            "config": {
+              "title": "Mock Score Trend Over Time"
+            }
+          }
+        },
+        {
+          "name": "MockResultsTable",
+          "position": { "x": 20, "y": 540, "width": 1220, "height": 200 },
+          "visual": {
+            "visualType": "table",
+            "projections": {
+              "Values": [
+                { "queryRef": "MockResults.user_name" },
+                { "queryRef": "MockResults.mock_type" },
+                { "queryRef": "MockResults.target_level" },
+                { "queryRef": "MockResults.reading_score" },
+                { "queryRef": "MockResults.listening_score" },
+                { "queryRef": "MockResults.speaking_score" },
+                { "queryRef": "MockResults.writing_score" },
+                { "queryRef": "MockResults.overall_score" },
+                { "queryRef": "MockResults.passed" },
+                { "queryRef": "MockResults.completed_at" }
+              ]
+            },
+            "config": {
+              "title": "Mock Exam Details"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

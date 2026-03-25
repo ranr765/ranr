@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "artifacts": [
+    {
+      "report": {
+        "path": "SwissGermanCoach.Report"
+      }
+    },
+    {
+      "semanticModel": {
+        "path": "SwissGermanCoach.SemanticModel"
+      }
+    }
+  ],
+  "settings": {
+    "enableAutoRecovery": true
+  }
+}
