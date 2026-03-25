@@ -524,6 +524,187 @@ app.get('/api/mock/:userId', async (c) => {
 })
 
 // ============================================
+// Analytics API Routes (Power BI Data Source)
+// ============================================
+
+// Analytics: User overview (all users with aggregated stats)
+app.get('/api/analytics/users', async (c) => {
+  const users = await c.env.DB.prepare(`
+    SELECT
+      u.id,
+      u.name,
+      u.current_level,
+      u.target_level,
+      u.streak_days,
+      u.daily_goal_minutes,
+      u.onboarding_completed,
+      u.last_session_date,
+      u.created_at,
+      COUNT(DISTINCT s.id) as total_sessions,
+      COALESCE(SUM(s.duration_seconds), 0) as total_practice_seconds,
+      COALESCE(AVG(s.accuracy), 0) as avg_accuracy,
+      COALESCE(SUM(s.items_completed), 0) as total_items_completed
+    FROM users u
+    LEFT JOIN sessions s ON u.id = s.user_id AND s.completed_at IS NOT NULL
+    GROUP BY u.id
+    ORDER BY u.created_at DESC
+  `).all()
+  return c.json({ data: users.results, _meta: { table: 'users_overview', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Skill levels across all users
+app.get('/api/analytics/skills', async (c) => {
+  const skills = await c.env.DB.prepare(`
+    SELECT
+      us.user_id,
+      u.name as user_name,
+      us.skill,
+      us.level,
+      us.mastery_score,
+      us.updated_at
+    FROM user_skills us
+    JOIN users u ON us.user_id = u.id
+    ORDER BY us.user_id, us.skill
+  `).all()
+  return c.json({ data: skills.results, _meta: { table: 'skill_levels', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Session history with details
+app.get('/api/analytics/sessions', async (c) => {
+  const sessions = await c.env.DB.prepare(`
+    SELECT
+      s.id as session_id,
+      s.user_id,
+      u.name as user_name,
+      u.current_level,
+      s.session_type,
+      s.started_at,
+      s.completed_at,
+      s.duration_seconds,
+      s.items_completed,
+      s.accuracy
+    FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    ORDER BY s.started_at DESC
+  `).all()
+  return c.json({ data: sessions.results, _meta: { table: 'sessions', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Mastery nodes (skill × theme × tactic granularity)
+app.get('/api/analytics/mastery', async (c) => {
+  const mastery = await c.env.DB.prepare(`
+    SELECT
+      mn.user_id,
+      u.name as user_name,
+      mn.skill,
+      mn.theme,
+      mn.tactic,
+      mn.level,
+      mn.mastery_score,
+      mn.attempts,
+      mn.correct_count,
+      mn.last_practiced,
+      CASE
+        WHEN mn.attempts > 0 THEN ROUND(CAST(mn.correct_count AS REAL) / mn.attempts * 100, 1)
+        ELSE 0
+      END as accuracy_pct
+    FROM mastery_nodes mn
+    JOIN users u ON mn.user_id = u.id
+    ORDER BY mn.user_id, mn.skill, mn.theme
+  `).all()
+  return c.json({ data: mastery.results, _meta: { table: 'mastery_nodes', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Vocabulary progress
+app.get('/api/analytics/vocabulary', async (c) => {
+  const vocab = await c.env.DB.prepare(`
+    SELECT
+      v.id as vocab_id,
+      v.word,
+      v.translation,
+      v.level,
+      v.theme,
+      COUNT(uv.id) as learner_count,
+      AVG(uv.mastery_level) as avg_mastery,
+      SUM(uv.times_reviewed) as total_reviews,
+      SUM(CASE WHEN uv.mastery_level = 0 THEN 1 ELSE 0 END) as count_new,
+      SUM(CASE WHEN uv.mastery_level = 1 THEN 1 ELSE 0 END) as count_learning,
+      SUM(CASE WHEN uv.mastery_level = 2 THEN 1 ELSE 0 END) as count_known,
+      SUM(CASE WHEN uv.mastery_level = 3 THEN 1 ELSE 0 END) as count_mastered
+    FROM vocabulary v
+    LEFT JOIN user_vocabulary uv ON v.id = uv.vocab_id
+    GROUP BY v.id
+    ORDER BY v.level, v.theme
+  `).all()
+  return c.json({ data: vocab.results, _meta: { table: 'vocabulary_progress', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Mock exam results
+app.get('/api/analytics/mocks', async (c) => {
+  const mocks = await c.env.DB.prepare(`
+    SELECT
+      mr.id as mock_id,
+      mr.user_id,
+      u.name as user_name,
+      mr.mock_type,
+      mr.level as target_level,
+      mr.reading_score,
+      mr.listening_score,
+      mr.speaking_score,
+      mr.writing_score,
+      mr.overall_score,
+      mr.passed,
+      mr.completed_at
+    FROM mock_results mr
+    JOIN users u ON mr.user_id = u.id
+    ORDER BY mr.completed_at DESC
+  `).all()
+  return c.json({ data: mocks.results, _meta: { table: 'mock_results', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: SRS queue health
+app.get('/api/analytics/srs', async (c) => {
+  const srs = await c.env.DB.prepare(`
+    SELECT
+      sq.user_id,
+      u.name as user_name,
+      sq.item_type,
+      COUNT(*) as queue_size,
+      SUM(CASE WHEN sq.due_date <= date('now') THEN 1 ELSE 0 END) as overdue_count,
+      SUM(CASE WHEN sq.due_date > date('now') THEN 1 ELSE 0 END) as upcoming_count,
+      AVG(sq.easiness_factor) as avg_easiness,
+      AVG(sq.repetitions) as avg_repetitions,
+      AVG(sq.interval_days) as avg_interval_days
+    FROM srs_queue sq
+    JOIN users u ON sq.user_id = u.id
+    GROUP BY sq.user_id, sq.item_type
+    ORDER BY sq.user_id
+  `).all()
+  return c.json({ data: srs.results, _meta: { table: 'srs_health', refreshed_at: new Date().toISOString() } })
+})
+
+// Analytics: Content library summary
+app.get('/api/analytics/content', async (c) => {
+  const content = await c.env.DB.prepare(`
+    SELECT
+      ci.type as content_type,
+      ci.level,
+      ci.theme,
+      ci.tactic,
+      COUNT(*) as item_count,
+      AVG(ci.difficulty) as avg_difficulty,
+      AVG(ci.time_estimate_seconds) as avg_time_estimate,
+      COALESCE(SUM(si.id IS NOT NULL), 0) as times_used,
+      COALESCE(AVG(CASE WHEN si.is_correct = 1 THEN 100.0 ELSE 0.0 END), 0) as success_rate
+    FROM content_items ci
+    LEFT JOIN session_items si ON ci.id = si.content_item_id
+    GROUP BY ci.type, ci.level, ci.theme, ci.tactic
+    ORDER BY ci.type, ci.level
+  `).all()
+  return c.json({ data: content.results, _meta: { table: 'content_library', refreshed_at: new Date().toISOString() } })
+})
+
+// ============================================
 // Main HTML Page
 // ============================================
 app.get('/', (c) => {
