@@ -44,18 +44,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Show/Hide Pages
 function showPage(page) {
-  const pages = ['welcome', 'diagnostic', 'dashboard', 'session', 'progress'];
+  const pages = ['welcome', 'diagnostic', 'dashboard', 'session', 'progress', 'bragbook'];
   pages.forEach(p => {
     document.getElementById(`${p}-screen`).classList.add('hidden');
   });
   document.getElementById(`${page}-screen`).classList.remove('hidden');
-  
+
   if (page !== 'welcome') {
     document.getElementById('nav-links').classList.remove('hidden');
   }
-  
+
   if (page === 'progress') {
     loadProgress();
+  }
+  if (page === 'bragbook') {
+    loadBragBook();
   }
 }
 
@@ -822,5 +825,89 @@ async function startMock(type) {
   } catch (error) {
     console.error('Error loading mock:', error);
     alert('Error loading mock exam. Please try again.');
+  }
+}
+
+// ========================================
+// Brag Book
+// ========================================
+async function loadBragBook() {
+  try {
+    const response = await axios.get(`/api/bragbook/${currentUser.userId}`);
+    const data = response.data;
+
+    // Profile
+    document.getElementById('brag-name').textContent = data.user.name;
+    document.getElementById('brag-level').textContent = `Level: ${data.user.level || 'A0'}`;
+    if (data.user.joined) {
+      const joined = new Date(data.user.joined).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('brag-joined').textContent = `Learning since ${joined}`;
+    }
+
+    // Stats
+    document.getElementById('brag-sessions').textContent = data.stats.totalSessions;
+    document.getElementById('brag-streak').textContent = data.user.streak;
+    document.getElementById('brag-minutes').textContent = data.stats.totalMinutes;
+    document.getElementById('brag-vocab').textContent = `${data.stats.vocabMastered}/${data.stats.vocabTotal}`;
+    document.getElementById('brag-accuracy').textContent = `${data.stats.bestAccuracy}%`;
+    document.getElementById('brag-themes').textContent = data.stats.themesCovered;
+
+    // Skills
+    const skillColors = { reading: 'purple', listening: 'blue', speaking: 'green', writing: 'orange' };
+    const skillsHtml = data.skills.map(skill => {
+      const color = skillColors[skill.skill] || 'gray';
+      const pct = Math.round(skill.mastery_score * 100);
+      return `
+        <div class="text-center p-4 bg-${color}-50 rounded-lg">
+          <div class="text-sm text-gray-600 mb-1 capitalize">${skill.skill}</div>
+          <div class="text-2xl font-bold text-${color}-600">${skill.level}</div>
+          <div class="progress-bar mt-2">
+            <div class="progress-fill" style="width: ${pct}%"></div>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">${pct}% mastery</div>
+        </div>
+      `;
+    }).join('');
+    document.getElementById('brag-skills').innerHTML = skillsHtml;
+
+    // Achievements
+    if (data.achievements.length > 0) {
+      document.getElementById('brag-no-achievements').classList.add('hidden');
+      const achievementsHtml = data.achievements.map(a => `
+        <div class="achievement-badge">
+          <div class="badge-icon badge-${a.color}">
+            <i class="fas ${a.icon}"></i>
+          </div>
+          <div class="font-semibold text-sm mt-1">${a.title}</div>
+          <div class="text-xs text-gray-500">${a.desc}</div>
+        </div>
+      `).join('');
+      document.getElementById('brag-achievements').innerHTML = achievementsHtml;
+    } else {
+      document.getElementById('brag-achievements').innerHTML = '';
+      document.getElementById('brag-no-achievements').classList.remove('hidden');
+    }
+
+    // Strong areas
+    if (data.strongAreas.length > 0) {
+      document.getElementById('brag-no-strong').classList.add('hidden');
+      const strongHtml = data.strongAreas.map(area => `
+        <div class="flex items-center justify-between py-3 border-b last:border-b-0">
+          <div class="flex items-center space-x-3">
+            <span class="skill-badge level-${area.level.toLowerCase()}">${area.level}</span>
+            <span class="capitalize font-semibold">${area.skill}</span>
+            <span class="text-gray-500 text-sm">${area.theme} (${area.tactic})</span>
+          </div>
+          <span class="text-green-600 font-bold">${Math.round(area.mastery_score * 100)}%</span>
+        </div>
+      `).join('');
+      document.getElementById('brag-strong-areas').innerHTML = strongHtml;
+    } else {
+      document.getElementById('brag-strong-areas').innerHTML = '';
+      document.getElementById('brag-no-strong').classList.remove('hidden');
+    }
+
+  } catch (error) {
+    console.error('Error loading brag book:', error);
   }
 }

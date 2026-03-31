@@ -523,6 +523,127 @@ app.get('/api/mock/:userId', async (c) => {
   return c.json({ mockItems, targetLevel, type })
 })
 
+// Get brag book data (achievements & milestones)
+app.get('/api/bragbook/:userId', async (c) => {
+  const userId = c.req.param('userId')
+
+  const user = await c.env.DB.prepare(`
+    SELECT * FROM users WHERE id = ?
+  `).bind(userId).first()
+
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404)
+  }
+
+  // Skill levels
+  const skills = await c.env.DB.prepare(`
+    SELECT skill, level, mastery_score FROM user_skills WHERE user_id = ?
+  `).bind(userId).all()
+
+  // Total sessions completed
+  const sessionStats = await c.env.DB.prepare(`
+    SELECT
+      COUNT(*) as total_sessions,
+      SUM(CASE WHEN accuracy >= 0.8 THEN 1 ELSE 0 END) as high_accuracy_sessions,
+      MAX(accuracy) as best_accuracy,
+      SUM(duration_seconds) as total_seconds
+    FROM sessions
+    WHERE user_id = ? AND completed_at IS NOT NULL
+  `).bind(userId).first()
+
+  // Vocabulary mastered (repetitions >= 3 means well-learned)
+  const vocabStats = await c.env.DB.prepare(`
+    SELECT COUNT(*) as mastered
+    FROM srs_queue
+    WHERE user_id = ? AND item_type = 'vocab' AND repetitions >= 3
+  `).bind(userId).first()
+
+  // Total vocabulary in progress
+  const vocabTotal = await c.env.DB.prepare(`
+    SELECT COUNT(*) as total
+    FROM srs_queue
+    WHERE user_id = ? AND item_type = 'vocab'
+  `).bind(userId).first()
+
+  // Strong areas (highest mastery nodes)
+  const strongAreas = await c.env.DB.prepare(`
+    SELECT skill, theme, tactic, level, mastery_score
+    FROM mastery_nodes
+    WHERE user_id = ? AND mastery_score >= 0.7
+    ORDER BY mastery_score DESC
+    LIMIT 10
+  `).bind(userId).all()
+
+  // Unique themes practiced
+  const themesCovered = await c.env.DB.prepare(`
+    SELECT DISTINCT theme FROM mastery_nodes WHERE user_id = ?
+  `).bind(userId).all()
+
+  // Level-up history: count skills above A0
+  const levelUps = (skills.results as Array<{ skill: string; level: string }>)
+    .filter(s => s.level !== 'A0')
+
+  // Build achievements list
+  const achievements = []
+  const totalSessions = (sessionStats?.total_sessions as number) || 0
+  const streakDays = (user.streak_days as number) || 0
+  const vocabMastered = (vocabStats?.mastered as number) || 0
+  const totalSeconds = (sessionStats?.total_seconds as number) || 0
+  const totalMinutes = Math.floor(totalSeconds / 60)
+
+  // Session milestones
+  if (totalSessions >= 1) achievements.push({ icon: 'fa-play', title: 'First Steps', desc: 'Completed your first session', color: 'green' })
+  if (totalSessions >= 5) achievements.push({ icon: 'fa-star', title: 'Dedicated Learner', desc: 'Completed 5 sessions', color: 'blue' })
+  if (totalSessions >= 10) achievements.push({ icon: 'fa-medal', title: 'Consistent Performer', desc: 'Completed 10 sessions', color: 'purple' })
+  if (totalSessions >= 25) achievements.push({ icon: 'fa-crown', title: 'Swiss German Champion', desc: 'Completed 25 sessions', color: 'yellow' })
+  if (totalSessions >= 50) achievements.push({ icon: 'fa-gem', title: 'Master Learner', desc: 'Completed 50 sessions', color: 'pink' })
+
+  // Streak milestones
+  if (streakDays >= 3) achievements.push({ icon: 'fa-fire', title: 'On Fire', desc: '3-day streak', color: 'orange' })
+  if (streakDays >= 7) achievements.push({ icon: 'fa-fire-flame-curved', title: 'Week Warrior', desc: '7-day streak', color: 'orange' })
+  if (streakDays >= 30) achievements.push({ icon: 'fa-volcano', title: 'Monthly Master', desc: '30-day streak', color: 'red' })
+
+  // Vocab milestones
+  if (vocabMastered >= 5) achievements.push({ icon: 'fa-book', title: 'Word Collector', desc: 'Mastered 5 words', color: 'teal' })
+  if (vocabMastered >= 20) achievements.push({ icon: 'fa-book-open', title: 'Vocabulary Builder', desc: 'Mastered 20 words', color: 'teal' })
+  if (vocabMastered >= 50) achievements.push({ icon: 'fa-language', title: 'Lexicon Legend', desc: 'Mastered 50 words', color: 'indigo' })
+
+  // Level milestones
+  for (const s of levelUps) {
+    achievements.push({ icon: 'fa-arrow-up', title: `${s.skill.charAt(0).toUpperCase() + s.skill.slice(1)} Level Up`, desc: `Reached ${s.level} in ${s.skill}`, color: 'purple' })
+  }
+
+  // Time milestones
+  if (totalMinutes >= 30) achievements.push({ icon: 'fa-clock', title: 'Half Hour Hero', desc: '30 minutes of practice', color: 'blue' })
+  if (totalMinutes >= 120) achievements.push({ icon: 'fa-hourglass-half', title: 'Time Investor', desc: '2 hours of practice', color: 'blue' })
+  if (totalMinutes >= 600) achievements.push({ icon: 'fa-hourglass-end', title: 'Marathon Learner', desc: '10 hours of practice', color: 'indigo' })
+
+  // Accuracy milestones
+  const bestAccuracy = (sessionStats?.best_accuracy as number) || 0
+  if (bestAccuracy >= 0.9) achievements.push({ icon: 'fa-bullseye', title: 'Sharpshooter', desc: '90%+ accuracy in a session', color: 'green' })
+  if (bestAccuracy >= 1.0) achievements.push({ icon: 'fa-trophy', title: 'Perfectionist', desc: '100% accuracy in a session', color: 'yellow' })
+
+  return c.json({
+    user: {
+      name: user.name,
+      level: user.current_level,
+      streak: streakDays,
+      joined: user.created_at
+    },
+    stats: {
+      totalSessions,
+      totalMinutes,
+      vocabMastered,
+      vocabTotal: (vocabTotal?.total as number) || 0,
+      bestAccuracy: Math.round(bestAccuracy * 100),
+      themesCovered: themesCovered.results.length
+    },
+    skills: skills.results,
+    strongAreas: strongAreas.results,
+    achievements
+  })
+})
+
 // ============================================
 // Main HTML Page
 // ============================================
@@ -561,6 +682,12 @@ app.get('/', (c) => {
           .vocab-card.flipped .front { display: none; }
           .vocab-card.flipped .back { display: block; }
           .vocab-card .back { display: none; }
+          .achievement-badge { text-align: center; padding: 16px; border-radius: 12px; border: 2px solid #e5e7eb; transition: transform 0.3s; }
+          .achievement-badge:hover { transform: scale(1.05); }
+          .achievement-badge .badge-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 20px; color: white; }
+          .badge-green { background: #16a34a; } .badge-blue { background: #2563eb; } .badge-purple { background: #7c3aed; }
+          .badge-yellow { background: #eab308; } .badge-orange { background: #ea580c; } .badge-red { background: #dc2626; }
+          .badge-teal { background: #0d9488; } .badge-indigo { background: #4f46e5; } .badge-pink { background: #db2777; }
         </style>
     </head>
     <body class="bg-gray-50">
@@ -575,6 +702,7 @@ app.get('/', (c) => {
                     <a href="#" onclick="showPage('dashboard')" class="hover:underline">Dashboard</a>
                     <a href="#" onclick="showPage('session')" class="hover:underline">Daily Session</a>
                     <a href="#" onclick="showPage('progress')" class="hover:underline">Progress</a>
+                    <a href="#" onclick="showPage('bragbook')" class="hover:underline">Brag Book</a>
                     <a href="#" onclick="logout()" class="hover:underline">Logout</a>
                 </div>
             </div>
@@ -803,6 +931,88 @@ app.get('/', (c) => {
                         </h3>
                         <div id="strategy-tips-list" class="text-sm space-y-2"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Brag Book Screen -->
+            <div id="bragbook-screen" class="hidden">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-award text-yellow-500"></i> My Brag Book
+                    </h1>
+                    <p class="text-gray-600">Your Swiss German learning achievements</p>
+                </div>
+
+                <!-- Profile Card -->
+                <div class="card p-8 mb-8 text-center gradient-bg text-white">
+                    <div class="text-6xl mb-4"><i class="fas fa-user-graduate"></i></div>
+                    <h2 class="text-2xl font-bold mb-1" id="brag-name">Learner</h2>
+                    <p class="text-white text-opacity-80 mb-4" id="brag-joined">Learning since...</p>
+                    <div class="inline-block px-6 py-2 bg-white bg-opacity-20 rounded-full text-lg font-bold" id="brag-level">
+                        Level: A0
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="card p-4 text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="brag-sessions">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Sessions</div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <div class="text-3xl font-bold text-orange-600" id="brag-streak">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Day Streak</div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-600" id="brag-minutes">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Minutes</div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <div class="text-3xl font-bold text-green-600" id="brag-vocab">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Words Mastered</div>
+                    </div>
+                </div>
+
+                <!-- Skill Levels -->
+                <div class="card p-6 mb-8">
+                    <h3 class="font-bold text-lg mb-4"><i class="fas fa-chart-radar text-purple-600"></i> Skill Levels</h3>
+                    <div id="brag-skills" class="grid md:grid-cols-4 gap-4"></div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="card p-6 mb-8">
+                    <h3 class="font-bold text-lg mb-4"><i class="fas fa-trophy text-yellow-500"></i> Achievements</h3>
+                    <div id="brag-achievements" class="grid md:grid-cols-3 gap-4"></div>
+                    <p id="brag-no-achievements" class="hidden text-gray-500 text-center py-8">
+                        Start practicing to earn achievements!
+                    </p>
+                </div>
+
+                <!-- Strong Areas -->
+                <div class="card p-6 mb-8">
+                    <h3 class="font-bold text-lg mb-4"><i class="fas fa-star text-green-500"></i> Strong Areas</h3>
+                    <div id="brag-strong-areas"></div>
+                    <p id="brag-no-strong" class="hidden text-gray-500 text-center py-4">
+                        Keep practicing to build your strengths!
+                    </p>
+                </div>
+
+                <!-- Extra Stats -->
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="card p-6 text-center">
+                        <div class="text-5xl font-bold text-purple-600" id="brag-accuracy">0%</div>
+                        <div class="text-gray-500 mt-2">Best Session Accuracy</div>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <div class="text-5xl font-bold text-blue-600" id="brag-themes">0</div>
+                        <div class="text-gray-500 mt-2">Themes Explored</div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="showPage('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </button>
                 </div>
             </div>
         </div>
