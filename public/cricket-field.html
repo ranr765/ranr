@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cricket Field — Slog Overs</title>
+<style>
+  :root {
+    --grass: #2f7a3a;
+    --grass-stripe: #2a6f34;
+    --ring: #f5f5dc;
+    --pitch: #c8a26a;
+    --pitch-edge: #a07e4d;
+    --crease: #f5f5dc;
+    --stump: #efe7d2;
+    --ink: #0e2a14;
+    --card-bg: rgba(255,255,255,0.95);
+    --card-border: #1f3d24;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #102017;
+    color: #e6efe9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  header {
+    padding: 16px 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 20px;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+  header .meta {
+    font-size: 13px;
+    opacity: 0.75;
+  }
+
+  .legend {
+    padding: 0 24px 12px;
+    font-size: 12px;
+    opacity: 0.8;
+  }
+  .legend span { margin-right: 16px; }
+  .legend .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  .stage {
+    position: relative;
+    width: min(100%, 880px);
+    aspect-ratio: 8 / 9;
+    margin: 0 auto 32px;
+  }
+
+  svg.field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .fielder {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffd23f;
+    border: 2px solid var(--ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .fielder.keeper .dot { background: #ff6b6b; }
+  .fielder.bowler .dot { background: #6bb6ff; }
+  .fielder.boundary .dot { background: #ffd23f; }
+  .fielder.ring .dot { background: #b8e986; }
+
+  .card {
+    background: var(--card-bg);
+    color: var(--ink);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 4px 6px;
+    min-width: 86px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .card .pos {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .card .name {
+    font-size: 12px;
+    margin-top: 2px;
+    border: none;
+    background: transparent;
+    text-align: center;
+    width: 100%;
+    padding: 0;
+    color: #1a1a1a;
+    outline: none;
+  }
+  .card .name::placeholder {
+    color: #888;
+    font-style: italic;
+  }
+  .card .name:focus {
+    background: #fffbe6;
+  }
+
+  /* Position the cards above or below the dot to avoid overlap with field edges */
+  .fielder.below .card { order: -1; margin-bottom: 4px; }
+
+  footer {
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.6;
+    padding: 8px 16px 24px;
+  }
+
+  @media print {
+    body { background: white; color: black; }
+    header, footer, .legend { display: none; }
+    .stage { margin: 0 auto; }
+    .card { background: white; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Cricket Field — Slog Overs</h1>
+  <span class="meta">Right-handed batter · 5 outside the circle · click a name field to edit</span>
+</header>
+
+<div class="legend">
+  <span><span class="swatch" style="background:#ff6b6b"></span>Wicketkeeper</span>
+  <span><span class="swatch" style="background:#6bb6ff"></span>Bowler</span>
+  <span><span class="swatch" style="background:#b8e986"></span>Inside the ring</span>
+  <span><span class="swatch" style="background:#ffd23f"></span>Boundary rider</span>
+</div>
+
+<div class="stage">
+  <svg class="field" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" aria-label="Cricket field">
+    <!-- Outer ground -->
+    <ellipse cx="400" cy="450" rx="380" ry="430" fill="#2f7a3a" stroke="#ffffff" stroke-width="3" />
+
+    <!-- Mowing stripes for visual interest -->
+    <g opacity="0.18">
+      <ellipse cx="400" cy="450" rx="320" ry="362" fill="#2a6f34" />
+      <ellipse cx="400" cy="450" rx="240" ry="272" fill="#2f7a3a" />
+      <ellipse cx="400" cy="450" rx="180" ry="204" fill="#2a6f34" />
+    </g>
+
+    <!-- 30-yard inner ring -->
+    <circle cx="400" cy="450" r="160" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="6 6" opacity="0.85" />
+
+    <!-- Pitch -->
+    <rect x="386" y="360" width="28" height="180" fill="#c8a26a" stroke="#a07e4d" stroke-width="1.5" />
+
+    <!-- Bowling creases (top and bottom of pitch) -->
+    <line x1="378" y1="360" x2="422" y2="360" stroke="#f5f5dc" stroke-width="1.5" />
+    <line x1="378" y1="540" x2="422" y2="540" stroke="#f5f5dc" stroke-width="1.5" />
+
+    <!-- Popping creases -->
+    <line x1="372" y1="378" x2="428" y2="378" stroke="#f5f5dc" stroke-width="1" />
+    <line x1="372" y1="522" x2="428" y2="522" stroke="#f5f5dc" stroke-width="1" />
+
+    <!-- Stumps (small marks) -->
+    <g fill="#efe7d2">
+      <rect x="397" y="357" width="2" height="6" />
+      <rect x="400" y="357" width="2" height="6" />
+      <rect x="403" y="357" width="2" height="6" />
+      <rect x="397" y="537" width="2" height="6" />
+      <rect x="400" y="537" width="2" height="6" />
+      <rect x="403" y="537" width="2" height="6" />
+    </g>
+
+    <!-- Off / Leg side labels (RHB, batting at bottom end) -->
+    <text x="760" y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="end" font-family="sans-serif">OFF SIDE</text>
+    <text x="40"  y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="start" font-family="sans-serif">LEG SIDE</text>
+
+    <!-- Bowler / batter end labels -->
+    <text x="400" y="32" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BOWLER'S END</text>
+    <text x="400" y="880" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BATTER'S END</text>
+  </svg>
+
+  <!-- Fielder markers. Coordinates are % of the 800x900 viewBox. -->
+
+  <!-- Bowler -->
+  <div class="fielder bowler" style="left:50.0%; top:38.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Bowler</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Wicketkeeper -->
+  <div class="fielder keeper below" style="left:50.0%; top:64.5%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Wicketkeeper</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Inside the ring (4) -->
+
+  <!-- Mid Off -->
+  <div class="fielder ring" style="left:60.5%; top:46.5%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Mid Off</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Mid On -->
+  <div class="fielder ring" style="left:39.5%; top:46.5%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Mid On</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Cover (inner) -->
+  <div class="fielder ring" style="left:65.0%; top:54.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Cover</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Square Leg (inner) -->
+  <div class="fielder ring below" style="left:35.0%; top:58.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Square Leg</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Boundary riders (5) -->
+
+  <!-- Long Off -->
+  <div class="fielder boundary" style="left:67.0%; top:14.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Long Off</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Long On -->
+  <div class="fielder boundary" style="left:33.0%; top:14.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Long On</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Sweeper Cover -->
+  <div class="fielder boundary" style="left:88.0%; top:43.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Sweeper Cover</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Deep Midwicket -->
+  <div class="fielder boundary" style="left:12.0%; top:43.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Deep Midwicket</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+  <!-- Third Man -->
+  <div class="fielder boundary below" style="left:86.0%; top:72.0%;">
+    <div class="dot"></div>
+    <div class="card">
+      <div class="pos">Third Man</div>
+      <input class="name" type="text" placeholder="Add name" />
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Slog overs setup · 11 positions · click any name field to add a fielder
+</footer>
+
+</body>
+</html>
