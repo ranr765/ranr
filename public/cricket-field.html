@@ -153,7 +153,7 @@
 
 <header>
   <h1>Cricket Field — Slog Overs</h1>
-  <span class="meta">Right-handed batter · 5 outside the circle · click a name field to edit</span>
+  <span class="meta">Right-handed batter · bowling from the bottom end · 5 outside the circle · click a name field to edit</span>
 </header>
 
 <div class="legend">
@@ -199,19 +199,19 @@
       <rect x="403" y="537" width="2" height="6" />
     </g>
 
-    <!-- Off / Leg side labels (RHB, batting at bottom end) -->
-    <text x="760" y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="end" font-family="sans-serif">OFF SIDE</text>
-    <text x="40"  y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="start" font-family="sans-serif">LEG SIDE</text>
+    <!-- Off / Leg side labels (RHB, batting at top end — bowler comes from bottom) -->
+    <text x="40"  y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="start" font-family="sans-serif">OFF SIDE</text>
+    <text x="760" y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="end" font-family="sans-serif">LEG SIDE</text>
 
     <!-- Bowler / batter end labels -->
-    <text x="400" y="32" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BOWLER'S END</text>
-    <text x="400" y="880" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BATTER'S END</text>
+    <text x="400" y="32" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BATTER'S END</text>
+    <text x="400" y="880" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BOWLER'S END</text>
   </svg>
 
   <!-- Fielder markers. Coordinates are % of the 800x900 viewBox. -->
 
   <!-- Bowler -->
-  <div class="fielder bowler" style="left:50.0%; top:38.0%;">
+  <div class="fielder bowler below" style="left:50.0%; top:62.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Bowler</div>
@@ -220,7 +220,7 @@
   </div>
 
   <!-- Wicketkeeper -->
-  <div class="fielder keeper below" style="left:50.0%; top:64.5%;">
+  <div class="fielder keeper" style="left:50.0%; top:35.5%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Wicketkeeper</div>
@@ -231,7 +231,7 @@
   <!-- Inside the ring (4) -->
 
   <!-- Mid Off -->
-  <div class="fielder ring" style="left:60.5%; top:46.5%;">
+  <div class="fielder ring" style="left:39.5%; top:53.5%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Mid Off</div>
@@ -240,7 +240,7 @@
   </div>
 
   <!-- Mid On -->
-  <div class="fielder ring" style="left:39.5%; top:46.5%;">
+  <div class="fielder ring" style="left:60.5%; top:53.5%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Mid On</div>
@@ -249,7 +249,7 @@
   </div>
 
   <!-- Cover (inner) -->
-  <div class="fielder ring" style="left:65.0%; top:54.0%;">
+  <div class="fielder ring" style="left:35.0%; top:46.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Cover</div>
@@ -258,7 +258,7 @@
   </div>
 
   <!-- Square Leg (inner) -->
-  <div class="fielder ring below" style="left:35.0%; top:58.0%;">
+  <div class="fielder ring" style="left:65.0%; top:42.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Square Leg</div>
@@ -269,7 +269,7 @@
   <!-- Boundary riders (5) -->
 
   <!-- Long Off -->
-  <div class="fielder boundary" style="left:67.0%; top:14.0%;">
+  <div class="fielder boundary below" style="left:33.0%; top:86.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Long Off</div>
@@ -278,7 +278,7 @@
   </div>
 
   <!-- Long On -->
-  <div class="fielder boundary" style="left:33.0%; top:14.0%;">
+  <div class="fielder boundary below" style="left:67.0%; top:86.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Long On</div>
@@ -287,7 +287,7 @@
   </div>
 
   <!-- Sweeper Cover -->
-  <div class="fielder boundary" style="left:88.0%; top:43.0%;">
+  <div class="fielder boundary" style="left:12.0%; top:57.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Sweeper Cover</div>
@@ -296,7 +296,7 @@
   </div>
 
   <!-- Deep Midwicket -->
-  <div class="fielder boundary" style="left:12.0%; top:43.0%;">
+  <div class="fielder boundary" style="left:88.0%; top:57.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Deep Midwicket</div>
@@ -305,7 +305,7 @@
   </div>
 
   <!-- Third Man -->
-  <div class="fielder boundary below" style="left:86.0%; top:72.0%;">
+  <div class="fielder boundary" style="left:14.0%; top:28.0%;">
     <div class="dot"></div>
     <div class="card">
       <div class="pos">Third Man</div>
