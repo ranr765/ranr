@@ -44,6 +44,99 @@
     margin-right: 6px;
   }
 
+  /* Top status bar: phase + bowler */
+  .status-bar {
+    max-width: 880px;
+    margin: 4px auto 16px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px;
+  }
+
+  .phase-toggle {
+    display: inline-flex;
+    background: rgba(0,0,0,0.35);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .phase-toggle button {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: #cfd8d3;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .phase-toggle button:hover { color: #fff; }
+  .phase-toggle button.active { color: #1a1a1a; }
+  .phase-toggle button.active[data-phase="powerplay"]     { background: #ff8a4d; color: #1a1a1a; }
+  .phase-toggle button.active[data-phase="non-powerplay"] { background: #b8e986; color: #1a1a1a; }
+
+  .bowler-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .bowler-picker label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+    font-weight: 600;
+  }
+  .bowler-picker select {
+    background: rgba(0,0,0,0.45);
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+  }
+  .bowler-picker select:focus { border-color: #ff6b6b; }
+  .bowler-picker .bowler-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 107, 107, 0.18);
+    border: 1px solid rgba(255, 107, 107, 0.55);
+    color: #ffd6d6;
+    border-radius: 999px;
+    padding: 4px 10px 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .bowler-picker .bowler-pill::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff4d4d;
+    box-shadow: 0 0 6px #ff4d4d;
+  }
+
+  .status-spacer { flex: 1; }
+  .field-count {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.75;
+  }
+  .field-count .num { font-weight: 700; opacity: 1; color: #fff; }
+  .field-count.over-limit .num { color: #ff6b6b; }
+
   .stage {
     position: relative;
     width: min(100%, 880px);
@@ -92,6 +185,21 @@
   .fielder[data-zone="ring"]     .dot { background: #b8e986; }
   .fielder[data-zone="boundary"] .dot { background: #ffd23f; }
   .fielder[data-zone="pitch"]    .dot { background: #ffffff; }
+
+  /* Highlight the selected bowler */
+  .fielder.is-bowler .dot {
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 4px #ff4d4d,
+      0 0 14px rgba(255, 77, 77, 0.7);
+  }
+  .fielder.is-bowler .player-name {
+    color: #ffd6d6;
+    text-shadow:
+      0 0 4px #ff4d4d,
+      0 0 3px rgba(0,0,0,0.95),
+      0 1px 2px rgba(0,0,0,0.95);
+  }
 
   /* Player name — static, always visible below the dot */
   .player-name {
@@ -170,6 +278,25 @@
   <span><span class="swatch" style="background:#6bb6ff"></span>Bowler zone</span>
   <span><span class="swatch" style="background:#b8e986"></span>Inside the ring</span>
   <span><span class="swatch" style="background:#ffd23f"></span>Boundary</span>
+</div>
+
+<div class="status-bar">
+  <div class="phase-toggle" role="tablist" aria-label="Innings phase">
+    <button type="button" data-phase="powerplay">Powerplay</button>
+    <button type="button" data-phase="non-powerplay" class="active">Non-Powerplay</button>
+  </div>
+
+  <div class="bowler-picker">
+    <label for="bowler-select">Bowler</label>
+    <select id="bowler-select"></select>
+    <span class="bowler-pill" id="bowler-pill">—</span>
+  </div>
+
+  <div class="status-spacer"></div>
+
+  <div class="field-count" id="field-count">
+    Outside circle: <span class="num" id="outside-count">0</span> / <span id="outside-limit">5</span>
+  </div>
 </div>
 
 <div class="stage">
@@ -303,16 +430,70 @@
     return { label, zone };
   }
 
+  // --- Phase + bowler controls (declared before initial render so updateFielder can use them)
+  const phaseButtons = document.querySelectorAll('.phase-toggle button');
+  const bowlerSelect = document.getElementById('bowler-select');
+  const bowlerPill   = document.getElementById('bowler-pill');
+  const outsideCount = document.getElementById('outside-count');
+  const outsideLimit = document.getElementById('outside-limit');
+  const fieldCountEl = document.getElementById('field-count');
+
+  let currentPhase = 'non-powerplay'; // default for slog overs
+  function phaseLimit() { return currentPhase === 'powerplay' ? 2 : 5; }
+
+  function refreshOutsideCount() {
+    let n = 0;
+    fielders.forEach(f => {
+      if (f.dataset.zone === 'boundary') n++;
+    });
+    outsideCount.textContent = n;
+    outsideLimit.textContent = phaseLimit();
+    fieldCountEl.classList.toggle('over-limit', n > phaseLimit());
+  }
+
   function updateFielder(f) {
     const xPct = parseFloat(f.style.left);
     const yPct = parseFloat(f.style.top);
     const { label, zone } = detectPosition(xPct, yPct);
     f.dataset.zone = zone;
     f.querySelector('.position-label').textContent = label;
+    refreshOutsideCount();
   }
 
-  // Initial labels
+  // Initial labels (now safe — count elements are bound)
   fielders.forEach(updateFielder);
+
+  phaseButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      phaseButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPhase = btn.dataset.phase;
+      refreshOutsideCount();
+    });
+  });
+
+  // Populate the bowler dropdown from the player names
+  function setBowler(name) {
+    fielders.forEach(f => {
+      f.classList.toggle('is-bowler', f.dataset.name === name);
+    });
+    bowlerPill.textContent = name || '—';
+  }
+
+  fielders.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.dataset.name;
+    opt.textContent = f.dataset.name;
+    bowlerSelect.appendChild(opt);
+  });
+  // Default bowler = whichever player starts in the bowler zone, else first name
+  const initialBowler =
+    Array.from(fielders).find(f => f.dataset.zone === 'bowler')?.dataset.name
+    || fielders[0]?.dataset.name;
+  bowlerSelect.value = initialBowler || '';
+  setBowler(bowlerSelect.value);
+
+  bowlerSelect.addEventListener('change', () => setBowler(bowlerSelect.value));
 
   // --- Drag handling (pointer events, mouse + touch)
   let active = null;
