@@ -74,21 +74,29 @@
 
   .fielder {
     position: absolute;
+    width: 22px;
+    height: 22px;
     transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
     pointer-events: auto;
+    touch-action: none;
+    user-select: none;
   }
 
   .dot {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #ffd23f;
     border: 2px solid var(--ink);
     box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    cursor: grab;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .dot:hover { transform: scale(1.12); }
+  .fielder.dragging .dot {
+    cursor: grabbing;
+    transform: scale(1.25);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }
   .fielder.keeper .dot { background: #ff6b6b; }
   .fielder.bowler .dot { background: #6bb6ff; }
@@ -96,15 +104,37 @@
   .fielder.ring .dot { background: #b8e986; }
 
   .card {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 6px);
+    transform: translateX(-50%) translateY(-4px) scale(0.92);
     background: var(--card-bg);
     color: var(--ink);
     border: 1px solid var(--card-border);
     border-radius: 6px;
     padding: 4px 6px;
-    min-width: 86px;
+    min-width: 96px;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    /* Hidden by default — opens on tap or drag */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 5;
+    white-space: nowrap;
   }
+  .fielder.below .card {
+    top: auto;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%) translateY(4px) scale(0.92);
+  }
+  .fielder.open .card,
+  .fielder.dragging .card {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .fielder.dragging { z-index: 10; }
   .card .pos {
     font-size: 11px;
     font-weight: 600;
@@ -145,7 +175,14 @@
     body { background: white; color: black; }
     header, footer, .legend { display: none; }
     .stage { margin: 0 auto; }
-    .card { background: white; box-shadow: none; }
+    .card {
+      background: white;
+      box-shadow: none;
+      opacity: 1 !important;
+      transform: translateX(-50%) translateY(0) scale(1) !important;
+      pointer-events: auto;
+    }
+    .dot { transform: none !important; }
   }
 </style>
 </head>
@@ -153,7 +190,7 @@
 
 <header>
   <h1>Cricket Field — Slog Overs</h1>
-  <span class="meta">Right-handed batter · bowling from the bottom end · 5 outside the circle · click a name field to edit</span>
+  <span class="meta">Right-handed batter · bowling from the bottom end · drag a dot to move · tap a dot to open its name</span>
 </header>
 
 <div class="legend">
@@ -316,8 +353,106 @@
 </div>
 
 <footer>
-  Slog overs setup · 11 positions · click any name field to add a fielder
+  Slog overs setup · 11 positions · drag dots to reposition · tap to open the name
 </footer>
+
+<script>
+(function () {
+  const stage = document.querySelector('.stage');
+  const fielders = document.querySelectorAll('.fielder');
+  const DRAG_THRESHOLD = 4; // px before treating pointer move as drag
+
+  let active = null;     // current fielder being interacted with
+  let didDrag = false;
+  let startX = 0, startY = 0;
+  let offsetX = 0, offsetY = 0;
+
+  function closeAll(except) {
+    document.querySelectorAll('.fielder.open').forEach(o => {
+      if (o !== except) o.classList.remove('open');
+    });
+  }
+
+  function setBelowAuto(f) {
+    // If the dot sits in the lower half of the stage, flip the card upward
+    const top = parseFloat(f.style.top);
+    if (!isNaN(top) && top > 55) f.classList.add('below');
+    else f.classList.remove('below');
+  }
+
+  fielders.forEach(f => {
+    const dot = f.querySelector('.dot');
+
+    dot.addEventListener('pointerdown', (e) => {
+      // Don't hijack pointer events that started on the input
+      if (e.target.classList.contains('name')) return;
+      e.preventDefault();
+      active = f;
+      didDrag = false;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const rect = stage.getBoundingClientRect();
+      const curX = (parseFloat(f.style.left) / 100) * rect.width;
+      const curY = (parseFloat(f.style.top)  / 100) * rect.height;
+      offsetX = (e.clientX - rect.left) - curX;
+      offsetY = (e.clientY - rect.top)  - curY;
+
+      f.classList.add('dragging');
+      try { dot.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    dot.addEventListener('pointermove', (e) => {
+      if (active !== f) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!didDrag && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        didDrag = true;
+      }
+      if (!didDrag) return;
+
+      const rect = stage.getBoundingClientRect();
+      const newX = (e.clientX - rect.left) - offsetX;
+      const newY = (e.clientY - rect.top)  - offsetY;
+      const pctX = Math.max(0, Math.min(100, (newX / rect.width)  * 100));
+      const pctY = Math.max(0, Math.min(100, (newY / rect.height) * 100));
+      f.style.left = pctX + '%';
+      f.style.top  = pctY + '%';
+      setBelowAuto(f);
+    });
+
+    function endDrag(e) {
+      if (active !== f) return;
+      try { dot.releasePointerCapture(e.pointerId); } catch (_) {}
+      f.classList.remove('dragging');
+      if (didDrag) {
+        // Keep the card open after a drag so the user can confirm/edit the name
+        closeAll(f);
+        f.classList.add('open');
+      } else {
+        // Tap → toggle this card open, close others
+        const wasOpen = f.classList.contains('open');
+        closeAll(f);
+        f.classList.toggle('open', !wasOpen);
+      }
+      active = null;
+    }
+
+    dot.addEventListener('pointerup', endDrag);
+    dot.addEventListener('pointercancel', endDrag);
+  });
+
+  // Click anywhere outside a fielder closes any open card
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.fielder')) closeAll(null);
+  });
+
+  // Esc closes everything
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAll(null);
+  });
+})();
+</script>
 
 </body>
 </html>
