@@ -108,6 +108,15 @@
     background: #ff4d4d;
     box-shadow: 0 0 5px #ff4d4d;
   }
+  .bowler-picker .keeper-pill {
+    background: rgba(45, 212, 191, 0.18);
+    border-color: rgba(45, 212, 191, 0.55);
+    color: #b6f0e8;
+  }
+  .bowler-picker .keeper-pill::before {
+    background: #2dd4bf;
+    box-shadow: 0 0 5px #2dd4bf;
+  }
 
   .top-bar .spacer { flex: 1; }
   .field-count {
@@ -186,6 +195,28 @@
       0 1px 2px rgba(0,0,0,0.95);
   }
 
+  /* Highlight the selected keeper */
+  .fielder.is-keeper .dot {
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 4px #2dd4bf,
+      0 0 14px rgba(45, 212, 191, 0.65);
+  }
+  .fielder.is-keeper .player-name {
+    color: #b6f0e8;
+    text-shadow:
+      0 0 4px #2dd4bf,
+      0 0 3px rgba(0,0,0,0.95),
+      0 1px 2px rgba(0,0,0,0.95);
+  }
+  /* If somehow a player ends up tagged as both, bowler styling wins */
+  .fielder.is-bowler.is-keeper .dot {
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 4px #ff4d4d,
+      0 0 14px rgba(255, 77, 77, 0.7);
+  }
+
   /* Player name — static, always visible below the dot */
   .player-name {
     position: absolute;
@@ -255,6 +286,12 @@
   <div class="phase-toggle" role="tablist" aria-label="Innings phase">
     <button type="button" data-phase="powerplay">Powerplay</button>
     <button type="button" data-phase="non-powerplay" class="active">Non-PP</button>
+  </div>
+  <span class="sep"></span>
+  <div class="bowler-picker">
+    <label for="keeper-select">Keeper</label>
+    <select id="keeper-select"></select>
+    <span class="bowler-pill keeper-pill" id="keeper-pill">—</span>
   </div>
   <span class="sep"></span>
   <div class="bowler-picker">
@@ -396,10 +433,12 @@
     return { label, zone };
   }
 
-  // --- Phase + bowler controls (declared before initial render so updateFielder can use them)
+  // --- Phase + bowler/keeper controls (declared before initial render so updateFielder can use them)
   const phaseButtons = document.querySelectorAll('.phase-toggle button');
   const bowlerSelect = document.getElementById('bowler-select');
   const bowlerPill   = document.getElementById('bowler-pill');
+  const keeperSelect = document.getElementById('keeper-select');
+  const keeperPill   = document.getElementById('keeper-pill');
   const outsideCount = document.getElementById('outside-count');
   const outsideLimit = document.getElementById('outside-limit');
   const fieldCountEl = document.getElementById('field-count');
@@ -438,49 +477,90 @@
     });
   });
 
-  // The bowler always stands here (top of the bowler's-end run-up)
+  // Anchor spots for the two role players
   const BOWLER_SPOT = { left: 50.0, top: 62.0 };
+  const KEEPER_SPOT = { left: 50.0, top: 35.5 };
 
-  // Populate the bowler dropdown from the player names
-  function setBowler(name) {
-    const newBowler  = Array.from(fielders).find(f => f.dataset.name === name) || null;
-    const prevBowler = Array.from(fielders).find(f => f.classList.contains('is-bowler')) || null;
+  function findByName(name)   { return Array.from(fielders).find(f => f.dataset.name === name) || null; }
+  function getBowlerName()    { return Array.from(fielders).find(f => f.classList.contains('is-bowler'))?.dataset.name || null; }
+  function getKeeperName()    { return Array.from(fielders).find(f => f.classList.contains('is-keeper'))?.dataset.name || null; }
 
-    if (newBowler && newBowler !== prevBowler) {
-      // Swap positions: new bowler → bowler spot, previous bowler → new bowler's old spot
-      const newOldLeft = newBowler.style.left;
-      const newOldTop  = newBowler.style.top;
-
-      newBowler.style.left = BOWLER_SPOT.left + '%';
-      newBowler.style.top  = BOWLER_SPOT.top  + '%';
-
-      if (prevBowler) {
-        prevBowler.style.left = newOldLeft;
-        prevBowler.style.top  = newOldTop;
-        updateFielder(prevBowler);
-      }
-      updateFielder(newBowler);
+  // Move `subject` to (left%, top%); the player currently at that anchor (if any
+  // and different) takes subject's old position. Refreshes labels for both.
+  function placeAtAnchor(subject, anchor, prev) {
+    if (!subject || subject === prev) return;
+    const oldLeft = subject.style.left;
+    const oldTop  = subject.style.top;
+    subject.style.left = anchor.left + '%';
+    subject.style.top  = anchor.top  + '%';
+    if (prev) {
+      prev.style.left = oldLeft;
+      prev.style.top  = oldTop;
+      updateFielder(prev);
     }
-
-    fielders.forEach(f => {
-      f.classList.toggle('is-bowler', f.dataset.name === name);
-    });
-    bowlerPill.textContent = name || '—';
+    updateFielder(subject);
   }
 
-  fielders.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f.dataset.name;
-    opt.textContent = f.dataset.name;
-    bowlerSelect.appendChild(opt);
-  });
-  // Default bowler = whichever player starts in the bowler zone, else first name
+  function setBowler(name) {
+    if (!name) return;
+    if (name === getKeeperName()) return; // safety: can't bowl and keep
+    const newBowler  = findByName(name);
+    const prevBowler = findByName(getBowlerName());
+    placeAtAnchor(newBowler, BOWLER_SPOT, prevBowler);
+    fielders.forEach(f => f.classList.toggle('is-bowler', f.dataset.name === name));
+    bowlerPill.textContent = name;
+    populateKeeperOptions();
+  }
+
+  function setKeeper(name) {
+    if (!name) return;
+    if (name === getBowlerName()) return; // safety: can't keep and bowl
+    const newKeeper  = findByName(name);
+    const prevKeeper = findByName(getKeeperName());
+    placeAtAnchor(newKeeper, KEEPER_SPOT, prevKeeper);
+    fielders.forEach(f => f.classList.toggle('is-keeper', f.dataset.name === name));
+    keeperPill.textContent = name;
+    populateBowlerOptions();
+  }
+
+  function populateOptions(selectEl, excludeName) {
+    const prev = selectEl.value;
+    selectEl.innerHTML = '';
+    fielders.forEach(f => {
+      if (f.dataset.name === excludeName) return;
+      const opt = document.createElement('option');
+      opt.value = f.dataset.name;
+      opt.textContent = f.dataset.name;
+      selectEl.appendChild(opt);
+    });
+    if (prev && Array.from(selectEl.options).some(o => o.value === prev)) {
+      selectEl.value = prev;
+    }
+  }
+  function populateBowlerOptions() { populateOptions(bowlerSelect, getKeeperName()); }
+  function populateKeeperOptions() { populateOptions(keeperSelect, getBowlerName()); }
+
+  // --- Initial roles
+  // Default keeper = whichever player starts in the keeper zone (Ankush);
+  // default bowler = whichever player starts in the bowler zone (Baljit).
+  const initialKeeper =
+    Array.from(fielders).find(f => f.dataset.zone === 'keeper')?.dataset.name
+    || fielders[0]?.dataset.name;
   const initialBowler =
     Array.from(fielders).find(f => f.dataset.zone === 'bowler')?.dataset.name
-    || fielders[0]?.dataset.name;
-  bowlerSelect.value = initialBowler || '';
-  setBowler(bowlerSelect.value);
+    || fielders.find(f => f.dataset.name !== initialKeeper)?.dataset.name;
 
+  // Build dropdowns with no exclusions yet, then set the roles which will refresh them.
+  populateOptions(keeperSelect, null);
+  populateOptions(bowlerSelect, null);
+
+  keeperSelect.value = initialKeeper;
+  setKeeper(initialKeeper);
+
+  bowlerSelect.value = initialBowler;
+  setBowler(initialBowler);
+
+  keeperSelect.addEventListener('change', () => setKeeper(keeperSelect.value));
   bowlerSelect.addEventListener('change', () => setBowler(bowlerSelect.value));
 
   // --- Drag handling (pointer events, mouse + touch)
