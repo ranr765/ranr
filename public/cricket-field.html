@@ -267,6 +267,39 @@
   }
   .fielder:hover .position-label { opacity: 1; }
 
+  @media (max-width: 640px) {
+    .top-bar {
+      font-size: 11px;
+      padding: 4px 6px;
+      gap: 6px 8px;
+      margin: 4px 4px 4px;
+      max-width: calc(100% - 8px);
+    }
+    .top-bar h1 { font-size: 11px; }
+    .top-bar .sep { display: none; }
+    .top-bar .spacer { display: none; }
+    .phase-toggle { padding: 1px; }
+    .phase-toggle button { padding: 3px 7px; font-size: 9px; letter-spacing: 0.4px; }
+    .bowler-picker { gap: 4px; }
+    .bowler-picker label { font-size: 9px; }
+    .bowler-picker select { padding: 2px 4px; font-size: 11px; }
+    .bowler-picker .bowler-pill { font-size: 10px; padding: 1px 6px 1px 5px; gap: 3px; }
+    .field-count { font-size: 9px; }
+    .player-name {
+      font-size: 9px;
+      letter-spacing: 0;
+      top: calc(100% + 2px);
+    }
+    .position-label {
+      font-size: 8px;
+      padding: 0 3px;
+      letter-spacing: 0.3px;
+      bottom: calc(100% + 2px);
+    }
+    .stage { width: calc(100% - 4px); margin: 4px auto; }
+    .field text { font-size: 11px !important; }
+  }
+
   @media print {
     body { background: white; color: black; }
     .top-bar { background: #f4f4f4; border-color: #ccc; color: #111; }
@@ -284,8 +317,8 @@
   <h1>CVZ Field Placement</h1>
   <span class="sep"></span>
   <div class="phase-toggle" role="tablist" aria-label="Innings phase">
-    <button type="button" data-phase="powerplay">Powerplay</button>
-    <button type="button" data-phase="non-powerplay" class="active">Non-PP</button>
+    <button type="button" data-phase="powerplay" class="active">Powerplay</button>
+    <button type="button" data-phase="non-powerplay">Non-PP</button>
   </div>
   <span class="sep"></span>
   <div class="bowler-picker">
@@ -334,20 +367,21 @@
   </svg>
 
   <!--
-    11 players. The name attribute is static; the position label is
-    computed by JS on init and on every drag move.
+    11 players in a Powerplay setup (max 2 outside the ring).
+    Ankush bowling at the bowler's end, Harsh keeping. Baljit at 1st slip.
+    Position labels are computed by JS on init and on every drag move.
   -->
-  <div class="fielder" data-name="Baljit"   style="left:50.0%; top:62.0%;"></div>
-  <div class="fielder" data-name="Ankush"   style="left:50.0%; top:35.5%;"></div>
-  <div class="fielder" data-name="Akhil"    style="left:33.0%; top:86.0%;"></div>
-  <div class="fielder" data-name="Ranjith"  style="left:67.0%; top:86.0%;"></div>
-  <div class="fielder" data-name="Mirza"    style="left:88.0%; top:57.0%;"></div>
-  <div class="fielder" data-name="Harsh"    style="left:12.0%; top:57.0%;"></div>
-  <div class="fielder" data-name="Jithesh"  style="left:14.0%; top:28.0%;"></div>
-  <div class="fielder" data-name="Shishir"  style="left:39.5%; top:53.5%;"></div>
-  <div class="fielder" data-name="Saurabh"  style="left:60.5%; top:53.5%;"></div>
-  <div class="fielder" data-name="Nikmal"   style="left:35.0%; top:46.0%;"></div>
-  <div class="fielder" data-name="Abdullah" style="left:65.0%; top:42.0%;"></div>
+  <div class="fielder" data-name="Baljit"   style="left:45.0%; top:37.0%;"></div>
+  <div class="fielder" data-name="Ankush"   style="left:50.0%; top:62.0%;"></div>
+  <div class="fielder" data-name="Akhil"    style="left:60.0%; top:85.0%;"></div>
+  <div class="fielder" data-name="Ranjith"  style="left:88.0%; top:60.0%;"></div>
+  <div class="fielder" data-name="Mirza"    style="left:40.0%; top:53.0%;"></div>
+  <div class="fielder" data-name="Harsh"    style="left:50.0%; top:35.5%;"></div>
+  <div class="fielder" data-name="Jithesh"  style="left:60.0%; top:53.0%;"></div>
+  <div class="fielder" data-name="Shishir"  style="left:35.0%; top:50.0%;"></div>
+  <div class="fielder" data-name="Saurabh"  style="left:33.0%; top:42.0%;"></div>
+  <div class="fielder" data-name="Nikmal"   style="left:68.0%; top:51.0%;"></div>
+  <div class="fielder" data-name="Abdullah" style="left:65.0%; top:47.0%;"></div>
 
 </div>
 
@@ -386,14 +420,27 @@
     const vbX = (xPct / 100) * 800;
     const vbY = (yPct / 100) * 900;
 
-    // Pitch / keeper / bowler special zones
-    if (vbY < 360 && Math.abs(vbX - 400) < 60) {
+    // Wicketkeeper: very close to the stumps at the batter's end
+    if (vbY >= 310 && vbY <= 365 && Math.abs(vbX - 400) <= 24) {
       return { label: 'Wicketkeeper', zone: 'keeper' };
     }
+    // On the pitch
     if (vbX > 380 && vbX < 420) {
-      if (vbY >= 360 && vbY <= 470) return { label: 'On the Pitch (Batter’s End)', zone: 'pitch' };
-      if (vbY > 470 && vbY <= 560)  return { label: 'Bowler', zone: 'bowler' };
-      if (vbY > 560 && vbY <= 620)  return { label: 'Bowler', zone: 'bowler' };
+      if (vbY >= 365 && vbY <= 470) return { label: "On the Pitch (Batter's End)", zone: 'pitch' };
+      if (vbY > 470 && vbY <= 620)  return { label: 'Bowler', zone: 'bowler' };
+    }
+
+    // Slip cordon: tight band level with the keeper, fanning off-side
+    if (vbY >= 305 && vbY <= 372) {
+      const sx = vbX - 400;
+      if (sx <= -22 && sx > -45)   return { label: '1st Slip', zone: 'ring' };
+      if (sx <= -45 && sx > -68)   return { label: '2nd Slip', zone: 'ring' };
+      if (sx <= -68 && sx > -92)   return { label: '3rd Slip', zone: 'ring' };
+      if (sx <= -92 && sx > -118)  return { label: '4th Slip', zone: 'ring' };
+      if (sx <= -118 && sx > -160) return { label: 'Gully',    zone: 'ring' };
+      // Leg side behind keeper
+      if (sx >= 22 && sx < 60)     return { label: 'Leg Slip', zone: 'ring' };
+      if (sx >= 60 && sx < 110)    return { label: 'Short Fine Leg', zone: 'ring' };
     }
 
     const dx = vbX - 400;
@@ -415,11 +462,11 @@
       if (angle >= -22.5 && angle < 22.5)         label = ax < 0 ? 'Mid Off' : 'Mid On';
       else if (angle >= 22.5 && angle < 67.5)     label = 'Cover';
       else if (angle >= 67.5 && angle < 112.5)    label = 'Point';
-      else if (angle >= 112.5 && angle < 157.5)   label = 'Backward Point';
-      else if (angle >= 157.5 || angle < -157.5)  label = 'Slip';
+      else if (angle >= 112.5 && angle < 150)     label = 'Backward Point';
+      else if (angle >= 150 || angle < -150)      label = 'Slip';
       else if (angle >= -67.5 && angle < -22.5)   label = 'Midwicket';
       else if (angle >= -112.5 && angle < -67.5)  label = 'Square Leg';
-      else if (angle >= -157.5 && angle < -112.5) label = 'Short Fine Leg';
+      else if (angle >= -150 && angle < -112.5)   label = 'Short Fine Leg';
     } else {
       if (angle >= -22.5 && angle < 22.5)         label = ax < 0 ? 'Long Off' : 'Long On';
       else if (angle >= 22.5 && angle < 67.5)     label = 'Deep Cover';
@@ -443,7 +490,7 @@
   const outsideLimit = document.getElementById('outside-limit');
   const fieldCountEl = document.getElementById('field-count');
 
-  let currentPhase = 'non-powerplay'; // default for CVZ field placement
+  let currentPhase = 'powerplay'; // default starting phase
   function phaseLimit() { return currentPhase === 'powerplay' ? 2 : 5; }
 
   function refreshOutsideCount() {
