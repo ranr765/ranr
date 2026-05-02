@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Cricket Field — Slog Overs</title>
+<title>Cricket Field — CVZ Field Placement</title>
 <style>
   html, body {
     margin: 0;
@@ -281,7 +281,7 @@
 <body>
 
 <div class="top-bar">
-  <h1>Cricket Field</h1>
+  <h1>CVZ Field Placement</h1>
   <span class="sep"></span>
   <div class="phase-toggle" role="tablist" aria-label="Innings phase">
     <button type="button" data-phase="powerplay">Powerplay</button>
@@ -443,7 +443,7 @@
   const outsideLimit = document.getElementById('outside-limit');
   const fieldCountEl = document.getElementById('field-count');
 
-  let currentPhase = 'non-powerplay'; // default for slog overs
+  let currentPhase = 'non-powerplay'; // default for CVZ field placement
   function phaseLimit() { return currentPhase === 'powerplay' ? 2 : 5; }
 
   function refreshOutsideCount() {
