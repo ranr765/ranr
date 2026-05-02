@@ -144,8 +144,10 @@
     touch-action: none;
     user-select: none;
     z-index: 4;
+    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .fielder.dragging { z-index: 10; }
+  .fielder.dragging { z-index: 10; transition: none; }
 
   .dot {
     width: 22px;
@@ -436,8 +438,30 @@
     });
   });
 
+  // The bowler always stands here (top of the bowler's-end run-up)
+  const BOWLER_SPOT = { left: 50.0, top: 62.0 };
+
   // Populate the bowler dropdown from the player names
   function setBowler(name) {
+    const newBowler  = Array.from(fielders).find(f => f.dataset.name === name) || null;
+    const prevBowler = Array.from(fielders).find(f => f.classList.contains('is-bowler')) || null;
+
+    if (newBowler && newBowler !== prevBowler) {
+      // Swap positions: new bowler → bowler spot, previous bowler → new bowler's old spot
+      const newOldLeft = newBowler.style.left;
+      const newOldTop  = newBowler.style.top;
+
+      newBowler.style.left = BOWLER_SPOT.left + '%';
+      newBowler.style.top  = BOWLER_SPOT.top  + '%';
+
+      if (prevBowler) {
+        prevBowler.style.left = newOldLeft;
+        prevBowler.style.top  = newOldTop;
+        updateFielder(prevBowler);
+      }
+      updateFielder(newBowler);
+    }
+
     fielders.forEach(f => {
       f.classList.toggle('is-bowler', f.dataset.name === name);
     });
