@@ -375,7 +375,18 @@
   .fielder:hover .position-label { opacity: 1; }
 
   @media (max-width: 640px) {
+    /* Lock the whole page on mobile so dragging a dot doesn't scroll
+       the underlying screen. The edit modal restores its own scroll. */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+    }
     body { background: #0e1813; }
+    .stage  { touch-action: none; }
+    .edit-overlay { touch-action: auto; }
+    .edit-modal   { touch-action: pan-y; -webkit-overflow-scrolling: touch; }
     .top-bar {
       font-size: 12px;
       padding: 6px 8px;
