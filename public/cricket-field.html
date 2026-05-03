@@ -395,19 +395,43 @@
     .field-count { font-size: 10px; }
     .edit-btn { padding: 5px 9px; font-size: 10px; letter-spacing: 0.3px; }
 
-    /* Bigger touch target for the dots */
-    .fielder { width: 28px; height: 28px; }
-    .dot { width: 28px; height: 28px; border-width: 2.5px; }
+    /* Bigger touch area: the fielder is a 48px halo with the visible dot
+       centered inside via flex, so anywhere within the halo grabs the player. */
+    .fielder {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dot {
+      width: 32px;
+      height: 32px;
+      border-width: 3px;
+    }
+    .fielder.dragging .dot { transform: scale(1.12); }
+
+    /* Tone down the dragging label so it doesn't cover the dot */
+    .fielder.dragging .position-label {
+      background: #ffd23f;
+      color: #1a1a1a;
+      border-color: #1a1a1a;
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
     .player-name {
       font-size: 11px;
       letter-spacing: 0;
-      top: calc(100% + 3px);
+      top: calc(100% - 4px);
     }
     .position-label {
       font-size: 9px;
       padding: 1px 4px;
       letter-spacing: 0.3px;
-      bottom: calc(100% + 3px);
+      bottom: calc(100% - 4px);
     }
     .stage { width: calc(100% - 4px); margin: 4px auto 8px; }
     .field text { font-size: 12px !important; }
@@ -862,9 +886,7 @@
   let offsetX = 0, offsetY = 0;
 
   fielders.forEach(f => {
-    const dot = f.querySelector('.dot');
-
-    dot.addEventListener('pointerdown', (e) => {
+    f.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       active = f;
       didDrag = false;
@@ -878,10 +900,10 @@
       offsetY = (e.clientY - rect.top)  - curY;
 
       f.classList.add('dragging');
-      try { dot.setPointerCapture(e.pointerId); } catch (_) {}
+      try { f.setPointerCapture(e.pointerId); } catch (_) {}
     });
 
-    dot.addEventListener('pointermove', (e) => {
+    f.addEventListener('pointermove', (e) => {
       if (active !== f) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -903,14 +925,14 @@
 
     function endDrag(e) {
       if (active !== f) return;
-      try { dot.releasePointerCapture(e.pointerId); } catch (_) {}
+      try { f.releasePointerCapture(e.pointerId); } catch (_) {}
       f.classList.remove('dragging');
       updateFielder(f);
       active = null;
     }
 
-    dot.addEventListener('pointerup', endDrag);
-    dot.addEventListener('pointercancel', endDrag);
+    f.addEventListener('pointerup', endDrag);
+    f.addEventListener('pointercancel', endDrag);
   });
 
   // --- Edit Players modal
