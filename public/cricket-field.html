@@ -375,37 +375,48 @@
   .fielder:hover .position-label { opacity: 1; }
 
   @media (max-width: 640px) {
+    body { background: #0e1813; }
     .top-bar {
-      font-size: 11px;
-      padding: 4px 6px;
-      gap: 6px 8px;
-      margin: 4px 4px 4px;
+      font-size: 12px;
+      padding: 6px 8px;
+      gap: 8px 10px;
+      margin: 5px 4px;
       max-width: calc(100% - 8px);
     }
-    .top-bar h1 { font-size: 11px; }
+    .top-bar h1 { font-size: 12px; }
     .top-bar .sep { display: none; }
     .top-bar .spacer { display: none; }
-    .phase-toggle { padding: 1px; }
-    .phase-toggle button { padding: 3px 7px; font-size: 9px; letter-spacing: 0.4px; }
-    .bowler-picker { gap: 4px; }
-    .bowler-picker label { font-size: 9px; }
-    .bowler-picker select { padding: 2px 4px; font-size: 11px; }
-    .bowler-picker .bowler-pill { font-size: 10px; padding: 1px 6px 1px 5px; gap: 3px; }
-    .field-count { font-size: 9px; }
-    .edit-btn { padding: 3px 7px; font-size: 9px; letter-spacing: 0.3px; }
+    .phase-toggle { padding: 2px; }
+    .phase-toggle button { padding: 5px 10px; font-size: 10px; letter-spacing: 0.4px; }
+    .bowler-picker { gap: 5px; }
+    .bowler-picker label { font-size: 10px; }
+    .bowler-picker select { padding: 5px 7px; font-size: 13px; min-width: 88px; }
+    .bowler-picker .bowler-pill { font-size: 11px; padding: 3px 9px 3px 7px; gap: 4px; }
+    .field-count { font-size: 10px; }
+    .edit-btn { padding: 5px 9px; font-size: 10px; letter-spacing: 0.3px; }
+
+    /* Bigger touch target for the dots */
+    .fielder { width: 28px; height: 28px; }
+    .dot { width: 28px; height: 28px; border-width: 2.5px; }
     .player-name {
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 0;
-      top: calc(100% + 2px);
+      top: calc(100% + 3px);
     }
     .position-label {
-      font-size: 8px;
-      padding: 0 3px;
+      font-size: 9px;
+      padding: 1px 4px;
       letter-spacing: 0.3px;
-      bottom: calc(100% + 2px);
+      bottom: calc(100% + 3px);
     }
-    .stage { width: calc(100% - 4px); margin: 4px auto; }
-    .field text { font-size: 11px !important; }
+    .stage { width: calc(100% - 4px); margin: 4px auto 8px; }
+    .field text { font-size: 12px !important; }
+
+    /* Edit modal */
+    .edit-modal { padding: 14px; }
+    .edit-modal h2 { font-size: 15px; }
+    .edit-list input { padding: 7px 9px; font-size: 14px; }
+    .edit-actions button { padding: 8px 14px; font-size: 12px; }
   }
 
   @media print {
@@ -464,26 +475,112 @@
 
 <div class="stage">
   <svg class="field" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" aria-label="Cricket field">
-    <ellipse cx="400" cy="450" rx="380" ry="430" fill="#2f7a3a" stroke="#ffffff" stroke-width="3" />
-    <g opacity="0.18">
-      <ellipse cx="400" cy="450" rx="320" ry="362" fill="#2a6f34" />
-      <ellipse cx="400" cy="450" rx="240" ry="272" fill="#2f7a3a" />
-      <ellipse cx="400" cy="450" rx="180" ry="204" fill="#2a6f34" />
+    <defs>
+      <radialGradient id="grass-grad" cx="50%" cy="50%" r="58%">
+        <stop offset="0%"   stop-color="#3f8c47" />
+        <stop offset="55%"  stop-color="#327c39" />
+        <stop offset="100%" stop-color="#1f5826" />
+      </radialGradient>
+      <radialGradient id="ring-shade" cx="50%" cy="50%" r="55%">
+        <stop offset="80%" stop-color="rgba(0,0,0,0)" />
+        <stop offset="100%" stop-color="rgba(0,0,0,0.35)" />
+      </radialGradient>
+      <linearGradient id="pitch-grad" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%"  stop-color="#caa56e" />
+        <stop offset="50%" stop-color="#d4b079" />
+        <stop offset="100%" stop-color="#b88f5a" />
+      </linearGradient>
+      <pattern id="grass-tex" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+        <rect width="8" height="8" fill="transparent" />
+        <line x1="0" y1="0" x2="8" y2="8" stroke="rgba(255,255,255,0.05)" stroke-width="0.6" />
+        <line x1="8" y1="0" x2="0" y2="8" stroke="rgba(0,0,0,0.05)" stroke-width="0.6" />
+      </pattern>
+    </defs>
+
+    <!-- Run-off / outfield rough -->
+    <ellipse cx="400" cy="450" rx="396" ry="446" fill="#173f1c" />
+
+    <!-- Main playing area -->
+    <ellipse cx="400" cy="450" rx="382" ry="432" fill="url(#grass-grad)" />
+
+    <!-- Concentric mowing stripes -->
+    <g opacity="0.28" stroke="#235a2b" fill="none">
+      <ellipse cx="400" cy="450" rx="350" ry="396" stroke-width="34" />
+      <ellipse cx="400" cy="450" rx="282" ry="318" stroke-width="34" />
+      <ellipse cx="400" cy="450" rx="214" ry="242" stroke-width="34" />
+      <ellipse cx="400" cy="450" rx="148" ry="166" stroke-width="34" />
+      <ellipse cx="400" cy="450" rx="82"  ry="92"  stroke-width="34" />
     </g>
-    <circle cx="400" cy="450" r="160" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="6 6" opacity="0.85" />
-    <rect x="386" y="360" width="28" height="180" fill="#c8a26a" stroke="#a07e4d" stroke-width="1.5" />
-    <line x1="378" y1="360" x2="422" y2="360" stroke="#f5f5dc" stroke-width="1.5" />
-    <line x1="378" y1="540" x2="422" y2="540" stroke="#f5f5dc" stroke-width="1.5" />
-    <line x1="372" y1="378" x2="428" y2="378" stroke="#f5f5dc" stroke-width="1" />
-    <line x1="372" y1="522" x2="428" y2="522" stroke="#f5f5dc" stroke-width="1" />
-    <g fill="#efe7d2">
-      <rect x="397" y="357" width="2" height="6" />
-      <rect x="400" y="357" width="2" height="6" />
-      <rect x="403" y="357" width="2" height="6" />
-      <rect x="397" y="537" width="2" height="6" />
-      <rect x="400" y="537" width="2" height="6" />
-      <rect x="403" y="537" width="2" height="6" />
+
+    <!-- Subtle grass texture -->
+    <ellipse cx="400" cy="450" rx="382" ry="432" fill="url(#grass-tex)" opacity="0.6" />
+
+    <!-- Soft vignette toward boundary -->
+    <ellipse cx="400" cy="450" rx="382" ry="432" fill="url(#ring-shade)" />
+
+    <!-- Boundary rope -->
+    <ellipse cx="400" cy="450" rx="378" ry="428" fill="none" stroke="#ffffff" stroke-width="2.6" />
+    <ellipse cx="400" cy="450" rx="378" ry="428" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1" stroke-dasharray="2 4" />
+
+    <!-- 30-yard ring -->
+    <circle cx="400" cy="450" r="160" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-dasharray="3 7" opacity="0.85" />
+    <!-- Compass / quarter markers along the inner ring -->
+    <g fill="#ffffff" opacity="0.9">
+      <circle cx="400" cy="290" r="2.6" />
+      <circle cx="400" cy="610" r="2.6" />
+      <circle cx="240" cy="450" r="2.6" />
+      <circle cx="560" cy="450" r="2.6" />
+      <circle cx="287" cy="337" r="2.2" />
+      <circle cx="513" cy="337" r="2.2" />
+      <circle cx="287" cy="563" r="2.2" />
+      <circle cx="513" cy="563" r="2.2" />
     </g>
+
+    <!-- Pitch base with shadow -->
+    <rect x="384" y="358" width="32" height="184" fill="rgba(0,0,0,0.25)" />
+    <rect x="386" y="360" width="28" height="180" fill="url(#pitch-grad)" stroke="#7a5d35" stroke-width="1.2" />
+    <!-- Worn central strip from bowler run-throughs -->
+    <rect x="394" y="364" width="12" height="172" fill="#d6b079" opacity="0.55" />
+    <!-- Scuff marks / footprints -->
+    <g fill="#8a6a3d" opacity="0.45">
+      <circle cx="391" cy="378" r="0.9" />
+      <circle cx="407" cy="392" r="0.9" />
+      <circle cx="395" cy="412" r="0.9" />
+      <circle cx="403" cy="438" r="0.9" />
+      <circle cx="391" cy="460" r="0.9" />
+      <circle cx="407" cy="482" r="0.9" />
+      <circle cx="395" cy="510" r="0.9" />
+      <circle cx="403" cy="528" r="0.9" />
+    </g>
+
+    <!-- Bowling creases (across the stumps) -->
+    <line x1="376" y1="360" x2="424" y2="360" stroke="#fafad2" stroke-width="1.8" />
+    <line x1="376" y1="540" x2="424" y2="540" stroke="#fafad2" stroke-width="1.8" />
+    <!-- Popping creases -->
+    <line x1="368" y1="378" x2="432" y2="378" stroke="#fafad2" stroke-width="1.4" />
+    <line x1="368" y1="522" x2="432" y2="522" stroke="#fafad2" stroke-width="1.4" />
+    <!-- Return creases (L corners) -->
+    <line x1="376" y1="360" x2="376" y2="378" stroke="#fafad2" stroke-width="1.4" />
+    <line x1="424" y1="360" x2="424" y2="378" stroke="#fafad2" stroke-width="1.4" />
+    <line x1="376" y1="540" x2="376" y2="522" stroke="#fafad2" stroke-width="1.4" />
+    <line x1="424" y1="540" x2="424" y2="522" stroke="#fafad2" stroke-width="1.4" />
+
+    <!-- Stumps + bails (top end) -->
+    <g>
+      <rect x="395" y="352" width="2" height="9" fill="#f5e6d3" />
+      <rect x="399" y="352" width="2" height="9" fill="#f5e6d3" />
+      <rect x="403" y="352" width="2" height="9" fill="#f5e6d3" />
+      <line x1="394" y1="352" x2="406" y2="352" stroke="#e2cba6" stroke-width="1.4" />
+    </g>
+    <!-- Stumps + bails (bottom end) -->
+    <g>
+      <rect x="395" y="540" width="2" height="9" fill="#f5e6d3" />
+      <rect x="399" y="540" width="2" height="9" fill="#f5e6d3" />
+      <rect x="403" y="540" width="2" height="9" fill="#f5e6d3" />
+      <line x1="394" y1="549" x2="406" y2="549" stroke="#e2cba6" stroke-width="1.4" />
+    </g>
+
+    <!-- Off / Leg / End labels -->
     <text x="40"  y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="start" font-family="sans-serif">OFF SIDE</text>
     <text x="760" y="455" font-size="14" fill="#ffffff" opacity="0.7" text-anchor="end"   font-family="sans-serif">LEG SIDE</text>
     <text x="400" y="32"  font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BATTER'S END</text>
