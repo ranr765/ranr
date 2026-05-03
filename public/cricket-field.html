@@ -129,6 +129,113 @@
   .field-count .num { font-weight: 700; opacity: 1; color: #fff; }
   .field-count.over-limit .num { color: #ff6b6b; }
 
+  .edit-btn {
+    background: rgba(255,255,255,0.10);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 5px;
+    padding: 4px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .edit-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.4); }
+
+  .edit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 12px;
+  }
+  .edit-overlay.open { display: flex; }
+  .edit-modal {
+    background: #1a2820;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 16px 18px;
+    width: min(420px, 100%);
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+  }
+  .edit-modal h2 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .edit-modal .hint {
+    margin: 0 0 12px;
+    font-size: 11px;
+    opacity: 0.65;
+  }
+  .edit-list {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 6px 8px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .edit-list .num {
+    font-size: 11px;
+    opacity: 0.55;
+    font-weight: 700;
+    text-align: right;
+  }
+  .edit-list input {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 4px;
+    color: #fff;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .edit-list input:focus {
+    outline: none;
+    border-color: #b8e986;
+    background: rgba(0,0,0,0.55);
+  }
+  .edit-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .edit-actions .right { display: inline-flex; gap: 8px; }
+  .edit-actions button {
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    transition: background 0.15s ease;
+  }
+  .edit-actions button:hover { background: rgba(255,255,255,0.12); }
+  .edit-actions button.primary {
+    background: #b8e986;
+    color: #1a1a1a;
+    border-color: #b8e986;
+  }
+  .edit-actions button.primary:hover { background: #c8f099; }
+  .edit-actions button.danger {
+    background: transparent;
+    color: #ff9b9b;
+    border-color: rgba(255, 107, 107, 0.4);
+  }
+  .edit-actions button.danger:hover { background: rgba(255, 107, 107, 0.15); }
+
   .stage {
     position: relative;
     width: min(100%, 880px);
@@ -285,6 +392,7 @@
     .bowler-picker select { padding: 2px 4px; font-size: 11px; }
     .bowler-picker .bowler-pill { font-size: 10px; padding: 1px 6px 1px 5px; gap: 3px; }
     .field-count { font-size: 9px; }
+    .edit-btn { padding: 3px 7px; font-size: 9px; letter-spacing: 0.3px; }
     .player-name {
       font-size: 9px;
       letter-spacing: 0;
@@ -335,6 +443,22 @@
   <span class="spacer"></span>
   <div class="field-count" id="field-count">
     Outside: <span class="num" id="outside-count">0</span> / <span id="outside-limit">5</span>
+  </div>
+  <button class="edit-btn" type="button" id="edit-players-btn">Edit Players</button>
+</div>
+
+<div class="edit-overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+  <div class="edit-modal">
+    <h2 id="edit-title">Edit Player Names</h2>
+    <p class="hint">Change any of the 11 names. Saved in this browser.</p>
+    <div class="edit-list" id="edit-list"></div>
+    <div class="edit-actions">
+      <button type="button" class="danger" id="edit-reset">Reset</button>
+      <span class="right">
+        <button type="button" id="edit-cancel">Cancel</button>
+        <button type="button" class="primary" id="edit-save">Save</button>
+      </span>
+    </div>
   </div>
 </div>
 
@@ -391,6 +515,30 @@
   const stage = document.querySelector('.stage');
   const fielders = document.querySelectorAll('.fielder');
   const DRAG_THRESHOLD = 3;
+
+  // --- Persisted player names (localStorage)
+  const STORAGE_KEY = 'cvz-player-names';
+  const DEFAULT_NAMES = Array.from(fielders).map(f => f.dataset.name);
+
+  function loadStoredNames() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr) || arr.length !== fielders.length) return null;
+      return arr.map(n => (typeof n === 'string' ? n.trim() : '')).map((n, i) => n || DEFAULT_NAMES[i]);
+    } catch (e) { return null; }
+  }
+  function saveNames(arr) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+
+  // Apply any stored names BEFORE building the inner DOM, so the player-name
+  // divs are created with the right text from the start.
+  const stored = loadStoredNames();
+  if (stored) {
+    fielders.forEach((f, i) => { f.dataset.name = stored[i]; });
+  }
 
   // --- Build the inner DOM for each fielder (dot, position label, name)
   fielders.forEach(f => {
@@ -666,6 +814,78 @@
 
     dot.addEventListener('pointerup', endDrag);
     dot.addEventListener('pointercancel', endDrag);
+  });
+
+  // --- Edit Players modal
+  const editBtn      = document.getElementById('edit-players-btn');
+  const editOverlay  = document.getElementById('edit-overlay');
+  const editList     = document.getElementById('edit-list');
+  const editSaveBtn  = document.getElementById('edit-save');
+  const editCancelBtn= document.getElementById('edit-cancel');
+  const editResetBtn = document.getElementById('edit-reset');
+
+  // Build the 11 input rows once
+  fielders.forEach((f, i) => {
+    const num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = (i + 1) + '.';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 24;
+    input.dataset.idx = i;
+
+    editList.appendChild(num);
+    editList.appendChild(input);
+  });
+  const editInputs = editList.querySelectorAll('input');
+
+  function openEditModal() {
+    fielders.forEach((f, i) => { editInputs[i].value = f.dataset.name; });
+    editOverlay.classList.add('open');
+    editInputs[0].focus();
+    editInputs[0].select();
+  }
+  function closeEditModal() {
+    editOverlay.classList.remove('open');
+  }
+
+  function applyNames(names) {
+    fielders.forEach((f, i) => {
+      const newName = (names[i] || '').trim() || DEFAULT_NAMES[i];
+      f.dataset.name = newName;
+      const nameEl = f.querySelector('.player-name');
+      if (nameEl) nameEl.textContent = newName;
+    });
+    // Refresh the dropdowns and pills with the new names
+    populateBowlerOptions();
+    populateKeeperOptions();
+    const kn = getKeeperName();
+    const bn = getBowlerName();
+    if (kn) { keeperSelect.value = kn; keeperPill.textContent = kn; }
+    if (bn) { bowlerSelect.value = bn; bowlerPill.textContent = bn; }
+  }
+
+  editBtn.addEventListener('click', openEditModal);
+  editCancelBtn.addEventListener('click', closeEditModal);
+  editSaveBtn.addEventListener('click', () => {
+    const names = Array.from(editInputs).map(i => i.value);
+    applyNames(names);
+    saveNames(Array.from(fielders).map(f => f.dataset.name));
+    closeEditModal();
+  });
+  editResetBtn.addEventListener('click', () => {
+    if (!confirm('Reset all 11 names to the defaults?')) return;
+    applyNames(DEFAULT_NAMES);
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    closeEditModal();
+  });
+  // Close on backdrop click or Esc
+  editOverlay.addEventListener('click', (e) => {
+    if (e.target === editOverlay) closeEditModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editOverlay.classList.contains('open')) closeEditModal();
   });
 })();
 </script>
