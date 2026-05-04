@@ -289,10 +289,10 @@
     transform: scale(1.3);
     box-shadow: 0 4px 14px rgba(0,0,0,0.6);
   }
-  .fielder[data-zone="keeper"]   .dot { background: #ff6b6b; }
-  .fielder[data-zone="bowler"]   .dot { background: #6bb6ff; }
-  .fielder[data-zone="ring"]     .dot { background: #b8e986; }
-  .fielder[data-zone="boundary"] .dot { background: #ffd23f; }
+  .fielder[data-zone="keeper"]   .dot { background: #ffb3b3; }
+  .fielder[data-zone="bowler"]   .dot { background: #a8d4ff; }
+  .fielder[data-zone="ring"]     .dot { background: #d6f0a8; }
+  .fielder[data-zone="boundary"] .dot { background: #ffe89a; }
   .fielder[data-zone="pitch"]    .dot { background: #ffffff; }
 
   /* Highlight the selected bowler */
@@ -357,9 +357,9 @@
     left: 50%;
     bottom: calc(100% + 3px);
     transform: translateX(-50%);
-    background: rgba(15, 30, 22, 0.78);
-    color: #f0f6f1;
-    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255, 255, 255, 0.92);
+    color: #1a2820;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 3px;
     padding: 0 5px;
     font-size: 9px;
@@ -368,7 +368,7 @@
     letter-spacing: 0.4px;
     white-space: nowrap;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 0.9;
     line-height: 1.5;
     transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
   }
@@ -660,12 +660,12 @@
     <text x="400" y="32"  font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BATTER'S END</text>
     <text x="400" y="880" font-size="12" fill="#ffffff" opacity="0.6" text-anchor="middle" font-family="sans-serif">BOWLER'S END</text>
 
-    <!-- Watermark -->
-    <text x="400" y="460" font-size="34" fill="#ffffff" opacity="0.09" text-anchor="middle"
+    <!-- Watermark (very subtle) -->
+    <text x="400" y="460" font-size="34" fill="#ffffff" opacity="0.04" text-anchor="middle"
           font-family="sans-serif" font-weight="800" letter-spacing="6"
           transform="rotate(-22 400 460)">RANJITH RAMAKRISHNAN</text>
-    <text x="760" y="858" font-size="12" fill="#ffffff" opacity="0.55" text-anchor="end"
-          font-family="sans-serif" font-weight="600" letter-spacing="0.4">© Ranjith Ramakrishnan</text>
+    <text x="760" y="858" font-size="11" fill="#ffffff" opacity="0.22" text-anchor="end"
+          font-family="sans-serif" font-weight="500" letter-spacing="0.4">© Ranjith Ramakrishnan</text>
   </svg>
 
   <!--
