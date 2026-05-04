@@ -61,8 +61,16 @@
   }
   .phase-toggle button:hover { color: #fff; }
   .phase-toggle button.active { color: #1a1a1a; }
-  .phase-toggle button.active[data-phase="powerplay"]     { background: #ff8a4d; }
-  .phase-toggle button.active[data-phase="non-powerplay"] { background: #b8e986; }
+  .phase-toggle button.active[data-phase="powerplay"] { background: #ff8a4d; }
+  .phase-toggle button.active[data-phase="middle"]    { background: #b8e986; }
+  .phase-toggle button.active[data-phase="death"]     { background: #6bb6ff; }
+
+  .mode-toggle button.active[data-mode="standard"] { background: #ffd23f; color: #1a1a1a; }
+  .mode-toggle button.active[data-mode="custom"]   { background: #b8e986; color: #1a1a1a; }
+
+  /* Show/hide controls based on the active mode */
+  .top-bar[data-mode="standard"] .custom-only { display: none !important; }
+  .top-bar[data-mode="custom"]   .standard-only { display: none !important; }
 
   .bowler-picker {
     display: inline-flex;
@@ -467,25 +475,56 @@
 </head>
 <body>
 
-<div class="top-bar">
-  <h1>CVZ Field Placement</h1>
+<div class="top-bar" id="top-bar" data-mode="standard">
+  <h1>CVZ Field</h1>
   <span class="sep"></span>
-  <div class="phase-toggle" role="tablist" aria-label="Innings phase">
-    <button type="button" data-phase="powerplay" class="active">Powerplay</button>
-    <button type="button" data-phase="non-powerplay">Non-PP</button>
+
+  <div class="phase-toggle mode-toggle" id="mode-toggle" role="tablist" aria-label="Mode">
+    <button type="button" data-mode="standard" class="active">Standard</button>
+    <button type="button" data-mode="custom">Custom</button>
   </div>
   <span class="sep"></span>
-  <div class="bowler-picker">
+
+  <div class="phase-toggle" id="phase-toggle" role="tablist" aria-label="Innings phase">
+    <button type="button" data-phase="powerplay" class="active">PP</button>
+    <button type="button" data-phase="middle">Middle</button>
+    <button type="button" data-phase="death">Death</button>
+  </div>
+  <span class="sep"></span>
+
+  <!-- Standard mode controls -->
+  <div class="bowler-picker standard-only">
+    <label for="bowler-type-select">Bowler</label>
+    <select id="bowler-type-select">
+      <option value="raf">Right-arm Fast</option>
+      <option value="ramf" selected>Right-arm Medium-Fast</option>
+      <option value="ros">Right-arm Off-Spin</option>
+      <option value="rls">Right-arm Leg-Spin</option>
+      <option value="laf">Left-arm Fast</option>
+      <option value="lao">Left-arm Orthodox</option>
+    </select>
+  </div>
+  <div class="bowler-picker standard-only">
+    <label for="accuracy-select">Accuracy</label>
+    <select id="accuracy-select">
+      <option value="good" selected>Good</option>
+      <option value="average">Average</option>
+      <option value="bad">Bad</option>
+    </select>
+  </div>
+
+  <!-- Custom mode controls -->
+  <div class="bowler-picker custom-only">
     <label for="keeper-select">Keeper</label>
     <select id="keeper-select"></select>
     <span class="bowler-pill keeper-pill" id="keeper-pill">—</span>
   </div>
-  <span class="sep"></span>
-  <div class="bowler-picker">
+  <div class="bowler-picker custom-only">
     <label for="bowler-select">Bowler</label>
     <select id="bowler-select"></select>
     <span class="bowler-pill" id="bowler-pill">—</span>
   </div>
+
   <span class="spacer"></span>
   <div class="field-count" id="field-count">
     Outside: <span class="num" id="outside-count">0</span> / <span id="outside-limit">5</span>
@@ -634,12 +673,12 @@
     Ankush bowling at the bowler's end, Harsh keeping. Baljit at 1st slip.
     Position labels are computed by JS on init and on every drag move.
   -->
-  <div class="fielder" data-name="Baljit"   style="left:45.0%; top:37.0%;"></div>
+  <div class="fielder" data-name="Harsh"    style="left:50.0%; top:35.5%;"></div>
   <div class="fielder" data-name="Ankush"   style="left:50.0%; top:62.0%;"></div>
+  <div class="fielder" data-name="Baljit"   style="left:45.0%; top:37.0%;"></div>
   <div class="fielder" data-name="Akhil"    style="left:60.0%; top:85.0%;"></div>
   <div class="fielder" data-name="Ranjith"  style="left:88.0%; top:60.0%;"></div>
   <div class="fielder" data-name="Mirza"    style="left:40.0%; top:53.0%;"></div>
-  <div class="fielder" data-name="Harsh"    style="left:50.0%; top:35.5%;"></div>
   <div class="fielder" data-name="Jithesh"  style="left:60.0%; top:53.0%;"></div>
   <div class="fielder" data-name="Shishir"  style="left:35.0%; top:50.0%;"></div>
   <div class="fielder" data-name="Saurabh"  style="left:33.0%; top:42.0%;"></div>
@@ -656,7 +695,7 @@
   const DRAG_THRESHOLD = 3;
 
   // --- Persisted player names (localStorage)
-  const STORAGE_KEY = 'cvz-player-names';
+  const STORAGE_KEY = 'cvz-player-names-v2';
   const DEFAULT_NAMES = Array.from(fielders).map(f => f.dataset.name);
 
   function loadStoredNames() {
@@ -768,17 +807,190 @@
   }
 
   // --- Phase + bowler/keeper controls (declared before initial render so updateFielder can use them)
-  const phaseButtons = document.querySelectorAll('.phase-toggle button');
+  const topBar       = document.getElementById('top-bar');
+  const modeButtons  = document.querySelectorAll('#mode-toggle button');
+  const phaseButtons = document.querySelectorAll('#phase-toggle button');
   const bowlerSelect = document.getElementById('bowler-select');
   const bowlerPill   = document.getElementById('bowler-pill');
   const keeperSelect = document.getElementById('keeper-select');
   const keeperPill   = document.getElementById('keeper-pill');
+  const bowlerTypeSel= document.getElementById('bowler-type-select');
+  const accuracySel  = document.getElementById('accuracy-select');
   const outsideCount = document.getElementById('outside-count');
   const outsideLimit = document.getElementById('outside-limit');
   const fieldCountEl = document.getElementById('field-count');
 
   let currentPhase = 'powerplay'; // default starting phase
+  let currentMode  = 'standard';  // 'standard' or 'custom'
   function phaseLimit() { return currentPhase === 'powerplay' ? 2 : 5; }
+
+  // ===== Standard cricket fielding positions on our 800x900 viewBox =====
+  // Each entry is a (left%, top%) anchor on the stage. RHB at the top end
+  // facing the bowler at the bottom: off side = screen LEFT, leg side = RIGHT.
+  const POS = {
+    WK:        { left: 50.0, top: 35.5 },
+    BOWLER:    { left: 50.0, top: 62.0 },
+
+    // Slip cordon (off side, level with the keeper)
+    SLIP1:     { left: 45.5, top: 37.0 },
+    SLIP2:     { left: 42.5, top: 37.5 },
+    SLIP3:     { left: 39.5, top: 38.0 },
+    SLIP4:     { left: 36.5, top: 38.5 },
+    GULLY:     { left: 33.0, top: 39.5 },
+    LEGSLIP:   { left: 56.5, top: 38.0 },
+
+    // Inside-the-ring catching positions
+    SILLY_PT:  { left: 38.0, top: 42.0 },
+    SHORT_LEG: { left: 60.0, top: 42.0 },
+
+    // Inside the 30-yard ring, saving singles
+    POINT:        { left: 30.0, top: 50.0 },
+    BACKWARD_PT:  { left: 31.0, top: 44.0 },
+    COVER:        { left: 34.0, top: 53.0 },
+    EXTRA_COVER:  { left: 39.0, top: 56.0 },
+    MID_OFF:      { left: 47.0, top: 55.0 },
+    MID_ON:       { left: 53.0, top: 55.0 },
+    MIDWICKET:    { left: 62.0, top: 50.0 },
+    SQUARE_LEG:   { left: 67.0, top: 45.0 },
+    SHORT_FINE:   { left: 64.0, top: 39.5 },
+    SHORT_THIRD:  { left: 36.0, top: 40.0 },
+
+    // Boundary riders (outside the ring)
+    THIRD_MAN:    { left: 14.0, top: 26.0 },
+    DEEP_BPT:     { left: 8.0,  top: 38.0 },
+    DEEP_POINT:   { left: 5.0,  top: 50.0 },
+    SWEEPER_CV:   { left: 12.0, top: 60.0 },
+    DEEP_COVER:   { left: 18.0, top: 70.0 },
+    DEEP_EXCV:    { left: 26.0, top: 78.0 },
+    LONG_OFF:     { left: 36.0, top: 86.0 },
+    LONG_ON:      { left: 64.0, top: 86.0 },
+    WIDE_LON:     { left: 74.0, top: 80.0 },
+    DEEP_MW:      { left: 82.0, top: 70.0 },
+    COW:          { left: 78.0, top: 76.0 },
+    DEEP_SQ:      { left: 92.0, top: 50.0 },
+    DEEP_BSQ:     { left: 88.0, top: 38.0 },
+    DEEP_FINE:    { left: 84.0, top: 26.0 }
+  };
+
+  // ===== Textbook field presets =====
+  // Each preset is exactly 11 position keys. Powerplay must keep <= 2 outside
+  // the ring; Middle / Death must keep <= 5 outside. Names follow common
+  // captain choices for an aggressive setup, modulated by accuracy.
+  const PRESETS = {
+    // ---- Right-arm Fast ----
+    raf: {
+      powerplay: {
+        good:    ['WK','BOWLER','SLIP1','SLIP2','GULLY','MID_OFF','COVER','MID_ON','MIDWICKET','THIRD_MAN','DEEP_FINE'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','POINT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','BACKWARD_PT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE']
+      },
+      middle: {
+        good:    ['WK','BOWLER','SLIP1','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_SQ','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','THIRD_MAN'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','DEEP_SQ','SWEEPER_CV']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_SQ','SWEEPER_CV','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','DEEP_SQ','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','BACKWARD_PT','MIDWICKET','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_FINE']
+      }
+    },
+
+    // ---- Right-arm Medium-Fast ----
+    ramf: {
+      powerplay: {
+        good:    ['WK','BOWLER','SLIP1','SLIP2','MID_OFF','COVER','POINT','MID_ON','MIDWICKET','THIRD_MAN','DEEP_FINE'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','POINT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','BACKWARD_PT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE']
+      },
+      middle: {
+        good:    ['WK','BOWLER','SLIP1','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','THIRD_MAN'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','COVER','MIDWICKET','LONG_OFF','LONG_ON','DEEP_MW','DEEP_SQ','SWEEPER_CV']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_SQ','SWEEPER_CV','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','BACKWARD_PT','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','MIDWICKET','BACKWARD_PT','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_FINE']
+      }
+    },
+
+    // ---- Right-arm Off-Spin (turns into RHB, leg side targeted) ----
+    ros: {
+      powerplay: {
+        good:    ['WK','BOWLER','SHORT_LEG','SILLY_PT','MID_OFF','COVER','MID_ON','SQUARE_LEG','MIDWICKET','LONG_ON','DEEP_MW'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','MID_ON','SQUARE_LEG','MIDWICKET','BACKWARD_PT','LONG_ON','DEEP_MW'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','MID_ON','SQUARE_LEG','MIDWICKET','SHORT_FINE','LONG_ON','DEEP_MW']
+      },
+      middle: {
+        good:    ['WK','BOWLER','SHORT_LEG','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_SQ'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','MIDWICKET','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_SQ'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','DEEP_SQ','SWEEPER_CV']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','MID_ON','COVER','MIDWICKET','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_SQ','DEEP_FINE'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','BACKWARD_PT','MIDWICKET','LONG_ON','DEEP_MW','COW','SWEEPER_CV','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MIDWICKET','SQUARE_LEG','BACKWARD_PT','LONG_ON','DEEP_MW','COW','SWEEPER_CV','DEEP_FINE']
+      }
+    },
+
+    // ---- Right-arm Leg-Spin (turns away from RHB, off side targeted) ----
+    rls: {
+      powerplay: {
+        good:    ['WK','BOWLER','SLIP1','SHORT_LEG','MID_OFF','COVER','POINT','MID_ON','MIDWICKET','LONG_ON','SWEEPER_CV'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','POINT','MID_ON','MIDWICKET','SQUARE_LEG','LONG_ON','SWEEPER_CV'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','BACKWARD_PT','MID_ON','MIDWICKET','SQUARE_LEG','LONG_ON','SWEEPER_CV']
+      },
+      middle: {
+        good:    ['WK','BOWLER','SLIP1','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW'],
+        average: ['WK','BOWLER','MID_OFF','COVER','MID_ON','MIDWICKET','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_SQ'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_POINT']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE'],
+        average: ['WK','BOWLER','MID_OFF','BACKWARD_PT','MID_ON','MIDWICKET','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','MIDWICKET','BACKWARD_PT','LONG_OFF','LONG_ON','SWEEPER_CV','COW','DEEP_FINE']
+      }
+    },
+
+    // ---- Left-arm Fast (mirror of RAF; angle into RHB body) ----
+    laf: {
+      powerplay: {
+        good:    ['WK','BOWLER','SLIP1','SLIP2','GULLY','MID_OFF','COVER','MID_ON','SQUARE_LEG','THIRD_MAN','DEEP_FINE'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','POINT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','BACKWARD_PT','MID_ON','SQUARE_LEG','MIDWICKET','THIRD_MAN','DEEP_FINE']
+      },
+      middle: {
+        good:    ['WK','BOWLER','SLIP1','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_SQ','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','THIRD_MAN'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_MW','DEEP_SQ','SWEEPER_CV']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','MID_ON','COVER','SQUARE_LEG','LONG_OFF','LONG_ON','DEEP_SQ','SWEEPER_CV','THIRD_MAN'],
+        average: ['WK','BOWLER','MID_OFF','MID_ON','COVER','BACKWARD_PT','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','MIDWICKET','BACKWARD_PT','LONG_OFF','LONG_ON','DEEP_MW','SWEEPER_CV','DEEP_FINE']
+      }
+    },
+
+    // ---- Left-arm Orthodox (turns away from RHB to off side) ----
+    lao: {
+      powerplay: {
+        good:    ['WK','BOWLER','SLIP1','SHORT_LEG','MID_OFF','COVER','POINT','MID_ON','MIDWICKET','LONG_ON','SWEEPER_CV'],
+        average: ['WK','BOWLER','SLIP1','MID_OFF','COVER','POINT','MID_ON','MIDWICKET','SQUARE_LEG','LONG_ON','SWEEPER_CV'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','POINT','BACKWARD_PT','MID_ON','MIDWICKET','SQUARE_LEG','LONG_ON','SWEEPER_CV']
+      },
+      middle: {
+        good:    ['WK','BOWLER','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_SQ'],
+        average: ['WK','BOWLER','MID_OFF','COVER','MID_ON','MIDWICKET','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE']
+      },
+      death: {
+        good:    ['WK','BOWLER','MID_OFF','COVER','MID_ON','SQUARE_LEG','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE'],
+        average: ['WK','BOWLER','MID_OFF','BACKWARD_PT','MID_ON','MIDWICKET','LONG_OFF','LONG_ON','SWEEPER_CV','DEEP_MW','DEEP_FINE'],
+        bad:     ['WK','BOWLER','MID_OFF','MID_ON','MIDWICKET','BACKWARD_PT','LONG_OFF','LONG_ON','SWEEPER_CV','COW','DEEP_FINE']
+      }
+    }
+  };
 
   function refreshOutsideCount() {
     let n = 0;
@@ -808,8 +1020,59 @@
       btn.classList.add('active');
       currentPhase = btn.dataset.phase;
       refreshOutsideCount();
+      maybeApplyStandardPreset();
     });
   });
+
+  // ===== Standard mode: pick a preset and place the 11 players =====
+  function applyPreset(typeKey, phase, accuracy) {
+    const preset = PRESETS[typeKey] && PRESETS[typeKey][phase] && PRESETS[typeKey][phase][accuracy];
+    if (!preset || preset.length !== fielders.length) return;
+
+    fielders.forEach((f, i) => {
+      const pos = POS[preset[i]];
+      if (!pos) return;
+      f.style.left = pos.left + '%';
+      f.style.top  = pos.top  + '%';
+    });
+    fielders.forEach(updateFielder);
+
+    // Auto-set the bowler / keeper based on whoever's at those anchors
+    const keeperIdx = preset.indexOf('WK');
+    const bowlerIdx = preset.indexOf('BOWLER');
+    if (keeperIdx >= 0) {
+      const name = fielders[keeperIdx].dataset.name;
+      fielders.forEach(f => f.classList.toggle('is-keeper', f.dataset.name === name));
+      keeperPill.textContent = name;
+    }
+    if (bowlerIdx >= 0) {
+      const name = fielders[bowlerIdx].dataset.name;
+      fielders.forEach(f => f.classList.toggle('is-bowler', f.dataset.name === name));
+      bowlerPill.textContent = name;
+    }
+    populateBowlerOptions();
+    populateKeeperOptions();
+    if (keeperIdx >= 0) keeperSelect.value = fielders[keeperIdx].dataset.name;
+    if (bowlerIdx >= 0) bowlerSelect.value = fielders[bowlerIdx].dataset.name;
+  }
+
+  function maybeApplyStandardPreset() {
+    if (currentMode !== 'standard') return;
+    applyPreset(bowlerTypeSel.value, currentPhase, accuracySel.value);
+  }
+
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      topBar.dataset.mode = currentMode;
+      maybeApplyStandardPreset();
+    });
+  });
+
+  bowlerTypeSel.addEventListener('change', maybeApplyStandardPreset);
+  accuracySel.addEventListener('change', maybeApplyStandardPreset);
 
   // Anchor spots for the two role players
   const BOWLER_SPOT = { left: 50.0, top: 62.0 };
@@ -896,6 +1159,9 @@
 
   keeperSelect.addEventListener('change', () => setKeeper(keeperSelect.value));
   bowlerSelect.addEventListener('change', () => setBowler(bowlerSelect.value));
+
+  // Apply the default Standard preset on first load (RAMF / Powerplay / Good)
+  maybeApplyStandardPreset();
 
   // --- Drag handling (pointer events, mouse + touch)
   let active = null;
