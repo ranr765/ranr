@@ -261,8 +261,8 @@
 
   .fielder {
     position: absolute;
-    width: 22px;
-    height: 22px;
+    width: 16px;
+    height: 16px;
     transform: translate(-50%, -50%);
     pointer-events: auto;
     touch-action: none;
@@ -274,38 +274,37 @@
   .fielder.dragging { z-index: 10; transition: none; }
 
   .dot {
-    width: 22px;
-    height: 22px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: #ffd23f;
-    border: 2px solid #0e2a14;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.45);
+    background: #ffe89a;
+    border: 1.5px solid rgba(20, 40, 28, 0.7);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.35);
     cursor: grab;
     transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.18s ease;
   }
-  .dot:hover { transform: scale(1.15); }
+  .dot:hover { transform: scale(1.18); }
   .fielder.dragging .dot {
     cursor: grabbing;
-    transform: scale(1.3);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    transform: scale(1.35);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
   }
-  .fielder[data-zone="keeper"]   .dot { background: #ffb3b3; }
-  .fielder[data-zone="bowler"]   .dot { background: #a8d4ff; }
-  .fielder[data-zone="ring"]     .dot { background: #d6f0a8; }
-  .fielder[data-zone="boundary"] .dot { background: #ffe89a; }
+  .fielder[data-zone="keeper"]   .dot { background: #ffd9d9; }
+  .fielder[data-zone="bowler"]   .dot { background: #d8ebff; }
+  .fielder[data-zone="ring"]     .dot { background: #e8f7c8; }
+  .fielder[data-zone="boundary"] .dot { background: #fff2c0; }
   .fielder[data-zone="pitch"]    .dot { background: #ffffff; }
 
   /* Highlight the selected bowler */
   .fielder.is-bowler .dot {
     box-shadow:
-      0 0 0 2px #ffffff,
-      0 0 0 4px #ff4d4d,
-      0 0 14px rgba(255, 77, 77, 0.7);
+      0 0 0 1.5px #ffffff,
+      0 0 0 3px rgba(255, 120, 120, 0.85),
+      0 0 8px rgba(255, 120, 120, 0.45);
   }
   .fielder.is-bowler .player-name {
-    color: #ffd6d6;
+    color: #ffe0e0;
     text-shadow:
-      0 0 4px #ff4d4d,
       0 0 3px rgba(0,0,0,0.95),
       0 1px 2px rgba(0,0,0,0.95);
   }
@@ -313,23 +312,22 @@
   /* Highlight the selected keeper */
   .fielder.is-keeper .dot {
     box-shadow:
-      0 0 0 2px #ffffff,
-      0 0 0 4px #2dd4bf,
-      0 0 14px rgba(45, 212, 191, 0.65);
+      0 0 0 1.5px #ffffff,
+      0 0 0 3px rgba(120, 220, 200, 0.85),
+      0 0 8px rgba(120, 220, 200, 0.45);
   }
   .fielder.is-keeper .player-name {
-    color: #b6f0e8;
+    color: #d6f5ec;
     text-shadow:
-      0 0 4px #2dd4bf,
       0 0 3px rgba(0,0,0,0.95),
       0 1px 2px rgba(0,0,0,0.95);
   }
   /* If somehow a player ends up tagged as both, bowler styling wins */
   .fielder.is-bowler.is-keeper .dot {
     box-shadow:
-      0 0 0 2px #ffffff,
-      0 0 0 4px #ff4d4d,
-      0 0 14px rgba(255, 77, 77, 0.7);
+      0 0 0 1.5px #ffffff,
+      0 0 0 3px rgba(255, 120, 120, 0.85),
+      0 0 8px rgba(255, 120, 120, 0.45);
   }
 
   /* Player name — static, always visible below the dot */
@@ -414,22 +412,22 @@
     .field-count { font-size: 10px; }
     .edit-btn { padding: 5px 9px; font-size: 10px; letter-spacing: 0.3px; }
 
-    /* Bigger touch area: the fielder is a 48px halo with the visible dot
-       centered inside via flex, so anywhere within the halo grabs the player. */
+    /* Touch halo around a smaller visible dot so anywhere within
+       the halo grabs the player on mobile. */
     .fielder {
-      width: 48px;
-      height: 48px;
+      width: 42px;
+      height: 42px;
       display: flex;
       align-items: center;
       justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
     .dot {
-      width: 32px;
-      height: 32px;
-      border-width: 3px;
+      width: 22px;
+      height: 22px;
+      border-width: 2px;
     }
-    .fielder.dragging .dot { transform: scale(1.12); }
+    .fielder.dragging .dot { transform: scale(1.18); }
 
     /* Tone down the dragging label so it doesn't cover the dot */
     .fielder.dragging .position-label {
