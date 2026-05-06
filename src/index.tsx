@@ -17,6 +17,9 @@ app.use('/static/*', serveStatic({ root: './public' }))
 // S&P Firepower model
 app.get('/firepower', serveStatic({ path: './public/static/sp-firepower-model.html' }))
 
+// Liquidity Playbook (CFO/Treasury)
+app.get('/playbook', serveStatic({ path: './public/static/liquidity-playbook.html' }))
+
 // ============================================
 // API Routes
 // ============================================
