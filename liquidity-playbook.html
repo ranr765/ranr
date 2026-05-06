@@ -6,108 +6,167 @@
 <title>Liquidity Playbook 1.0 (Confidential)</title>
 <style>
 :root{
-  --brand:#0D2A82;
-  --brand-dark:#081E63;
-  --brand-tint:#E6EAF5;
-  --ink:#1a1a1a;
-  --ink2:#333333;
-  --muted:#6e6e6e;
-  --hair:#e8e8e8;
-  --hair2:#d4d4d4;
-  --soft:#FAFAFA;
+  /* Clariant navy theme */
+  --navy:#0D2A82;
+  --navy-dark:#081E63;
+  --navy-mid:#1F3FA0;
+  --navy-wash:#E6EAF5;
+  --navy-soft:#F2F4FA;
 
-  /* S&P scorecard cell colours (matching screenshot) */
+  /* Neutrals */
+  --ink:#111827;
+  --ink2:#374151;
+  --muted:#6b7280;
+  --hair:#e5e7eb;
+  --hair2:#d1d5db;
+  --paper:#ffffff;
+  --soft:#fafafa;
+
+  /* S&P scorecard band colours (kept conventional for at-a-glance read) */
   --min:#C6EFCE;  --min-t:#1B5E20;
   --mod:#D9EAD3;  --mod-t:#2E7D32;
   --int:#FFF2CC;  --int-t:#7F6000;
   --sig:#FFE699;  --sig-t:#7A5700;
   --agg:#FCD5CE;  --agg-t:#9C0006;
-  --hl: #F4B7BD;  --hl-t: #8B0000;
+  --hl: #F4B7BD;  --hl-t: #7B1C1C;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#fff;color:var(--ink);
   font-family:"Open Sans","Helvetica Neue",Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
 
-/* Header */
-.brandbar{height:4px;background:var(--brand)}
-.page{max-width:1380px;margin:0 auto;padding:22px 30px 40px;position:relative}
+/* ===== Brand bar ===== */
+.brandbar{height:5px;background:linear-gradient(90deg,var(--navy) 0%,var(--navy) 80%,var(--navy-mid) 100%)}
+
+/* ===== Page ===== */
+.page{max-width:1380px;margin:0 auto;padding:24px 32px 44px;position:relative}
+
+/* ===== Watermark ===== */
 .watermark{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .watermark span{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);
-  font-size:140px;letter-spacing:18px;color:rgba(13,42,130,.05);font-weight:700;white-space:nowrap}
+  font-size:160px;letter-spacing:22px;color:rgba(13,42,130,.045);font-weight:800;white-space:nowrap}
 .page > *{position:relative;z-index:1}
 
+/* ===== Header ===== */
 header.doc{display:flex;justify-content:space-between;align-items:flex-end;
-  border-bottom:1.5px solid var(--ink);padding-bottom:12px;margin-bottom:18px}
-header h1{font-size:22px;letter-spacing:.2px;margin:0;font-weight:700}
-header h1 em{color:var(--brand);font-style:normal}
-header .sub{color:var(--muted);font-size:12px;margin-top:3px}
-header .crest{display:flex;align-items:center;gap:8px;color:var(--brand-dark);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:5px;font-weight:700}
-header .crest .dot{width:7px;height:7px;background:var(--brand);border-radius:50%}
+  border-bottom:2px solid var(--navy);padding-bottom:14px;margin-bottom:20px}
+header .crest{display:flex;align-items:center;gap:9px;color:var(--navy-dark);font-size:10.5px;
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+header .crest .dot{width:7px;height:7px;background:var(--navy);border-radius:50%}
+header h1{font-size:26px;letter-spacing:-.2px;margin:0;font-weight:700;color:var(--ink)}
+header h1 em{color:var(--navy);font-style:normal;font-weight:700}
+header .sub{color:var(--muted);font-size:12px;margin-top:4px}
 header .rhs{text-align:right;font-size:11px;color:var(--muted)}
-header .stamp{display:inline-block;border:1px solid var(--brand);color:var(--brand);
-  padding:2px 9px;font-size:9.5px;font-weight:700;letter-spacing:2.5px;margin-bottom:6px}
-header .meta{font-size:11px;color:var(--ink)}
-.toolbar{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
-.btn{background:transparent;color:var(--ink);border:1px solid var(--ink2);padding:5px 12px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;font-weight:600;border-radius:2px}
-.btn:hover{background:var(--ink);color:#fff}
+header .stamp{display:inline-block;border:1.5px solid var(--navy);color:var(--navy);
+  padding:3px 11px;font-size:10px;font-weight:800;letter-spacing:3px;margin-bottom:7px;background:#fff}
+header .meta{font-size:11px;color:var(--ink);line-height:1.55}
+header .meta b{color:var(--ink);font-weight:600}
+.toolbar{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+.btn{background:#fff;color:var(--ink);border:1px solid var(--ink2);padding:6px 14px;
+  font-size:11px;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;font-weight:600;border-radius:2px}
+.btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--navy-dark);border-color:var(--navy-dark)}
 
-/* Top input bar */
-.topbar{background:var(--soft);border:1px solid var(--hair);border-radius:3px;padding:10px 14px;margin-bottom:14px;
-  display:flex;flex-wrap:wrap;align-items:center;gap:18px;font-size:12px}
+/* ===== Section dividers ===== */
+.sec{display:flex;align-items:baseline;gap:12px;margin:18px 0 10px}
+.sec .num{font-size:10px;font-weight:800;letter-spacing:3px;color:var(--navy);text-transform:uppercase;
+  border:1.5px solid var(--navy);padding:2px 8px;border-radius:2px;display:inline-block}
+.sec h2{font-size:14px;font-weight:700;margin:0;color:var(--ink)}
+.sec .it{font-size:11px;color:var(--muted);font-style:italic;font-weight:400;margin-left:auto}
+
+/* ===== Top input bar ===== */
+.topbar{background:linear-gradient(180deg,var(--navy-soft),#fff);
+  border:1px solid var(--hair);border-left:3px solid var(--navy);border-radius:3px;
+  padding:12px 16px;margin-bottom:14px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:22px;font-size:12px}
 .topbar .group{display:flex;align-items:center;gap:8px}
-.topbar label{color:var(--ink);font-weight:600;letter-spacing:.2px}
-.topbar input,.topbar select{background:#fff;border:1px solid var(--hair2);padding:4px 8px;
-  font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--brand);font-weight:700;text-align:right;width:90px;border-radius:2px}
-.topbar input:focus,.topbar select:focus{outline:none;border-color:var(--brand)}
-.topbar select{text-align:left;color:var(--brand);background:#E6EAF5}
+.topbar label{color:var(--ink);font-weight:600;letter-spacing:.2px;font-size:11.5px}
+.topbar input,.topbar select{background:#fff;border:1px solid var(--hair2);padding:5px 9px;
+  font-size:13px;font-variant-numeric:tabular-nums;color:var(--navy);font-weight:700;
+  text-align:right;width:96px;border-radius:2px}
+.topbar input:focus,.topbar select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 2px var(--navy-wash)}
+.topbar select{text-align:left;background:#fff}
 
-/* Section title */
-.sec-title{font-size:14px;font-weight:700;margin:14px 0 8px;color:var(--ink);display:flex;align-items:baseline;gap:10px}
-.sec-title .it{font-size:11px;color:var(--muted);font-style:italic;font-weight:400}
+/* ===== Snapshot pills ===== */
+.snapshot{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.snap-card{flex:1;min-width:200px;background:#fff;border:1px solid var(--hair);border-radius:3px;
+  padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.snap-card .lbl{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.snap-card .val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.snap-card .chip{padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.4px}
+.snap-card.lead{border-left:3px solid var(--navy)}
 
-/* Two-up grid */
-.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px}
+/* ===== Two-up ===== */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:14px}
 @media (max-width:1100px){.two{grid-template-columns:1fr}}
 
-/* Facilities */
-.facilities{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
-.facilities h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+/* ===== Cards ===== */
+.card{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:14px 16px}
+.card h3{font-size:12.5px;margin:0 0 10px;font-weight:700;color:var(--ink);
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:6px;border-bottom:1px solid var(--hair)}
+.card h3 .it{font-size:10.5px;font-weight:400;color:var(--muted);font-style:italic}
+
+/* ===== Facilities ===== */
 .facilities table{width:100%;border-collapse:collapse;font-size:12px}
-.facilities th,.facilities td{padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--hair)}
+.facilities th,.facilities td{padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;
+  border-bottom:1px solid var(--hair)}
 .facilities th:first-child,.facilities td:first-child{text-align:left;color:var(--ink2)}
-.facilities th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--brand-dark);font-weight:700;border-bottom:1.5px solid var(--ink)}
-.facilities input{background:var(--soft);border:1px solid var(--hair2);padding:3px 6px;font-size:12px;width:80px;text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink)}
-.facilities input:focus{outline:none;border-color:var(--brand);background:#fff}
-.facilities tr.tot td{border-top:1.5px solid var(--ink);font-weight:700;border-bottom:0;color:var(--ink)}
+.facilities th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--navy-dark);font-weight:700;border-bottom:1.5px solid var(--navy)}
+.facilities input[type=text]{background:var(--soft);border:1px solid var(--hair2);padding:3px 7px;
+  font-size:12px;width:170px;text-align:left;border-radius:2px;color:var(--ink)}
+.facilities input[type=number]{background:var(--soft);border:1px solid var(--hair2);padding:3px 7px;
+  font-size:12px;width:78px;text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink)}
+.facilities input:focus{outline:none;border-color:var(--navy);background:#fff}
+.facilities .ut-bar{display:inline-block;width:80px;height:6px;background:var(--hair);border-radius:3px;
+  vertical-align:middle;margin-right:8px;overflow:hidden}
+.facilities .ut-bar > i{display:block;height:100%;background:var(--navy);transition:width .2s}
+.facilities tr.tot td{border-top:1.5px solid var(--navy);font-weight:700;border-bottom:0;color:var(--navy-dark);background:var(--navy-wash)}
+.facilities .liq-line{margin-top:10px;padding:8px 12px;background:var(--navy-soft);
+  border-left:3px solid var(--navy);font-size:11.5px;display:flex;justify-content:space-between;align-items:center}
+.facilities .liq-line b{color:var(--navy-dark);font-weight:700}
+.facilities .liq-line .liqv{font-size:14px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
 
-/* Axis editor */
-.axis{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
-.axis h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
-.axis .row{display:grid;grid-template-columns:170px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:6px;font-size:12px}
-.axis label{color:var(--ink2)}
-.axis input{background:var(--soft);border:1px solid var(--hair2);padding:4px 6px;font-size:12px;width:100%;text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink)}
-.axis input:focus{outline:none;border-color:var(--brand);background:#fff}
-.axis .hint{font-size:11px;color:var(--muted);margin-top:4px}
+/* ===== Axis editor ===== */
+.axis .row{display:grid;grid-template-columns:200px repeat(5,1fr);gap:8px;align-items:center;
+  margin-bottom:8px;font-size:12px}
+.axis label{color:var(--ink2);font-weight:600;font-size:11.5px}
+.axis input{background:var(--soft);border:1px solid var(--hair2);padding:5px 7px;font-size:12.5px;width:100%;
+  text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink);font-weight:600}
+.axis input:focus{outline:none;border-color:var(--navy);background:#fff;box-shadow:0 0 0 2px var(--navy-wash)}
+.axis .hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
 
-/* Matrix layout */
-.matrix-wrap{margin-bottom:14px}
-.matrix{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
-.matrix .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:12.5px}
-.matrix .hd .name{font-weight:700;color:var(--ink)}
-.matrix .hd .axis-lbl{color:var(--muted);font-size:11px}
+/* ===== Matrix ===== */
+.matrix{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:14px 16px}
+.matrix .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;font-size:12.5px;
+  padding-bottom:6px;border-bottom:1px solid var(--hair)}
+.matrix .hd .name{font-weight:700;color:var(--ink);font-size:13px}
+.matrix .hd .target{color:var(--navy);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+  background:var(--navy-wash);padding:2px 8px;border-radius:2px}
 .matrix table{width:100%;border-collapse:collapse;table-layout:fixed}
 .matrix th,.matrix td{border:1px solid #f0f0f0;padding:0;font-size:12px}
-.matrix .corner,.matrix .colhead,.matrix .rowhead{background:#F2F2F2;color:var(--ink);font-weight:700;text-align:center;padding:6px;font-size:11px}
-.matrix .colhead-top{background:#E6EAF5;color:var(--ink);font-weight:600;font-size:11px;padding:6px;border-left:1px solid #f0f0f0;border-right:1px solid #f0f0f0;border-bottom:1px solid var(--hair)}
-.matrix .rowhead{background:#FAFAFA}
-.matrix .axis-x{background:#fff;color:var(--muted);font-size:10.5px;text-align:left;padding:4px 6px;font-style:italic;font-weight:400}
-.matrix .axis-y{background:#fff;color:var(--muted);font-size:10.5px;text-align:left;padding:4px 6px;font-style:italic;font-weight:400}
-.matrix .cell{padding:0}
-.matrix .cell .top{padding:5px 8px 1px;text-align:center;font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink2)}
-.matrix .cell .bot{padding:1px 8px 5px;text-align:center;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;font-style:italic}
+.matrix .ax-x{background:#fff;color:var(--muted);font-size:10.5px;text-align:left;
+  padding:3px 6px;font-style:italic;font-weight:400;border:0}
+.matrix .corner{background:var(--navy);color:#fff;padding:6px;font-size:10px;font-weight:700;
+  letter-spacing:1.4px;text-transform:uppercase;text-align:center}
+.matrix .colhead-top{background:var(--navy-wash);color:var(--navy-dark);font-weight:700;font-size:11.5px;
+  padding:7px 4px;text-align:center;font-variant-numeric:tabular-nums}
+.matrix .rowhead{background:var(--navy-soft);color:var(--navy-dark);font-weight:700;font-size:11.5px;
+  padding:7px 8px;text-align:center;font-variant-numeric:tabular-nums}
+.matrix .rowhead-sub{background:#fff;color:var(--muted);font-size:10px;text-align:center;
+  padding:4px;line-height:1.2;font-weight:400}
+.matrix .cell{padding:0;position:relative}
+.matrix .cell .top{padding:5px 6px 1px;text-align:center;font-variant-numeric:tabular-nums;
+  font-size:11.5px;color:var(--ink2);font-weight:500}
+.matrix .cell .bot{padding:0 6px 5px;text-align:center;font-variant-numeric:tabular-nums;
+  font-size:12.5px;font-weight:700;font-style:italic}
+.matrix .cell.base::after{content:"";position:absolute;inset:0;border:2px solid var(--navy);pointer-events:none}
+.matrix .legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;font-size:9.5px;color:var(--muted)}
+.matrix .legend i{display:inline-block;width:10px;height:10px;border-radius:1px;margin-right:3px;vertical-align:middle;border:1px solid rgba(0,0,0,.05)}
 
-/* Cell colours */
+/* ===== Cell colour bands ===== */
 .c-min{background:var(--min);color:var(--min-t)}
 .c-mod{background:var(--mod);color:var(--mod-t)}
 .c-int{background:var(--int);color:var(--int-t)}
@@ -115,23 +174,29 @@ header .meta{font-size:11px;color:var(--ink)}
 .c-agg{background:var(--agg);color:var(--agg-t)}
 .c-hl {background:var(--hl); color:var(--hl-t)}
 
-/* Scorecard */
-.scorecard{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
-.scorecard h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+/* ===== Scorecard ===== */
 .scorecard table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
-.scorecard th,.scorecard td{padding:5px 8px;border-bottom:1px solid var(--hair);text-align:center;font-variant-numeric:tabular-nums}
+.scorecard th,.scorecard td{padding:6px 8px;border-bottom:1px solid var(--hair);text-align:center;
+  font-variant-numeric:tabular-nums}
 .scorecard th:first-child,.scorecard td:first-child{text-align:left}
-.scorecard th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--brand-dark);font-weight:700;border-bottom:1.5px solid var(--ink);background:#fff}
+.scorecard th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--navy-dark);
+  font-weight:700;border-bottom:1.5px solid var(--navy);background:#fff}
 .scorecard tr td{font-weight:600}
 
-footer{margin-top:18px;padding-top:10px;border-top:1px solid var(--hair2);font-size:10.5px;color:var(--muted);line-height:1.55}
+/* ===== Footer ===== */
+footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--hair2);font-size:10.5px;
+  color:var(--muted);line-height:1.6}
 footer b{color:var(--ink2)}
+footer .sig{margin-top:8px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);letter-spacing:.5px}
 
+/* ===== Print ===== */
 @media print{
   .toolbar{display:none}
   body{background:#fff}
-  .page{padding:14px 18px}
-  .matrix,.facilities,.axis,.scorecard,.topbar{break-inside:avoid;box-shadow:none}
+  .page{padding:14px 18px;max-width:none}
+  .matrix,.facilities,.axis,.scorecard,.topbar,.card,.snap-card{break-inside:avoid;box-shadow:none}
+  .watermark span{color:rgba(13,42,130,.07)}
+  header.doc{break-after:avoid}
 }
 </style>
 </head>
@@ -141,16 +206,17 @@ footer b{color:var(--ink2)}
 
 <div class="page">
 
+<!-- ===== Header ===== -->
 <header class="doc">
   <div>
     <div class="crest"><span class="dot"></span> Group CFO &middot; Treasury</div>
     <h1>Liquidity Playbook <em>1.0</em></h1>
-    <div class="sub">Leverage Sensitivity Analysis &mdash; based on S&amp;P methodology</div>
+    <div class="sub">Leverage sensitivity &amp; rating-impact analysis &mdash; based on S&amp;P methodology</div>
   </div>
   <div class="rhs">
     <div class="stamp">CONFIDENTIAL</div>
-    <div class="meta">Doc Ref <b>TR-LP-1.0</b> &nbsp;|&nbsp; Prepared <b id="docDate"></b></div>
-    <div class="meta">Distribution: CFO &middot; Group Treasurer &middot; Audit &amp; Risk</div>
+    <div class="meta">Doc Ref&nbsp; <b>TR-LP-1.0</b><br/>Prepared&nbsp; <b id="docDate"></b></div>
+    <div class="meta" style="margin-top:4px">Distribution: <b>CFO &middot; Group Treasurer &middot; Audit &amp; Risk Cttee</b></div>
     <div class="toolbar">
       <button class="btn" onclick="window.print()">Print / PDF</button>
       <button class="btn" onclick="exportJSON()">Export</button>
@@ -160,38 +226,66 @@ footer b{color:var(--ink2)}
   </div>
 </header>
 
-<!-- Base position -->
+<!-- ===== I. Base position ===== -->
+<div class="sec"><span class="num">I</span><h2>Base position</h2><span class="it">Standalone, S&amp;P-adjusted figures</span></div>
+
 <div class="topbar">
-  <div class="group"><label>Select Month</label>
-    <select id="month">
+  <div class="group"><label>Period</label>
+    <select id="month" style="width:70px">
       <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
       <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
       <option>Sep</option><option>Oct</option><option>Nov</option><option selected>Dec</option>
     </select>
+    <input id="year" type="number" value="2026" style="width:70px"/>
   </div>
-  <div class="group"><label>Year</label><input id="year" type="number" value="2026"/></div>
   <div class="group"><label>Adj. Net Debt</label><input id="netDebt" type="number" value="500"/></div>
   <div class="group"><label>EBITDA</label><input id="ebitda" type="number" value="617"/></div>
   <div class="group"><label>FFO</label><input id="ffo" type="number" value="491"/></div>
   <div class="group"><label>FOCF</label><input id="focf" type="number" value="335"/></div>
   <div class="group"><label>Currency</label>
-    <select id="ccy"><option>$m</option><option>€m</option><option>£m</option><option>CHFm</option></select>
+    <select id="ccy" style="width:78px;color:var(--ink);font-weight:600"><option>USD m</option><option>EUR m</option><option>GBP m</option><option>CHF m</option></select>
   </div>
 </div>
 
-<!-- Facilities + Axis editor -->
+<!-- ===== Snapshot ===== -->
+<div class="snapshot">
+  <div class="snap-card lead">
+    <div><div class="lbl">Net Debt / EBITDA</div><div class="val" id="snapDE">–</div></div>
+    <div class="chip" id="snapDEchip">–</div>
+  </div>
+  <div class="snap-card lead">
+    <div><div class="lbl">FFO / Net Debt</div><div class="val" id="snapFFO">–</div></div>
+    <div class="chip" id="snapFFOchip">–</div>
+  </div>
+  <div class="snap-card lead">
+    <div><div class="lbl">FOCF / Net Debt</div><div class="val" id="snapFOCF">–</div></div>
+    <div class="chip" id="snapFOCFchip">–</div>
+  </div>
+  <div class="snap-card lead">
+    <div><div class="lbl">Implied S&amp;P band</div><div class="val" id="snapBand">–</div></div>
+    <div class="chip" id="snapBandChip">–</div>
+  </div>
+</div>
+
+<!-- ===== II. Liquidity stack & axes ===== -->
+<div class="sec"><span class="num">II</span><h2>Liquidity stack &amp; sensitivity axes</h2></div>
+
 <div class="two">
-  <div class="facilities">
-    <h3>Facilities &middot; starting range and utilization</h3>
+  <div class="card facilities">
+    <h3>Committed &amp; uncommitted facilities <span class="it">starting range, current utilization</span></h3>
     <table>
-      <thead><tr><th>Facility</th><th>Limit</th><th>Utilization</th><th>Available</th></tr></thead>
+      <thead><tr><th>Facility</th><th>Limit</th><th>Drawn</th><th>Utilization</th><th>Available</th></tr></thead>
       <tbody id="facBody"></tbody>
-      <tfoot><tr class="tot"><td>Total</td><td id="facLim">0</td><td id="facUt">0</td><td id="facAv">0</td></tr></tfoot>
+      <tfoot><tr class="tot"><td>Total</td><td id="facLim">0</td><td id="facUt">0</td><td></td><td id="facAv">0</td></tr></tfoot>
     </table>
+    <div class="liq-line">
+      <span><b>Total available liquidity</b> = Cash position not yet drawn down + undrawn facilities</span>
+      <span class="liqv" id="liqTotal">0</span>
+    </div>
   </div>
 
-  <div class="axis">
-    <h3>Sensitivity axes</h3>
+  <div class="card axis">
+    <h3>Sensitivity axes <span class="it">edit step values directly</span></h3>
     <div class="row">
       <label>Litigation outflow ↓</label>
       <input data-ax="lit" data-i="0" type="number" value="0"/>
@@ -208,55 +302,65 @@ footer b{color:var(--ink2)}
       <input data-ax="ma" data-i="3" type="number" value="2000"/>
       <input data-ax="ma" data-i="4" type="number" value="3000"/>
     </div>
-    <div class="hint">Net transaction value = acquisition outflow (positive) net of divestment proceeds (negative). Both can run in parallel.</div>
+    <div class="hint">
+      <b style="color:var(--ink2)">Net transaction value</b> = acquisition outflow (positive) net of divestment proceeds (negative).
+      M&amp;A and divestments may run in parallel — key the net number.<br/>
+      The base case (Litigation = 0, Transaction = 0) is highlighted with a navy outline in each matrix.
+    </div>
   </div>
 </div>
 
-<!-- Matrices -->
-<div class="sec-title">Leverage sensitivity &mdash; S&amp;P core ratios <span class="it">Cells coloured by S&amp;P financial-risk band</span></div>
+<!-- ===== III. Sensitivity matrices ===== -->
+<div class="sec"><span class="num">III</span><h2>Leverage sensitivity matrices</h2><span class="it">Cells colour-banded against S&amp;P scorecard</span></div>
 
 <div class="two">
   <div class="matrix" id="mtxDE">
-    <div class="hd"><span class="name">Adj. Net Debt / EBITDA</span><span class="axis-lbl">target band &middot; 2.0&ndash;3.0x</span></div>
+    <div class="hd"><span class="name">Adj. Net Debt / EBITDA</span><span class="target">Target&nbsp; 2.0&ndash;3.0x</span></div>
     <div class="tbl"></div>
   </div>
   <div class="matrix" id="mtxFOCF">
-    <div class="hd"><span class="name">FOCF / Net Debt</span><span class="axis-lbl">target band &middot; 20&ndash;35%</span></div>
+    <div class="hd"><span class="name">FOCF / Adj. Net Debt</span><span class="target">Target&nbsp; 20&ndash;35%</span></div>
     <div class="tbl"></div>
   </div>
 </div>
 
 <div class="two">
   <div class="matrix" id="mtxFFO">
-    <div class="hd"><span class="name">FFO / Adj. Net Debt</span><span class="axis-lbl">target band &middot; 30&ndash;45%</span></div>
+    <div class="hd"><span class="name">FFO / Adj. Net Debt</span><span class="target">Target&nbsp; 30&ndash;45%</span></div>
     <div class="tbl"></div>
   </div>
-  <div class="scorecard">
-    <h3>S&amp;P Rating Scorecard &middot; standard volatility</h3>
+  <div class="card scorecard">
+    <h3>S&amp;P Rating Scorecard <span class="it">standard volatility</span></h3>
     <table>
       <thead><tr><th>Category</th><th>Rating</th><th>FFO/Debt</th><th>Debt/EBITDA</th><th>FOCF/Debt</th></tr></thead>
       <tbody>
-        <tr class="c-min"><td>Minimal</td>          <td>AAA / AA</td>     <td>&gt;60%</td>   <td>&lt;1.5x</td> <td>&gt;50%</td></tr>
-        <tr class="c-mod"><td>Modest</td>           <td>A / A-</td>       <td>45&ndash;60%</td><td>1.5&ndash;2.0x</td><td>35&ndash;50%</td></tr>
-        <tr class="c-int"><td>Intermediate</td>     <td>BBB+ / BBB</td>   <td>30&ndash;45%</td><td>2.0&ndash;3.0x</td><td>20&ndash;35%</td></tr>
-        <tr class="c-sig"><td>Significant</td>      <td>BBB- / BB+</td>   <td>20&ndash;30%</td><td>3.0&ndash;4.0x</td><td>12&ndash;20%</td></tr>
-        <tr class="c-agg"><td>Aggressive</td>       <td>BB / BB-</td>     <td>12&ndash;20%</td><td>4.0&ndash;5.0x</td><td>5&ndash;12%</td></tr>
-        <tr class="c-hl" ><td>Highly leveraged</td> <td>B+ / below</td>   <td>&lt;12%</td>   <td>&gt;5.0x</td>     <td>&lt;5%</td></tr>
+        <tr class="c-min"><td>Minimal</td>          <td>AAA / AA</td>   <td>&gt;60%</td>     <td>&lt;1.5x</td>     <td>&gt;50%</td></tr>
+        <tr class="c-mod"><td>Modest</td>           <td>A / A-</td>     <td>45&ndash;60%</td><td>1.5&ndash;2.0x</td><td>35&ndash;50%</td></tr>
+        <tr class="c-int"><td>Intermediate</td>     <td>BBB+ / BBB</td> <td>30&ndash;45%</td><td>2.0&ndash;3.0x</td><td>20&ndash;35%</td></tr>
+        <tr class="c-sig"><td>Significant</td>      <td>BBB- / BB+</td> <td>20&ndash;30%</td><td>3.0&ndash;4.0x</td><td>12&ndash;20%</td></tr>
+        <tr class="c-agg"><td>Aggressive</td>       <td>BB / BB-</td>   <td>12&ndash;20%</td><td>4.0&ndash;5.0x</td><td>5&ndash;12%</td></tr>
+        <tr class="c-hl" ><td>Highly leveraged</td> <td>B+ / below</td> <td>&lt;12%</td>     <td>&gt;5.0x</td>     <td>&lt;5%</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <footer>
-  <b>Note.</b> Cell <i>top</i> figure = pro-forma Adj. Net Debt = Base Net Debt + Litigation outflow + Net transaction value. Cell <i>bottom</i> figure = the resulting ratio. EBITDA, FFO and FOCF are held at the keyed-in base position. Negative net debt (net cash) is shown mechanically; ratios in that quadrant are informational only. Cells are colour-banded against the S&amp;P scorecard (standard volatility table). &nbsp;<b>Use.</b> Internal indicative model. Not S&amp;P guidance.
+  <b>Methodology.</b> Each cell shows pro-forma Adj. Net Debt = base Net Debt + litigation outflow + net transaction value (top), and the resulting ratio against the keyed-in EBITDA, FFO or FOCF (bottom). Net transaction value is signed: positive = acquisition consideration, negative = divestment proceeds; the two can be netted within the same period. Cells are coloured against the S&amp;P scorecard (standard volatility table). Liquidity total = period-end Cash + undrawn committed and uncommitted facilities. Negative net debt (net cash) is shown mechanically; ratios in that quadrant are informational.
+  <div class="sig">
+    <span><b>Internal indicative model</b> — not S&amp;P guidance.</span>
+    <span>© Group Treasury · v1.0</span>
+  </div>
 </footer>
 
 </div>
 
 <script>
-/* ===== Colour bands (S&P scorecard) ===== */
-function bandDE(x){ // Net Debt / EBITDA — lower better
-  if(!isFinite(x)) return "c-int";
+/* ============================================================
+   Band logic
+   ============================================================ */
+function bandDE(x){
+  if(!isFinite(x) || x===null) return "c-int";
   if(x < 1.5) return "c-min";
   if(x < 2.0) return "c-mod";
   if(x < 3.0) return "c-int";
@@ -264,8 +368,8 @@ function bandDE(x){ // Net Debt / EBITDA — lower better
   if(x < 5.0) return "c-agg";
   return "c-hl";
 }
-function bandFFO(x){ // %, higher better
-  if(!isFinite(x)) return "c-int";
+function bandFFO(x){
+  if(!isFinite(x) || x===null) return "c-int";
   if(x >= 60) return "c-min";
   if(x >= 45) return "c-mod";
   if(x >= 30) return "c-int";
@@ -273,8 +377,8 @@ function bandFFO(x){ // %, higher better
   if(x >= 12) return "c-agg";
   return "c-hl";
 }
-function bandFOCF(x){ // %, higher better
-  if(!isFinite(x)) return "c-int";
+function bandFOCF(x){
+  if(!isFinite(x) || x===null) return "c-int";
   if(x >= 50) return "c-min";
   if(x >= 35) return "c-mod";
   if(x >= 20) return "c-int";
@@ -282,28 +386,42 @@ function bandFOCF(x){ // %, higher better
   if(x >= 5)  return "c-agg";
   return "c-hl";
 }
+const BAND_NAME = {
+  "c-min":"Minimal", "c-mod":"Modest", "c-int":"Intermediate",
+  "c-sig":"Significant", "c-agg":"Aggressive", "c-hl":"Highly Leveraged"
+};
+const BAND_RATING = {
+  "c-min":"AAA / AA", "c-mod":"A / A-", "c-int":"BBB+ / BBB",
+  "c-sig":"BBB- / BB+", "c-agg":"BB / BB-", "c-hl":"B+ / below"
+};
 
-/* ===== Helpers ===== */
+/* ============================================================
+   Helpers
+   ============================================================ */
 const $ = id => document.getElementById(id);
 const num = id => parseFloat($(id).value) || 0;
 const fmt = (v,dp=0)=> isFinite(v) ? Number(v).toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp}) : "–";
-const ax = (a)=> [0,1,2,3,4].map(i => parseFloat(document.querySelector(`[data-ax="${a}"][data-i="${i}"]`).value) || 0);
+const ax = a => [0,1,2,3,4].map(i => parseFloat(document.querySelector(`[data-ax="${a}"][data-i="${i}"]`).value) || 0);
 
-/* ===== Facilities ===== */
+/* ============================================================
+   Facilities
+   ============================================================ */
 const FAC_DEFAULTS = [
-  {name:"RCF 1", limit:1000, util:0},
-  {name:"RCF 2", limit:500,  util:0},
-  {name:"Supply Chain Financing", limit:400, util:0},
-  {name:"Term loan / bond capacity", limit:0, util:0}
+  {name:"Cash on hand",                    limit:300, util:0  },
+  {name:"RCF 1 (committed)",               limit:1000, util:0 },
+  {name:"RCF 2 (committed)",               limit:500,  util:0 },
+  {name:"Supply Chain Financing",          limit:400,  util:0 },
+  {name:"Term loan / bond capacity",       limit:0,    util:0 }
 ];
 function renderFacilities(){
   const tb = $("facBody");
   if(!tb.dataset.init){
     tb.innerHTML = FAC_DEFAULTS.map((f,i)=>`
       <tr>
-        <td><input type="text" value="${f.name}" data-fac="name" data-fi="${i}" style="width:160px;text-align:left"/></td>
+        <td><input type="text" value="${f.name}" data-fac="name" data-fi="${i}"/></td>
         <td><input type="number" value="${f.limit}" data-fac="limit" data-fi="${i}"/></td>
-        <td><input type="number" value="${f.util}"  data-fac="util"  data-fi="${i}"/></td>
+        <td><input type="number" value="${f.util}" data-fac="util" data-fi="${i}"/></td>
+        <td><span class="ut-bar"><i data-utbar="${i}" style="width:0%"></i></span><span data-utpct="${i}">0%</span></td>
         <td data-av="${i}">0</td>
       </tr>
     `).join("");
@@ -318,68 +436,119 @@ function updateFacTotals(){
     const l = parseFloat(tr.querySelector('[data-fac="limit"]').value)||0;
     const u = parseFloat(tr.querySelector('[data-fac="util"]').value)||0;
     const a = Math.max(0, l-u);
+    const pct = l>0 ? Math.min(100, (u/l)*100) : 0;
     tr.querySelector(`[data-av="${i}"]`).textContent = fmt(a);
+    tr.querySelector(`[data-utbar="${i}"]`).style.width = pct+"%";
+    tr.querySelector(`[data-utpct="${i}"]`).textContent = fmt(pct,0)+"%";
     lim+=l; ut+=u; av+=a;
   });
   $("facLim").textContent = fmt(lim);
   $("facUt").textContent  = fmt(ut);
   $("facAv").textContent  = fmt(av);
+  $("liqTotal").textContent = fmt(av) + " " + ($("ccy").value);
 }
 
-/* ===== Matrix render ===== */
+/* ============================================================
+   Snapshot (base position)
+   ============================================================ */
+function renderSnapshot(){
+  const eb = num("ebitda"), nd = num("netDebt"), f = num("ffo"), fc = num("focf");
+  const de  = eb!==0 ? nd/eb : NaN;
+  const fr  = nd!==0 ? (f/nd)*100 : NaN;
+  const fcr = nd!==0 ? (fc/nd)*100 : NaN;
+
+  $("snapDE").textContent  = fmt(de,2)+"x";
+  $("snapFFO").textContent = fmt(fr,1)+"%";
+  $("snapFOCF").textContent = fmt(fcr,1)+"%";
+
+  const setChip = (id, cls, label)=>{
+    const el = $(id); el.className = "chip "+cls; el.textContent = label;
+  };
+  const cDE = bandDE(de), cFFO = bandFFO(fr), cFOCF = bandFOCF(fcr);
+  setChip("snapDEchip", cDE, BAND_NAME[cDE]);
+  setChip("snapFFOchip", cFFO, BAND_NAME[cFFO]);
+  setChip("snapFOCFchip", cFOCF, BAND_NAME[cFOCF]);
+
+  // Implied band = worst of the three
+  const order = ["c-min","c-mod","c-int","c-sig","c-agg","c-hl"];
+  const idx = Math.max(order.indexOf(cDE), order.indexOf(cFFO), order.indexOf(cFOCF));
+  const cAgg = order[Math.max(0,idx)];
+  $("snapBand").textContent = BAND_RATING[cAgg];
+  setChip("snapBandChip", cAgg, BAND_NAME[cAgg]);
+}
+
+/* ============================================================
+   Matrix builder
+   ============================================================ */
 function buildMatrix(elId, fmtCell, bandFn){
   const root = document.querySelector(`#${elId} .tbl`);
   const lit = ax("lit"), ma = ax("ma");
   const baseND = num("netDebt");
-  const ccy = $("ccy").value;
 
   let html = `<table>
     <thead>
       <tr>
-        <td colspan="2" class="axis-x" style="text-align:left">Litigation ↓</td>
-        <td colspan="${ma.length}" class="axis-x" style="text-align:left">Net Transaction value → (Acquisitions and / or Disposals)</td>
+        <td colspan="2" class="ax-x">Litigation ↓</td>
+        <td colspan="${ma.length}" class="ax-x">Net Transaction value → (acquisitions and / or disposals)</td>
       </tr>
       <tr>
-        <td class="corner"></td><td class="corner"></td>
+        <td class="corner">Lit.</td><td class="corner">Δ</td>
         ${ma.map(v=>`<td class="colhead-top">${fmt(v)}</td>`).join("")}
       </tr>
     </thead><tbody>`;
   lit.forEach((lv, ri)=>{
-    html += `<tr><td class="rowhead" rowspan="1">${fmt(lv)}</td><td class="rowhead" style="background:#fff;color:var(--muted);font-weight:400;font-size:10.5px">Net&nbsp;Debt<br/><span style="font-style:italic">ratio</span></td>`;
+    html += `<tr>
+      <td class="rowhead">${fmt(lv)}</td>
+      <td class="rowhead-sub">Net&nbsp;Debt<br/><span style="font-style:italic">ratio</span></td>`;
     ma.forEach((mv,ci)=>{
       const nd = baseND + lv + mv;
       const cell = fmtCell(nd);
-      html += `<td class="cell ${bandFn(cell.raw)}">
+      const isBase = (lv===0 && mv===0);
+      html += `<td class="cell ${bandFn(cell.raw)} ${isBase?"base":""}">
                  <div class="top">${fmt(nd)}</div>
                  <div class="bot">${cell.disp}</div>
                </td>`;
     });
     html += `</tr>`;
   });
-  html += `</tbody></table>`;
+  html += `</tbody></table>
+    <div class="legend">
+      <span><i class="c-min"></i>Minimal</span>
+      <span><i class="c-mod"></i>Modest</span>
+      <span><i class="c-int"></i>Intermediate</span>
+      <span><i class="c-sig"></i>Significant</span>
+      <span><i class="c-agg"></i>Aggressive</span>
+      <span><i class="c-hl"></i>Highly Leveraged</span>
+    </div>`;
   root.innerHTML = html;
 }
 
+/* ============================================================
+   Render orchestrator
+   ============================================================ */
 function render(){
+  renderSnapshot();
   const eb = num("ebitda"), ffoV = num("ffo"), focfV = num("focf");
 
-  buildMatrix("mtxDE", nd=>{
+  buildMatrix("mtxDE", nd => {
     const r = eb>0 ? nd/eb : NaN;
     return {raw:r, disp: fmt(r,1)+"x"};
   }, bandDE);
 
-  buildMatrix("mtxFOCF", nd=>{
+  buildMatrix("mtxFOCF", nd => {
     const r = nd!==0 ? (focfV/nd)*100 : NaN;
     return {raw:r, disp: fmt(r,1)+"%"};
   }, bandFOCF);
 
-  buildMatrix("mtxFFO", nd=>{
+  buildMatrix("mtxFFO", nd => {
     const r = nd!==0 ? (ffoV/nd)*100 : NaN;
     return {raw:r, disp: fmt(r,1)+"%"};
   }, bandFFO);
 }
 
-/* ===== Wiring ===== */
+/* ============================================================
+   Import / export
+   ============================================================ */
 function exportJSON(){
   const data = {fields:{}, axes:{lit:ax("lit"), ma:ax("ma")}, fac:[]};
   ["month","year","netDebt","ebitda","ffo","focf","ccy"].forEach(k=>data.fields[k]=$(k).value);
@@ -391,7 +560,8 @@ function exportJSON(){
     });
   });
   const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="liquidity-playbook.json"; a.click();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download="liquidity-playbook.json"; a.click();
 }
 function importJSON(ev){
   const f = ev.target.files[0]; if(!f) return;
@@ -415,6 +585,9 @@ function importJSON(ev){
   r.readAsText(f);
 }
 
+/* ============================================================
+   Wiring
+   ============================================================ */
 document.querySelectorAll("input,select").forEach(el=>{
   if(el.type==="file") return;
   el.addEventListener("input", render);
