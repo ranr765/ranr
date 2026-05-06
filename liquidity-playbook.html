@@ -7,31 +7,32 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --paper:#f7f4ec;
+  /* Clariant brand palette */
+  --paper:#ffffff;
   --surface:#ffffff;
-  --ink:#0a1733;
-  --ink2:#1a2748;
-  --muted:#5a6478;
-  --hair:#e7e2d4;
-  --hair2:#cfc7b3;
-  --gold:#b8924f;
-  --gold2:#8b6f3a;
-  --softgold:#f1e7d2;
-  --good:#2d6a4f;
-  --warn:#b07a1f;
-  --bad:#9b2226;
-  --soft:#fbf9f3;
+  --ink:#1a1a1a;
+  --ink2:#333333;
+  --muted:#6e6e6e;
+  --hair:#e8e8e8;
+  --hair2:#d4d4d4;
+  --gold:#E6491E;        /* Clariant signature orange */
+  --gold2:#B83A18;       /* Clariant orange — dark */
+  --softgold:#FCE8DD;    /* Clariant orange — tint */
+  --good:#2E7D32;
+  --warn:#E6491E;
+  --bad:#C62828;
+  --soft:#FAFAFA;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.serif{font-family:"Iowan Old Style","Apple Garamond",Baskerville,Georgia,"Times New Roman",serif;letter-spacing:.2px}
+  font-family:"Open Sans","Helvetica Neue",Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;font-weight:400}
+.serif{font-family:"Open Sans","Helvetica Neue",Arial,sans-serif;letter-spacing:0}
 
 /* ---------- Watermark ---------- */
 .watermark{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .watermark span{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);
-  font-family:Georgia,serif;font-size:140px;letter-spacing:18px;color:rgba(184,146,79,.06);font-weight:700;white-space:nowrap}
+  font-family:inherit;font-size:140px;letter-spacing:18px;color:rgba(230,73,30,.045);font-weight:700;white-space:nowrap}
 
 /* ---------- Page ---------- */
 .page{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:28px 36px 56px}
@@ -41,7 +42,7 @@ header.doc{display:flex;justify-content:space-between;align-items:flex-end;
   border-bottom:1.5px solid var(--ink);padding-bottom:14px;margin-bottom:20px}
 header .lhs .crest{display:flex;align-items:center;gap:12px;color:var(--gold2);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
 header .lhs .crest .dot{width:8px;height:8px;background:var(--gold);border-radius:50%}
-header .lhs h1{font-family:"Iowan Old Style","Apple Garamond",Baskerville,Georgia,serif;font-size:34px;letter-spacing:.5px;margin:0;font-weight:600}
+header .lhs h1{font-family:inherit;font-size:34px;letter-spacing:.5px;margin:0;font-weight:600}
 header .lhs h1 em{color:var(--gold2);font-style:normal;font-weight:500}
 header .lhs .sub{color:var(--muted);font-size:12px;margin-top:4px;letter-spacing:.4px}
 header .rhs{text-align:right;font-size:11px;color:var(--muted);letter-spacing:.4px}
@@ -54,7 +55,7 @@ header .rhs .meta b{color:var(--ink)}
 .section-label{display:flex;align-items:center;gap:10px;text-transform:uppercase;
   font-size:10.5px;letter-spacing:3px;color:var(--gold2);font-weight:600;margin:18px 0 10px}
 .section-label .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--hair2),transparent)}
-.section-label .roman{font-family:Georgia,serif;font-size:14px;color:var(--gold);font-style:italic;letter-spacing:1px}
+.section-label .roman{font-family:inherit;font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px}
 
 /* ---------- KPI strip ---------- */
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
@@ -62,7 +63,7 @@ header .rhs .meta b{color:var(--ink)}
 .kpi{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:14px 16px;position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
 .kpi .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:var(--muted)}
-.kpi .val{font-family:"Iowan Old Style",Georgia,serif;font-size:26px;font-weight:600;margin-top:6px;letter-spacing:-.3px}
+.kpi .val{font-family:inherit;font-size:26px;font-weight:600;margin-top:6px;letter-spacing:-.3px}
 .kpi .delta{font-size:11px;margin-top:2px;color:var(--muted)}
 .kpi .delta.up{color:var(--good)}
 .kpi .delta.dn{color:var(--bad)}
@@ -73,7 +74,7 @@ header .rhs .meta b{color:var(--ink)}
 
 /* ---------- Panel ---------- */
 .panel{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px}
-.panel h2{font-family:"Iowan Old Style",Georgia,serif;font-size:15px;font-weight:600;margin:0 0 14px;
+.panel h2{font-family:inherit;font-size:15px;font-weight:600;margin:0 0 14px;
   padding-bottom:8px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between;align-items:baseline}
 .panel h2 .num{color:var(--gold);font-size:11px;letter-spacing:2px}
 .subpanel{border-top:1px dashed var(--hair2);padding-top:12px;margin-top:14px}
@@ -109,7 +110,7 @@ header .rhs .meta b{color:var(--ink)}
 .sc.active .sc-title{color:#fff}
 .sc.active .sc-desc{color:rgba(255,255,255,.7)}
 .sc input[type=radio]{position:absolute;left:12px;top:14px;accent-color:var(--gold)}
-.sc .sc-title{font-family:"Iowan Old Style",Georgia,serif;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.sc .sc-title{font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
 .sc .sc-desc{font-size:11px;color:var(--muted);line-height:1.35}
 
 /* ---------- Tables ---------- */
@@ -132,40 +133,40 @@ table.elegant tr.tot td{border-top:1px solid var(--ink2);font-weight:600}
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 @media (max-width:1100px){.charts{grid-template-columns:1fr}}
 .chart-card{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:14px;height:280px;display:flex;flex-direction:column}
-.chart-card h3{font-family:Georgia,serif;font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink)}
+.chart-card h3{font-family:inherit;font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink)}
 .chart-card .csub{font-size:11px;color:var(--muted);margin-bottom:8px}
 .chart-card .canvasWrap{flex:1;position:relative}
 
 /* ---------- S&U Waterfall ---------- */
 .waterfall{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px;margin-bottom:14px}
 .waterfall .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
-.waterfall .hd h3{font-family:Georgia,serif;font-size:15px;margin:0;font-weight:600}
+.waterfall .hd h3{font-family:inherit;font-size:15px;margin:0;font-weight:600}
 .waterfall .hd .yr-pick{display:inline-flex;border:1px solid var(--hair2);border-radius:3px;overflow:hidden;font-size:11px}
 .waterfall .hd .yr-pick button{background:transparent;border:0;padding:4px 10px;cursor:pointer;color:var(--muted)}
 .waterfall .hd .yr-pick button.on{background:var(--ink);color:#fff}
 .wf-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:18px;align-items:start}
 .wf-col h4{font-size:10.5px;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between}
-.wf-col h4 .tot{color:var(--ink);font-family:Georgia,serif;font-size:13px;letter-spacing:0;text-transform:none}
+.wf-col h4 .tot{color:var(--ink);font-family:inherit;font-size:13px;letter-spacing:0;text-transform:none}
 .wf-bar{margin:6px 0}
 .wf-bar .bar-lbl{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px}
 .wf-bar .bar-lbl .name{color:var(--ink2)}
 .wf-bar .bar-lbl .v{color:var(--muted);font-variant-numeric:tabular-nums}
-.wf-bar .bar{height:8px;background:#f1ece0;border-radius:2px;overflow:hidden}
+.wf-bar .bar{height:8px;background:#F2F2F2;border-radius:2px;overflow:hidden}
 .wf-bar .bar > i{display:block;height:100%}
-.wf-bar.use .bar > i{background:linear-gradient(90deg,#9b2226,#c95a5e)}
-.wf-bar.src .bar > i{background:linear-gradient(90deg,#0a1733,#3b5598)}
-.wf-bar.facil .bar > i{background:linear-gradient(90deg,#b8924f,#e2c98f)}
+.wf-bar.use .bar > i{background:linear-gradient(90deg,#C62828,#E57373)}
+.wf-bar.src .bar > i{background:linear-gradient(90deg,#1a1a1a,#555555)}
+.wf-bar.facil .bar > i{background:linear-gradient(90deg,#E6491E,#F5A57E)}
 .wf-balance{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:11px}
 .wf-balance .arr{font-size:24px;color:var(--gold)}
 
 /* ---------- Rating ladder ---------- */
 .rating-ladder{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px;margin-top:14px}
-.rating-ladder h3{font-family:Georgia,serif;font-size:15px;margin:0 0 14px;font-weight:600}
+.rating-ladder h3{font-family:inherit;font-size:15px;margin:0 0 14px;font-weight:600}
 .ladder-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media (max-width:900px){.ladder-grid{grid-template-columns:repeat(2,1fr)}}
 .year-card{border:1px solid var(--hair);border-radius:4px;padding:12px;background:var(--soft);position:relative}
 .year-card .yc-hd{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:6px;font-weight:600}
-.year-card .yc-r{font-family:Georgia,serif;font-size:24px;font-weight:600;margin-bottom:2px}
+.year-card .yc-r{font-family:inherit;font-size:24px;font-weight:600;margin-bottom:2px}
 .year-card .yc-band{font-size:11px;color:var(--muted);margin-bottom:8px}
 .year-card .yc-mt{font-size:11px;color:var(--ink2);display:flex;justify-content:space-between;margin-bottom:3px}
 .year-card .yc-mt b{font-variant-numeric:tabular-nums;font-weight:600}
@@ -186,7 +187,7 @@ table.elegant tr.tot td{border-top:1px solid var(--ink2);font-weight:600}
 /* ---------- Print ---------- */
 @media print{
   body{background:#fff}
-  .watermark span{color:rgba(184,146,79,.10)}
+  .watermark span{color:rgba(230,73,30,.08)}
   .layout{grid-template-columns:1fr}
   .toolbar,.scenarios{break-inside:avoid}
   .panel,.kpi,.waterfall,.rating-ladder,.chart-card{break-inside:avoid;box-shadow:none}
@@ -197,11 +198,12 @@ table.elegant tr.tot td{border-top:1px solid var(--ink2);font-weight:600}
 </head>
 <body>
 <div class="watermark"><span>CONFIDENTIAL</span></div>
+<div style="height:4px;background:#E6491E;width:100%"></div>
 
 <div class="page">
 <header class="doc">
   <div class="lhs">
-    <div class="crest"><span class="dot"></span> Office of the Group CFO &middot; Treasury</div>
+    <div class="crest"><span class="dot"></span> Group CFO &middot; Treasury</div>
     <h1>Liquidity Playbook <em>1.0</em></h1>
     <div class="sub">Funding strategy &amp; rating impact under contingent capital deployment</div>
   </div>
@@ -362,7 +364,7 @@ table.elegant tr.tot td{border-top:1px solid var(--ink2);font-weight:600}
         <div class="wf-balance">
           <div class="arr">⇄</div>
           <div style="margin-top:6px">balance</div>
-          <div id="balVal" style="font-family:Georgia,serif;color:var(--ink);font-size:14px;margin-top:4px">0</div>
+          <div id="balVal" style="font-family:inherit;color:var(--ink);font-size:14px;margin-top:4px">0</div>
         </div>
         <div class="wf-col" id="srcCol">
           <h4>Sources <span class="tot" id="srcTot">0</span></h4>
@@ -748,7 +750,7 @@ let charts = {};
 function destroy(c){ if(c) c.destroy(); }
 function renderCharts(p){
   const labels = ["Y0","Y1","Y2","Y3"];
-  const ink="#0a1733", gold="#b8924f", muted="#5a6478", grid="#e7e2d4";
+  const ink="#1a1a1a", gold="#E6491E", muted="#6e6e6e", grid="#e8e8e8";
   const baseOpts = {
     responsive:true, maintainAspectRatio:false,
     plugins:{legend:{labels:{color:muted,font:{size:11}}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}`}}},
@@ -782,10 +784,10 @@ function renderCharts(p){
   charts.liq = new Chart($("chLiq"),{
     type:"bar",
     data:{labels, datasets:[
-      {label:"Cash",  data:stackData.map(d=>d.cash), backgroundColor:"#0a1733"},
-      {label:"RCF 1", data:stackData.map(d=>d.r1),   backgroundColor:"#b8924f"},
-      {label:"RCF 2", data:stackData.map(d=>d.r2),   backgroundColor:"#e2c98f"},
-      {label:"SCF",   data:stackData.map(d=>d.scf),  backgroundColor:"#cfc7b3"}
+      {label:"Cash",  data:stackData.map(d=>d.cash), backgroundColor:"#1a1a1a"},
+      {label:"RCF 1", data:stackData.map(d=>d.r1),   backgroundColor:"#E6491E"},
+      {label:"RCF 2", data:stackData.map(d=>d.r2),   backgroundColor:"#F5A57E"},
+      {label:"SCF",   data:stackData.map(d=>d.scf),  backgroundColor:"#BDBDBD"}
     ]},
     options:{...baseOpts, scales:{x:{stacked:true,grid:{color:grid},ticks:{color:muted}}, y:{stacked:true,grid:{color:grid},ticks:{color:muted}}}}
   });
@@ -797,7 +799,7 @@ function renderCharts(p){
     type:"doughnut",
     data:{labels:["Cash","RCF 1","RCF 2","SCF","New debt","Divest. proceeds"], datasets:[{
       data:[a.cash,a.r1,a.r2,a.scf,a.nd,a.proceeds||0],
-      backgroundColor:["#0a1733","#b8924f","#e2c98f","#cfc7b3","#9b2226","#2d6a4f"],
+      backgroundColor:["#1a1a1a","#E6491E","#F5A57E","#BDBDBD","#C62828","#2E7D32"],
       borderColor:"#fff", borderWidth:2
     }]},
     options:{responsive:true,maintainAspectRatio:false,cutout:"60%",
