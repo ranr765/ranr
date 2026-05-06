@@ -1,0 +1,1889 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ABC LTD — CFO Firepower & Capital Allocation Model</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style id="core-css">
+:root{
+  --navy:#0D2680; --navy-deep:#091B5E; --navy-light:#1A3A9E;
+  --steel:#4A6FA5; --ice:#E8EEF7; --gold:#C5A572;
+  --ink:#333; --muted:#6b7280; --line:#dde3ef;
+  --green:#1f8a4c; --amber:#d68910; --red:#c0392b; --blue-band:#1f6fb6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#f6f8fc}
+h1,h2,h3,h4{margin:0 0 8px 0;color:var(--navy)}
+h2{font-size:24px;font-weight:bold;border-left:4px solid var(--gold);padding-left:10px;margin-top:18px}
+h3{font-size:20px;font-weight:bold;margin-top:14px}
+h4{font-size:16px;font-weight:bold;margin-top:10px;color:var(--steel)}
+p{font-size:14px;line-height:1.45}
+a{color:var(--navy)}
+#hero{background:linear-gradient(135deg,#091B5E,#0D2680,#1A3A9E);color:#fff;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(9,27,94,.25)}
+#hero .title{font-size:26px;font-weight:bold;letter-spacing:.5px}
+#hero .sub{font-size:13px;color:#cfd8ee;margin-top:4px}
+#hero .actions button{margin-left:8px}
+#tabs{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;padding:0 18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+#tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:12px 14px;font:bold 13px Arial;color:var(--steel);cursor:pointer}
+#tabs button.active{color:var(--navy);border-bottom-color:var(--gold)}
+#tabs button:hover{color:var(--navy)}
+main{padding:18px 24px 60px 24px;max-width:1500px;margin:0 auto}
+section.panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:18px;box-shadow:0 1px 2px rgba(13,38,128,.05)}
+section.panel.hidden{display:none}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.kpi{background:linear-gradient(135deg,#0D2680,#1A3A9E);color:#fff;border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi.gold{background:linear-gradient(135deg,#8a6f33,#C5A572)}
+.kpi.ice{background:var(--ice);color:var(--navy)}
+.kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.85}
+.kpi .val{font-size:48px;font-weight:bold;line-height:1.05;margin-top:4px}
+.kpi .sub{font-size:11px;opacity:.85;margin-top:2px}
+.kpi.small .val{font-size:30px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr}}
+table.fin{width:100%;border-collapse:collapse;font-size:13px}
+table.fin th,table.fin td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
+table.fin th:first-child,table.fin td:first-child{text-align:left}
+table.fin thead th{background:var(--ice);color:var(--navy);font-weight:bold;border-bottom:2px solid var(--steel)}
+table.fin tr.total td{background:#f0f4fb;font-weight:bold;border-top:2px solid var(--steel)}
+table.fin tr.subtotal td{font-weight:bold;color:var(--navy)}
+table.fin tr.add td:first-child{padding-left:18px;color:#555}
+table.fin tr.sub td:first-child{padding-left:18px;color:#555}
+table.fin td.neg{color:var(--red)}
+table.fin td.tooltip{position:relative;cursor:help;border-bottom:1px dotted var(--steel)}
+.tooltip-tip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:6px 8px;border-radius:4px;font-size:11px;white-space:nowrap;display:none;z-index:5}
+td.tooltip:hover .tooltip-tip{display:block}
+.input-row{display:grid;grid-template-columns:220px 80px 1fr;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+.input-row label{color:#444}
+.input-row input[type=number]{width:80px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;text-align:right;font:13px Arial}
+.input-row input[type=range]{width:100%}
+.input-row .unit{color:var(--muted);font-size:11px}
+button.primary{background:var(--navy);color:#fff;border:0;padding:8px 14px;border-radius:6px;font:bold 12px Arial;cursor:pointer}
+button.primary:hover{background:var(--navy-light)}
+button.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy);padding:8px 14px;border-radius:6px;font:bold 12px Arial;cursor:pointer}
+button.ghost:hover{background:var(--ice)}
+button.gold{background:var(--gold);color:#3d2f10;border:0;padding:8px 14px;border-radius:6px;font:bold 12px Arial;cursor:pointer}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;margin:6px 12px 6px 0}
+.toggle input{transform:scale(1.15)}
+.placeholder{color:var(--red);font-style:italic;font-size:11px}
+.flag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold}
+.flag.green{background:#dff5e6;color:var(--green)}
+.flag.amber{background:#fff1d6;color:var(--amber)}
+.flag.red{background:#fbe1de;color:var(--red)}
+.flag.blue{background:var(--ice);color:var(--navy)}
+.gauge{height:24px;background:linear-gradient(90deg,#1f8a4c 0%,#1f8a4c 25%,#1f6fb6 25%,#1f6fb6 55%,#d68910 55%,#d68910 80%,#c0392b 80%,#c0392b 100%);border-radius:12px;position:relative;margin:8px 0}
+.gauge .needle{position:absolute;top:-6px;width:4px;height:36px;background:#000;left:50%;transition:left .3s}
+.gauge .labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px}
+.heatmap td{padding:6px 4px;text-align:center;font-size:11px;font-weight:bold;color:#fff;border:1px solid #fff}
+.heatmap th{background:var(--ice);color:var(--navy);font-size:11px;padding:4px}
+details{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+details summary{cursor:pointer;font-weight:bold;color:var(--steel);font-size:12px}
+.commentary{background:var(--ice);border-left:4px solid var(--gold);padding:12px 14px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5;margin:10px 0}
+.verdict{padding:14px;border-radius:8px;font-weight:bold;font-size:16px;margin:10px 0;display:flex;align-items:center;gap:10px}
+.verdict.green{background:#dff5e6;color:var(--green);border:1px solid var(--green)}
+.verdict.amber{background:#fff1d6;color:var(--amber);border:1px solid var(--amber)}
+.verdict.red{background:#fbe1de;color:var(--red);border:1px solid var(--red)}
+.scenario-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:#fafbfd}
+.scenario-card.active{border-color:var(--gold);background:#fffbf2}
+.scenario-card h4{display:flex;justify-content:space-between;align-items:center}
+.canvas-wrap{position:relative;height:300px}
+#footer{padding:12px 24px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);background:#fff;text-align:center}
+.tornado-bar{display:grid;grid-template-columns:140px 1fr 80px;align-items:center;gap:6px;font-size:12px;margin:3px 0}
+.tornado-bar .track{position:relative;height:18px;background:#f0f3f9;border-left:2px solid var(--navy)}
+.tornado-bar .neg-bar{position:absolute;right:50%;height:18px;background:var(--red)}
+.tornado-bar .pos-bar{position:absolute;left:50%;height:18px;background:var(--steel)}
+.waterfall{display:flex;gap:6px;align-items:flex-end;height:240px;padding:8px;border-bottom:2px solid var(--navy)}
+.waterfall .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:10px;color:var(--ink);text-align:center}
+.waterfall .bar .b{width:100%;background:var(--steel);border-radius:3px 3px 0 0}
+.waterfall .bar.neg .b{background:var(--red)}
+.waterfall .bar.tot .b{background:var(--navy)}
+</style>
+<style id="print-css" media="print">
+@page{size:A4 landscape;margin:10mm}
+#tabs,.no-print,button,#hero .actions{display:none!important}
+section.panel{page-break-inside:avoid;page-break-after:auto;box-shadow:none;border-color:#888}
+section.panel.hidden{display:block!important}
+section.major-break{page-break-before:always}
+body{background:#fff}
+input,select{border:0!important;background:transparent!important;padding:0!important}
+.input-row input[type=range]{display:none}
+details{display:block}
+details > *{display:block!important}
+.kpi{background:#0D2680!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.kpi.gold{background:#C5A572!important}
+.kpi.ice{background:#E8EEF7!important;color:#0D2680!important}
+.heatmap td,.gauge,.flag,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+</style>
+</head>
+<body>
+<header id="hero">
+  <div>
+    <div class="title">ABC LTD — CFO Firepower & Capital Allocation Model</div>
+    <div class="sub">S&amp;P-Adjusted Credit Framework · CHF m · 2025A → 2030E · Confidential</div>
+  </div>
+  <div class="actions no-print">
+    <button class="gold" id="btn-print">Print Board Pack</button>
+    <button class="ghost" id="btn-csv" style="background:#fff">Export CSV</button>
+    <button class="ghost" id="btn-reset" style="background:#fff">Reset to Base</button>
+  </div>
+</header>
+<nav id="tabs" class="no-print"></nav>
+<main id="app"></main>
+<footer id="footer">
+  ABC LTD | Treasury | CFO Firepower Model v1.0 | Confidential | Generated <span id="gen-date"></span>
+</footer>
+<script id="state">
+// ============================================================
+// STATE — all editable assumptions. Values flagged ASSUMPTION are illustrative.
+// ============================================================
+const YEARS = [2025,2026,2027,2028,2029,2030];
+
+const BASE = {
+  meta:{ entity:"ABC LTD", ccy:"CHF m", today:new Date().toISOString().slice(0,10) },
+
+  // P&L drivers --------------------------------------------------
+  pl:{
+    revenue:        [4800, 4992, 5217, 5478, 5752, 6040], // ASSUMPTION
+    ebitdaMargin:   [18.0, 18.5, 19.0, 19.5, 19.8, 20.0], // %  ASSUMPTION
+    daPct:          [6.0, 6.0, 6.0, 6.0, 6.0, 6.0],       // % of revenue (D&A)
+    restructuring:  [60, 40, 30, 20, 15, 10],             // one-offs add-back, CHF m
+    sbc:            [25, 26, 27, 28, 29, 30],             // stock-based comp
+    pensionSvcAdj:  [12, 12, 13, 13, 14, 14],             // S&P pension service adj
+    capDevCost:     [20, 22, 24, 26, 28, 30],             // capitalised dev — subtract
+    cashInterest:   [55, 60, 70, 65, 60, 55],
+    cashTaxes:      [110,120,135,150,165,180],
+    capexMaint:     [180,185,190,195,200,205],
+    capexGrowth:    [120,140,160,170,180,190],
+    dso:            [62, 62, 62, 62, 62, 62], // days
+    dpo:            [55, 55, 55, 55, 55, 55],
+    dio:            [70, 70, 70, 70, 70, 70],
+    dividend:       [180,190,200,210,220,230],
+    buyback:        [100,100,100,100,100,100],
+    pensionTopUp:   [25, 25, 20, 20, 15, 15],
+    leasePrincipal: [60, 62, 64, 66, 68, 70],
+    restructCash:   [70, 50, 40, 25, 15, 10]
+  },
+
+  // Toggles for S&P methodology ---------------------------------
+  toggles:{
+    sbcAddBack:false,        // S&P typically NOT adding back SBC
+    hybridEquityCredit:50,   // % equity credit (50% standard for IG hybrids)
+    cashHaircut:25,          // % of cash deemed operational/trapped
+    pensionHaircutPct:100,   // 100% of underfunded portion (post-tax effect handled in calc)
+    factoringAsDebt:true,
+    earnoutInDebt:true,
+    iso16FullInclusion:true,
+    sustainabilityLinked:true
+  },
+
+  // Balance sheet — opening 2025A position ---------------------
+  bs2025:{
+    bonds:        1450,  // outstanding bond stock
+    termLoan:      350,
+    rcfDrawn:        0,
+    rcfSize:       800,
+    rcfMaturity: 2029,
+    cpOutstanding: 100,
+    cpProgramme:   500,
+    bilateralDrawn: 50,
+    bilateralLines:300,
+    schuldscheinOut:200,
+    schuldscheinCap:500,
+    hybridOutstanding:300,
+    leaseLiability:420,
+    pensionDBO:    1850,
+    pensionAssets: 1610,
+    factoringRecourse:120,
+    securitisation:80,
+    arOblig:        90,        // Asset retirement / decommissioning
+    osbsGuarantees: 40,
+    cashTotal:     680,
+    cashTrapped:   170,        // China/India/Brazil/Argentina concentration
+    marketableSec: 90,
+    earnoutFV:      40,
+    avgCostDebt:  3.10,        // % all-in
+    floatingPct:   30          // % of debt floating
+  },
+
+  // Bond / loan maturity ladder (CHF m principal due in year)
+  maturities:[
+    {instr:"Bond 2026 4.0% EUR",  ccy:"EUR", amount:300, year:2026, coupon:4.00, type:"bond"},
+    {instr:"Bond 2027 1.5% CHF",  ccy:"CHF", amount:250, year:2027, coupon:1.50, type:"bond"},
+    {instr:"Bond 2028 3.25% USD", ccy:"USD", amount:400, year:2028, coupon:3.25, type:"bond"},
+    {instr:"Bond 2030 2.5% EUR",  ccy:"EUR", amount:500, year:2030, coupon:2.50, type:"bond"},
+    {instr:"Term Loan A",          ccy:"CHF", amount:350, year:2027, coupon:2.85, type:"loan"},
+    {instr:"Schuldschein 2029",    ccy:"EUR", amount:200, year:2029, coupon:3.10, type:"ssd"},
+    {instr:"Hybrid (1st call)",    ccy:"EUR", amount:300, year:2029, coupon:5.50, type:"hybrid"}
+  ],
+
+  // Sources of funds — full firepower table -------------------
+  sources:[
+    {src:"Cash & cash equivalents",       size:680,  drawn:680,  maturity:"-",     cost:"-",       ccy:"CHF/EUR/USD", cov:"Trapped-cash haircut",         cat:"liquidity"},
+    {src:"Marketable securities (FV)",    size:90,   drawn:90,   maturity:"-",     cost:"-",       ccy:"Mixed",        cov:"Mark-to-market",               cat:"liquidity"},
+    {src:"Committed RCF (sustainability-linked)", size:800, drawn:0, maturity:"2029", cost:"+50bps grid", ccy:"Multi", cov:"ND/EBITDA<3.5x; IC>4x", cat:"committed"},
+    {src:"Uncommitted bilateral lines",   size:300,  drawn:50,   maturity:"364d", cost:"+60bps",   ccy:"Multi",        cov:"None — uncommitted",           cat:"uncommitted"},
+    {src:"Commercial Paper programme",    size:500,  drawn:100,  maturity:"<1y",  cost:"+25bps",   ccy:"EUR/CHF",      cov:"Rating dependent (A2/P2)",     cat:"programme"},
+    {src:"EMTN programme headroom",       size:2000, drawn:1450, maturity:"-",    cost:"market",   ccy:"Multi",        cov:"None",                          cat:"programme"},
+    {src:"Schuldschein capacity",         size:500,  drawn:200,  maturity:"-",    cost:"market",   ccy:"EUR",          cov:"None",                          cat:"programme"},
+    {src:"Hybrid bond capacity (cap 15% capitalisation)", size:500, drawn:300, maturity:"perp/NC5", cost:"+250bps", ccy:"EUR", cov:"S&P 50% equity credit", cat:"programme"},
+    {src:"Convertible bond capacity",     size:400,  drawn:0,    maturity:"-",    cost:"-150bps vs straight", ccy:"CHF", cov:"Dilution at conversion",   cat:"programme"},
+    {src:"Trade receivables securitisation (committed)", size:200, drawn:80, maturity:"2027", cost:"+90bps", ccy:"EUR", cov:"Eligibility criteria",        cat:"committed"},
+    {src:"Factoring (with recourse)",     size:200,  drawn:120,  maturity:"rolling", cost:"+80bps", ccy:"Multi",       cov:"S&P reclassifies as debt",      cat:"factoring"},
+    {src:"M&A bridge loan (indicative)",  size:1500, drawn:0,    maturity:"364d+364d", cost:"+75bps step-up", ccy:"Multi", cov:"Take-out plan required", cat:"contingent"},
+    {src:"Equity issuance (10% of mkt cap, AGM auth)", size:900, drawn:0, maturity:"-", cost:"-",   ccy:"CHF",          cov:"Pre-emption / dilution",       cat:"contingent"},
+    {src:"Green / SLB eligible pool",     size:600,  drawn:0,    maturity:"-",    cost:"-5–10bps", ccy:"EUR",          cov:"Use-of-proceeds reporting",     cat:"esg"},
+    {src:"Sale & leaseback (RE portfolio)", size:350, drawn:0, maturity:"-",     cost:"~7% yield",ccy:"Multi",        cov:"Operational covenants",         cat:"alt"},
+    {src:"Non-core asset disposals",      size:450,  drawn:0,    maturity:"-",    cost:"-",       ccy:"Multi",        cov:"Tax leakage",                   cat:"alt"},
+    {src:"Insurance recoveries (litigation)", size:120, drawn:0, maturity:"12-24m lag", cost:"-",  ccy:"CHF",          cov:"Insurer dispute risk",          cat:"alt"},
+    {src:"Pension scheme buy-in capacity",size:300,  drawn:0,    maturity:"-",    cost:"3-5% premium", ccy:"CHF",      cov:"Trustee approval",              cat:"alt"}
+  ],
+
+  // Scenario modules -------------------------------------------
+  scen:{
+    ma:{ on:false, target:"Project Helios", year:2026, ev:1500, ebitda:150, mixCash:30, mixDebt:50, mixEquity:10, mixHybrid:10,
+         synergyRR:60, synergyY1:25, synergyY2:60, synergyY3:100, integrationPct:120, txCostPct:2.0,
+         earnout:50, earnoutYear:2028, stampDuty:1.5, bridgeUsed:true,
+         goodwillRiskFlag:true, wcAbsorption:30 },
+    div:{ on:false, asset:"Specialty Pigments unit", year:2026, gross:600, taxLeakPct:12, ebitdaLost:55,
+          strandedPct:15, strandedYears:2, txCostPct:1.5, tsaNet:6, pensionTransfer:15,
+          wcRelease:25, useDebt:60, useBuyback:20, useReinvest:15, useDiv:5, carveOutPct:5 },
+    lit:{ on:false, desc:"Antitrust class action (EU/US)", probLow:30, probBase:50, probHigh:20,
+          low:80, base:220, high:500, insRecoveryPct:35, insLagYears:1, year:2027,
+          taxDeductPct:50, reputationShockPct:1.5, provisionBooked:60 },
+    refi:{ on:false, tranche:"Bond 2026 4.0% EUR", year:2026, spreadBps:-30, tenorAdd:7, ccySwitch:false, feesPct:0.5 }
+  },
+
+  // Peer benchmarking ------------------------------------------
+  peers:[
+    {name:"Clariant",       nde:1.95, ffo:42, sp:"BBB",  moody:"Baa2", fitch:"BBB",  divY:3.8, payout:65},
+    {name:"BASF",           nde:2.40, ffo:32, sp:"A",    moody:"A3",   fitch:"A",    divY:6.1, payout:75},
+    {name:"Croda",          nde:1.80, ffo:48, sp:"BBB+", moody:"Baa1", fitch:"-",    divY:2.4, payout:55},
+    {name:"IFF",            nde:3.80, ffo:18, sp:"BBB-", moody:"Baa3", fitch:"BBB-", divY:5.0, payout:70},
+    {name:"DSM-Firmenich",  nde:2.70, ffo:28, sp:"BBB+", moody:"Baa1", fitch:"-",    divY:2.9, payout:60},
+    {name:"Lonza",          nde:1.30, ffo:62, sp:"-",    moody:"-",    fitch:"-",    divY:0.7, payout:35},
+    {name:"Sika",           nde:2.10, ffo:38, sp:"A-",   moody:"-",    fitch:"-",    divY:1.4, payout:48},
+    {name:"Givaudan",       nde:2.55, ffo:30, sp:"A-",   moody:"-",    fitch:"-",    divY:2.1, payout:60},
+    {name:"Symrise",        nde:2.20, ffo:35, sp:"BBB+", moody:"-",    fitch:"-",    divY:1.6, payout:45}
+  ],
+
+  // S&P rating thresholds (financial risk anchor) -------------
+  thresholds:[
+    {rating:"AAA",  ndeMax:1.0, ffoMin:60},
+    {rating:"AA",   ndeMax:1.5, ffoMin:55},
+    {rating:"A",    ndeMax:2.0, ffoMin:45},
+    {rating:"BBB+", ndeMax:2.5, ffoMin:35},
+    {rating:"BBB",  ndeMax:3.0, ffoMin:30},
+    {rating:"BBB-", ndeMax:4.0, ffoMin:20},
+    {rating:"BB+",  ndeMax:5.0, ffoMin:12},
+    {rating:"BB",   ndeMax:6.0, ffoMin:9},
+    {rating:"BB-",  ndeMax:99,  ffoMin:0}
+  ],
+
+  // Modifiers --------------------------------------------------
+  modifiers:{
+    businessRisk:"Satisfactory",
+    liquidity:"Strong",
+    minLiquidityFloor:600  // CHF m floor
+  },
+
+  // Capital allocation policy thresholds ----------------------
+  policy:{
+    bbbAnchorNDE:2.5,  bbbAnchorFFO:30,
+    freezeBuybackNDE:3.0,
+    deferMaNDE:3.5,
+    equityRaiseNDE:4.0,
+    minMonthsLiquidity:12
+  },
+
+  // Sensitivity defaults --------------------------------------
+  sens:{
+    ebitdaShock:0, fxShock:0, rateShockBps:0, wcDays:0,
+    pensionDiscBps:0, capexShock:0, payoutShock:0, commodityShock:0
+  }
+};
+
+// Working state — deep clone so reset works
+let S = JSON.parse(JSON.stringify(BASE));
+
+// Persistence
+const STORE_KEY = "abc_cfo_firepower_v1";
+function saveState(){
+  try{
+    const target = (window.storage && window.storage.setItem) ? window.storage : localStorage;
+    target.setItem(STORE_KEY, JSON.stringify(S));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const target = (window.storage && window.storage.getItem) ? window.storage : localStorage;
+    const raw = target.getItem(STORE_KEY);
+    if(raw){ S = Object.assign(JSON.parse(JSON.stringify(BASE)), JSON.parse(raw)); }
+  }catch(e){}
+}
+function resetState(){
+  S = JSON.parse(JSON.stringify(BASE));
+  saveState(); renderAll();
+}
+</script>
+<script id="compute">
+// ============================================================
+// FORMATTING HELPERS
+// ============================================================
+function fmt(n, dec=0){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  const sign = n<0;
+  const abs = Math.abs(n);
+  let s = abs.toFixed(dec);
+  // Swiss apostrophe thousand separator
+  const parts = s.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  s = parts.join(".");
+  return sign ? `<span style="color:var(--red)">(${s})</span>` : s;
+}
+function fmtPct(n, dec=1){ if(n===null||isNaN(n)) return "—"; return n.toFixed(dec)+"%"; }
+function fmtX(n, dec=2){ if(n===null||isNaN(n)) return "—"; return n.toFixed(dec)+"×"; }
+
+// ============================================================
+// COMPUTE — full year-by-year build
+// ============================================================
+function compute(){
+  const m = {}, n=YEARS.length;
+  const p = S.pl, t = S.toggles, b = S.bs2025;
+
+  // Apply sensitivity shocks --------------------------------
+  const sens = S.sens;
+  const ebitdaShockMul = 1 + sens.ebitdaShock/100;
+  const fxMul = 1 + sens.fxShock/100;       // affects translation of foreign debt & EBITDA
+  const wcDaysShock = sens.wcDays;
+  const capexMul = 1 + sens.capexShock/100;
+  const payoutAdd = sens.payoutShock/100;
+  const commodityHit = sens.commodityShock/100 * 0.4;  // ~40% pass-through to EBITDA
+
+  // ---- 1. Revenue & reported EBITDA (with sensitivity) ----
+  m.revenue = p.revenue.map(r=>r);
+  m.ebitdaReported = YEARS.map((y,i)=>{
+    const margin = p.ebitdaMargin[i] - commodityHit*100;
+    return p.revenue[i]*margin/100 * ebitdaShockMul;
+  });
+
+  // ---- 2. EBITDA b.e.i. (S&P Adjusted) build --------------
+  m.restruct = p.restructuring.slice();
+  m.sbcAdd = p.sbc.map(v=> t.sbcAddBack ? v : 0);
+  m.pensionSvc = p.pensionSvcAdj.slice();
+  m.capDev = p.capDevCost.slice();
+  m.ebitdaBEI = YEARS.map((_,i)=> m.ebitdaReported[i] + m.restruct[i] + m.sbcAdd[i] + m.pensionSvc[i] - m.capDev[i]);
+
+  // ---- 3. Working capital movement (DSO/DPO/DIO) ----------
+  m.nwc = YEARS.map((_,i)=>{
+    const dso = p.dso[i] + wcDaysShock;
+    const dpo = p.dpo[i] - wcDaysShock; // worsening = lower DPO
+    const dio = p.dio[i] + wcDaysShock;
+    const ar = p.revenue[i]*dso/365;
+    const ap = p.revenue[i]*0.55 * dpo/365;       // assume 55% of revenue is COGS-payable
+    const inv = p.revenue[i]*0.55 * dio/365;
+    return ar + inv - ap;
+  });
+  m.nwcDelta = m.nwc.map((v,i)=> i===0 ? 0 : -(v - m.nwc[i-1]));  // negative = WC absorbs cash
+
+  // ---- 4. Capex split & FOCF -----------------------------
+  m.capexMaint = p.capexMaint.map(v=> v*capexMul);
+  m.capexGrowth = p.capexGrowth.map(v=> v*capexMul);
+  m.capexTotal = m.capexMaint.map((v,i)=> v + m.capexGrowth[i]);
+
+  // ---- 5. Funds From Operations ---------------------------
+  // Apply rate shock to cash interest (floating exposure)
+  const rateAdd = sens.rateShockBps/10000 * b.floatingPct/100;
+  m.cashInterest = p.cashInterest.map((v,i)=> v + (i>0 ? (m.netDebtPrior?m.netDebtPrior:0)*rateAdd : 0));
+  m.cashTaxes = p.cashTaxes.slice();
+  m.ffo = YEARS.map((_,i)=> m.ebitdaBEI[i] - m.cashInterest[i] - m.cashTaxes[i]);
+
+  // ---- 6. FOCF & DCF -------------------------------------
+  m.focf = YEARS.map((_,i)=> m.ffo[i] + m.nwcDelta[i] - m.capexTotal[i]);
+  m.dividend = YEARS.map((_,i)=> p.dividend[i] * (1+payoutAdd));
+  m.buyback = p.buyback.slice();
+  m.pensionTopUp = p.pensionTopUp.slice();
+  m.leasePrincipal = p.leasePrincipal.slice();
+  m.restructCash = p.restructCash.slice();
+  m.dcf = YEARS.map((_,i)=> m.focf[i] - m.dividend[i] - m.buyback[i] - m.pensionTopUp[i] - m.leasePrincipal[i] - m.restructCash[i]);
+
+  // ---- 7. Scenario impacts -------------------------------
+  m.scenCashImpact = YEARS.map(()=>0);
+  m.scenDebtAdd = YEARS.map(()=>0);
+  m.scenEbitdaAdd = YEARS.map(()=>0);
+  m.scenEquityAdd = YEARS.map(()=>0);
+  m.scenNotes = YEARS.map(()=>[]);
+
+  applyMA(m); applyDiv(m); applyLit(m); applyRefi(m);
+
+  // ---- 8. Cash & debt roll-forward -----------------------
+  m.openingCash = YEARS.map(()=>0);
+  m.closingCash = YEARS.map(()=>0);
+  m.openingCash[0] = b.cashTotal;
+
+  // Debt build per year (gross financial debt evolves with refi/M&A)
+  m.grossDebt = YEARS.map(()=>0);
+  let runningGross = b.bonds + b.termLoan + b.rcfDrawn + b.cpOutstanding + b.bilateralDrawn + b.schuldscheinOut + b.hybridOutstanding;
+  for(let i=0;i<n;i++){
+    if(i>0) m.openingCash[i] = m.closingCash[i-1];
+    runningGross += m.scenDebtAdd[i];
+    m.grossDebt[i] = runningGross * fxMul;  // FX translation
+    m.closingCash[i] = m.openingCash[i] + m.dcf[i] + m.scenCashImpact[i] + m.scenEquityAdd[i];
+  }
+
+  // ---- 9. S&P-Adjusted Net Debt build -------------------
+  m.leaseLiab = YEARS.map((_,i)=> b.leaseLiability * Math.pow(1.02, i));
+  m.pensionDeficitGross = YEARS.map((_,i)=>{
+    const discBps = sens.pensionDiscBps/10000;
+    const dboMul = 1 - discBps*15;  // duration 15y, dDBO/DBO = -duration*dr
+    const dbo = b.pensionDBO * dboMul;
+    return Math.max(0, dbo - b.pensionAssets);
+  });
+  m.pensionAdj = m.pensionDeficitGross.map(v=> v * t.pensionHaircutPct/100 * 0.78); // post-tax @ 22%
+  m.hybridAsDebt = YEARS.map(()=> b.hybridOutstanding * (1 - t.hybridEquityCredit/100));
+  m.osbsItems = YEARS.map(()=> (t.factoringAsDebt? b.factoringRecourse:0) + b.securitisation + b.osbsGuarantees);
+  m.aroAdj = YEARS.map(()=> b.arOblig);
+  m.surplusCash = YEARS.map((_,i)=> m.closingCash[i] * (1 - t.cashHaircut/100));
+  m.marketableSec = YEARS.map(()=> b.marketableSec);
+  m.earnoutAdj = YEARS.map(()=> t.earnoutInDebt ? b.earnoutFV : 0);
+
+  m.adjNetDebt = YEARS.map((_,i)=>
+      m.grossDebt[i]
+    + m.leaseLiab[i]
+    + m.pensionAdj[i]
+    + m.hybridAsDebt[i]
+    + m.osbsItems[i]
+    + m.aroAdj[i]
+    + m.earnoutAdj[i]
+    - m.surplusCash[i]
+    - m.marketableSec[i]);
+
+  // Three leverage views
+  m.lev_primary = m.adjNetDebt.map((d,i)=> d / m.ebitdaBEI[i]);
+  m.lev_bank    = YEARS.map((_,i)=> (m.grossDebt[i] + m.osbsItems[i] + m.aroAdj[i] - m.surplusCash[i] - m.marketableSec[i]) / m.ebitdaBEI[i]);
+  m.lev_gross   = YEARS.map((_,i)=> (m.grossDebt[i] + m.leaseLiab[i] + m.pensionAdj[i] + m.hybridAsDebt[i]) / m.ebitdaBEI[i]);
+
+  // Coverage ratios
+  m.ffoNetDebt = YEARS.map((_,i)=> m.ffo[i] / m.adjNetDebt[i] * 100);
+  m.ffoIntCov  = YEARS.map((_,i)=> (m.ffo[i] + m.cashInterest[i]) / m.cashInterest[i]);
+  m.ebitdaIntCov = YEARS.map((_,i)=> m.ebitdaBEI[i] / m.cashInterest[i]);
+  m.debtCap = YEARS.map((_,i)=> {
+    const equity = (p.revenue[i]*0.6) - m.adjNetDebt[i]*0.3;  // illustrative book equity
+    return m.adjNetDebt[i] / (m.adjNetDebt[i] + Math.max(500, equity)) * 100;
+  });
+  m.focfNetDebt = YEARS.map((_,i)=> m.focf[i] / m.adjNetDebt[i] * 100);
+  m.dcfNetDebt  = YEARS.map((_,i)=> m.dcf[i] / m.adjNetDebt[i] * 100);
+  m.cfoNetDebt  = YEARS.map((_,i)=> (m.ffo[i] + m.nwcDelta[i]) / m.adjNetDebt[i] * 100);
+
+  // Rating per year
+  m.rating = YEARS.map((_,i)=> deriveRating(m.lev_primary[i], m.ffoNetDebt[i]));
+
+  // Liquidity
+  const undrawnCommitted = (S.bs2025.rcfSize - S.bs2025.rcfDrawn) + 120;  // +securitisation undrawn
+  m.totalLiquidity = m.closingCash.map(c=> c + undrawnCommitted);
+  m.firepower = m.totalLiquidity.map(l=> l + 1500 /*bridge*/ + 600 /*equity*/ + 450 /*disposals*/);
+
+  return m;
+}
+
+// ============================================================
+// Scenario application
+// ============================================================
+function applyMA(m){
+  const x = S.scen.ma; if(!x.on) return;
+  const idx = YEARS.indexOf(x.year); if(idx<0) return;
+  const equityFund = x.ev * x.mixEquity/100;
+  const debtFund = x.ev * (x.mixDebt + x.mixHybrid)/100;
+  const cashFund = x.ev * x.mixCash/100;
+  const txCost = x.ev * x.txCostPct/100 + x.ev * x.stampDuty/100;
+  m.scenCashImpact[idx] -= (cashFund + txCost + x.wcAbsorption);
+  m.scenDebtAdd[idx] += debtFund;
+  m.scenEquityAdd[idx] += equityFund;
+  // Earnout
+  if(x.earnout>0){
+    const ei = YEARS.indexOf(x.earnoutYear);
+    if(ei>=0) m.scenCashImpact[ei] -= x.earnout;
+  }
+  // Add target EBITDA + synergies phasing
+  const phase = [x.synergyY1, x.synergyY2, x.synergyY3, 100, 100, 100];
+  for(let i=idx;i<YEARS.length;i++){
+    const k = i-idx;
+    const synergy = x.synergyRR * (phase[Math.min(k,phase.length-1)]/100);
+    const integ = (k===0) ? -x.synergyRR * x.integrationPct/100 : (k===1 ? -x.synergyRR*0.3 : 0);
+    m.scenEbitdaAdd[i] += x.ebitda + synergy + integ;
+    m.ebitdaBEI[i] += x.ebitda + synergy + integ;
+  }
+  m.scenNotes[idx].push(`M&A: ${x.target} EV ${fmt(x.ev)}`);
+}
+
+function applyDiv(m){
+  const x = S.scen.div; if(!x.on) return;
+  const idx = YEARS.indexOf(x.year); if(idx<0) return;
+  const net = x.gross * (1 - x.taxLeakPct/100) - x.gross*x.txCostPct/100 - x.gross*x.carveOutPct/100 - x.pensionTransfer;
+  m.scenCashImpact[idx] += net + x.wcRelease;
+  // Use of proceeds (debt reduction reduces gross debt next year)
+  if(x.useDebt) m.scenDebtAdd[idx] -= net*x.useDebt/100;
+  if(x.useBuyback) m.scenCashImpact[idx] -= net*x.useBuyback/100;  // already subtracted via debt? no — cash impact net
+  // EBITDA loss + stranded costs
+  for(let i=idx;i<YEARS.length;i++){
+    m.scenEbitdaAdd[i] -= x.ebitdaLost;
+    m.ebitdaBEI[i] -= x.ebitdaLost;
+    const k = i - idx;
+    if(k < x.strandedYears){
+      const stranded = x.ebitdaLost * x.strandedPct/100;
+      m.scenEbitdaAdd[i] -= stranded;
+      m.ebitdaBEI[i] -= stranded;
+    }
+    // TSA (small positive 12-24 months)
+    if(k<2) m.scenEbitdaAdd[i] += x.tsaNet;
+  }
+  m.scenNotes[idx].push(`Divestment: ${x.asset} net ${fmt(net)}`);
+}
+
+function applyLit(m){
+  const x = S.scen.lit; if(!x.on) return;
+  const idx = YEARS.indexOf(x.year); if(idx<0) return;
+  // Probability-weighted
+  const pw = (x.probLow*x.low + x.probBase*x.base + x.probHigh*x.high)/100;
+  const cashOut = pw - x.provisionBooked;
+  m.scenCashImpact[idx] -= cashOut * (1 - x.taxDeductPct/100*0.22);
+  // Insurance recovery lagged
+  const recovery = pw * x.insRecoveryPct/100;
+  const ri = Math.min(YEARS.length-1, idx + x.insLagYears);
+  m.scenCashImpact[ri] += recovery;
+  // Reputational EBITDA shock
+  m.scenEbitdaAdd[idx] -= m.ebitdaBEI[idx] * x.reputationShockPct/100;
+  m.ebitdaBEI[idx] -= m.ebitdaBEI[idx] * x.reputationShockPct/100;
+  m.scenNotes[idx].push(`Litigation: prob-weighted ${fmt(pw)}`);
+}
+
+function applyRefi(m){
+  const x = S.scen.refi; if(!x.on) return;
+  const idx = YEARS.indexOf(x.year); if(idx<0) return;
+  const tr = S.bs2025.maturities ? null : null;
+  const tranche = S.maturities ? S.maturities.find(t=>t.instr===x.tranche) : null;
+  // Simplified: shift interest cost
+  const principal = 300;  // approx
+  const intDelta = principal * x.spreadBps/10000;
+  for(let i=idx;i<YEARS.length;i++){
+    m.cashInterest[i] += intDelta;
+  }
+  m.scenCashImpact[idx] -= principal * x.feesPct/100;
+  m.scenNotes[idx].push(`Refi: ${x.tranche} ${x.spreadBps>0?"+":""}${x.spreadBps}bps`);
+}
+
+// ============================================================
+// Rating derivation
+// ============================================================
+function deriveRating(nde, ffoPct){
+  // Take worst of two metrics
+  let byLev=null, byFFO=null;
+  for(const r of S.thresholds){ if(nde <= r.ndeMax){ byLev = r.rating; break; } }
+  for(const r of S.thresholds){ if(ffoPct >= r.ffoMin){ byFFO = r.rating; break; } }
+  // Pick the lower (more conservative)
+  const order = S.thresholds.map(r=>r.rating);
+  const a = order.indexOf(byLev||"BB-");
+  const b = order.indexOf(byFFO||"BB-");
+  return order[Math.max(a,b)];
+}
+
+function ratingToPosition(rating){
+  // 0% = AAA (left), 100% = BB- (right)
+  const order = S.thresholds.map(r=>r.rating);
+  const idx = order.indexOf(rating);
+  return idx<0 ? 100 : (idx/(order.length-1))*100;
+}
+
+function ratingHeadroom(m, year=2027){
+  const i = YEARS.indexOf(year); if(i<0) return null;
+  const ebit = m.ebitdaBEI[i];
+  // EBITDA decline that pushes leverage to BBB- threshold (4.0x)
+  const debt = m.adjNetDebt[i];
+  const ebitToBBB = debt / 3.0; // BBB threshold
+  const ebitToBBBm = debt / 4.0;
+  return {
+    pct_to_BBB: ((ebit - ebitToBBB)/ebit*100),
+    pct_to_BBBm: ((ebit - ebitToBBBm)/ebit*100),
+    chf_debt_room_BBB: ebit*3.0 - debt,
+    chf_debt_room_BBBm: ebit*4.0 - debt
+  };
+}
+
+function outlookFlag(m){
+  const trend = m.lev_primary[5] - m.lev_primary[0];
+  if(trend < -0.3) return {label:"Positive", cls:"green"};
+  if(trend > 0.3)  return {label:"Negative", cls:"red"};
+  return {label:"Stable", cls:"blue"};
+}
+
+function liquidityRunway(m){
+  // Months of debt service + opex covered by liquidity
+  const monthlyOpex = (m.revenue[0]*0.85)/12;
+  const monthlyDebtSvc = (m.cashInterest[0] + m.leasePrincipal[0])/12;
+  const liquidity = m.totalLiquidity[0];
+  return liquidity / (monthlyOpex*0.15 + monthlyDebtSvc); // 15% opex coverage assumption
+}
+
+function nearestMaturity(){
+  const sorted = [...S.maturities].sort((a,b)=>a.year-b.year);
+  return sorted[0];
+}
+</script>
+<script id="render">
+// ============================================================
+// PANEL DEFINITIONS — tabs in order
+// ============================================================
+const PANELS = [
+  {id:"summary", label:"Executive Summary", fn:renderSummary},
+  {id:"core",    label:"Core Metrics (S&P)", fn:renderCore},
+  {id:"rating",  label:"Rating Positioning",  fn:renderRating},
+  {id:"cash",    label:"Cash Projection",     fn:renderCash},
+  {id:"sources", label:"Sources & Liquidity", fn:renderSources},
+  {id:"scen",    label:"Scenario Engine",     fn:renderScenarios},
+  {id:"sens",    label:"Sensitivity & Stress",fn:renderSensitivity},
+  {id:"capalloc",label:"Capital Allocation",  fn:renderCapAlloc},
+  {id:"bench",   label:"Benchmarking",        fn:renderBench},
+  {id:"check",   label:"Risk Checklist",      fn:renderChecklist}
+];
+let activePanel = "summary";
+
+function renderTabs(){
+  const nav = document.getElementById("tabs");
+  nav.innerHTML = PANELS.map(p=>`<button data-tab="${p.id}" class="${p.id===activePanel?'active':''}">${p.label}</button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>{
+    b.onclick = ()=>{ activePanel = b.dataset.tab; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); };
+  });
+}
+
+function renderAll(){
+  const m = compute();
+  renderTabs();
+  const app = document.getElementById("app");
+  // Render every panel but hide non-active ones — print view shows all
+  app.innerHTML = PANELS.map(p=>`<section class="panel ${p.id===activePanel?'':'hidden'} ${['core','cash','sources','scen'].includes(p.id)?'major-break':''}" id="panel-${p.id}"></section>`).join("");
+  PANELS.forEach(p=>{ try{ p.fn(document.getElementById("panel-"+p.id), m); }catch(e){ console.error(p.id, e); } });
+  hookGlobalEvents();
+  renderCharts(m);
+  saveState();
+}
+
+// Generic input helper — wires numeric+slider, persists, recomputes
+function inputCtl(path, label, opts={}){
+  const {min=0, max=100, step=1, unit="", slider=true} = opts;
+  const id = "i_"+path.replace(/[\.\[\]]/g,"_");
+  let val = path.split(/[\.\[\]]+/).filter(x=>x).reduce((o,k)=> o[isNaN(k)?k:Number(k)], S);
+  if(typeof val !== "number") val = 0;
+  return `<div class="input-row">
+    <label title="${path}">${label}</label>
+    <input type="number" id="${id}_n" value="${val}" min="${min}" max="${max}" step="${step}" data-path="${path}" />
+    ${slider?`<input type="range" id="${id}_r" value="${val}" min="${min}" max="${max}" step="${step}" data-path="${path}" />`:`<span class="unit">${unit}</span>`}
+  </div>`;
+}
+function arrInputCtl(arrPath, label, opts={}){
+  const arr = arrPath.split(".").reduce((o,k)=> o[k], S);
+  const cells = arr.map((v,i)=>`<input type="number" data-path="${arrPath}[${i}]" value="${v}" step="${opts.step||1}" style="width:60px;padding:3px;border:1px solid var(--line);border-radius:3px;text-align:right;font-size:12px"/>`).join("");
+  return `<tr><td style="font-size:12px;color:#444">${label}</td>${arr.map((_,i)=>`<td>${cells.split('><').slice(i,i+1).map(c=> '<'+c.split('<').filter(x=>x).join('<') ).join('')}</td>`).join("")}</tr>`;
+}
+// Simpler array input row
+function arrRow(arrPath, label, step=1, dec=0){
+  const arr = arrPath.split(".").reduce((o,k)=> o[k], S);
+  const tds = arr.map((v,i)=>`<td><input type="number" data-path="${arrPath}[${i}]" value="${v}" step="${step}" style="width:62px;padding:3px;border:1px solid var(--line);border-radius:3px;text-align:right;font-size:12px"/></td>`).join("");
+  return `<tr><td style="font-size:12px;color:#444">${label}</td>${tds}</tr>`;
+}
+
+// Generic event wiring after render
+function hookGlobalEvents(){
+  document.querySelectorAll("input[data-path]").forEach(el=>{
+    el.oninput = (e)=>{
+      const path = el.dataset.path;
+      const v = parseFloat(el.value);
+      if(isNaN(v) && el.type==="number") return;
+      setByPath(S, path, isNaN(v)?el.value:v);
+      // mirror paired controls
+      document.querySelectorAll(`input[data-path="${path}"]`).forEach(o=>{ if(o!==el) o.value = el.value; });
+      renderAll();
+    };
+  });
+  document.querySelectorAll("input[type=checkbox][data-toggle]").forEach(el=>{
+    el.onchange = ()=>{
+      const path = el.dataset.toggle;
+      setByPath(S, path, el.checked);
+      renderAll();
+    };
+  });
+  document.querySelectorAll("input[type=text][data-text]").forEach(el=>{
+    el.oninput = ()=>{ setByPath(S, el.dataset.text, el.value); };
+  });
+  document.querySelectorAll("select[data-path]").forEach(el=>{
+    el.onchange = ()=>{ setByPath(S, el.dataset.path, el.value); renderAll(); };
+  });
+}
+function setByPath(obj, path, v){
+  const parts = path.split(/[\.\[\]]+/).filter(x=>x);
+  let o = obj;
+  for(let i=0;i<parts.length-1;i++){
+    const k = isNaN(parts[i]) ? parts[i] : Number(parts[i]);
+    o = o[k];
+  }
+  const last = parts[parts.length-1];
+  o[isNaN(last)?last:Number(last)] = v;
+}
+
+// ============================================================
+// 1. EXECUTIVE SUMMARY PANEL
+// ============================================================
+function renderSummary(el, m){
+  const out = outlookFlag(m);
+  const verdict = decideVerdict(m);
+  const nm = nearestMaturity();
+  const i0 = 0; // 2025
+  el.innerHTML = `
+    <h2>Executive Summary</h2>
+    <p style="color:var(--muted);font-size:13px;margin-top:-4px">Single-page snapshot for the CFO, Audit Committee and Treasury Steering Committee.</p>
+
+    <div class="kpi-row">
+      <div class="kpi gold">
+        <div class="lbl">Current Rating (S&P-equiv)</div>
+        <div class="val">${m.rating[0]}</div>
+        <div class="sub">Outlook: <span class="flag ${out.cls}">${out.label}</span> · Modifiers: ${S.modifiers.businessRisk} business / ${S.modifiers.liquidity} liquidity</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Net Debt / EBITDA b.e.i. (S&P)</div>
+        <div class="val">${fmtX(m.lev_primary[i0])}</div>
+        <div class="sub">2030E: ${fmtX(m.lev_primary[5])}</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">FFO / Net Debt</div>
+        <div class="val">${fmtPct(m.ffoNetDebt[i0])}</div>
+        <div class="sub">2030E: ${fmtPct(m.ffoNetDebt[5])}</div>
+      </div>
+      <div class="kpi ice">
+        <div class="lbl">Total Firepower</div>
+        <div class="val">${fmt(m.firepower[0])}</div>
+        <div class="sub">Liquidity ${fmt(m.totalLiquidity[0])} + bridge + equity + disposals</div>
+      </div>
+      <div class="kpi ice">
+        <div class="lbl">Liquidity Runway</div>
+        <div class="val">${liquidityRunway(m).toFixed(0)}<span style="font-size:18px">m</span></div>
+        <div class="sub">Cash + committed undrawn vs debt service & opex</div>
+      </div>
+      <div class="kpi ice">
+        <div class="lbl">Nearest Maturity</div>
+        <div class="val">${fmt(nm.amount)}</div>
+        <div class="sub">${nm.instr} · ${nm.year}</div>
+      </div>
+    </div>
+
+    <div class="${verdict.cls==='green'?'verdict green':verdict.cls==='amber'?'verdict amber':'verdict red'}">
+      <span style="font-size:24px">${verdict.cls==='green'?'●':verdict.cls==='amber'?'●':'●'}</span>
+      <div>
+        <div>Decision verdict (current scenario combination): <strong>${verdict.label}</strong></div>
+        <div style="font-size:13px;font-weight:normal;margin-top:4px">${verdict.text}</div>
+      </div>
+    </div>
+
+    <div class="commentary" id="dynamic-commentary">${dynamicCommentary(m)}</div>
+
+    <div class="grid-2">
+      <div>
+        <h3>Leverage trajectory 2025–2030</h3>
+        <div class="canvas-wrap"><canvas id="ch-summary-lev"></canvas></div>
+      </div>
+      <div>
+        <h3>Cash & liquidity trajectory</h3>
+        <div class="canvas-wrap"><canvas id="ch-summary-cash"></canvas></div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px">Headline ratios — all years</h3>
+    <table class="fin">
+      <thead><tr><th>Metric</th>${YEARS.map(y=>`<th>${y}${y===2025?"A":"E"}</th>`).join("")}</tr></thead>
+      <tbody>
+        ${rowR("Adjusted Net Debt", m.adjNetDebt)}
+        ${rowR("EBITDA b.e.i. (S&P Adj.)", m.ebitdaBEI)}
+        ${rowX("ND / EBITDA (S&P primary)", m.lev_primary)}
+        ${rowPct("FFO / Net Debt", m.ffoNetDebt)}
+        ${rowX("FFO Interest Cover", m.ffoIntCov)}
+        ${rowR("Free Operating Cash Flow", m.focf)}
+        ${rowR("Discretionary Cash Flow", m.dcf)}
+        <tr><td>Implied rating</td>${m.rating.map(r=>`<td><span class="flag ${ratingBandCls(r)}">${r}</span></td>`).join("")}</tr>
+      </tbody>
+    </table>
+    <details><summary>Methodology notes</summary>
+      <p style="font-size:12px">EBITDA b.e.i. = Reported EBITDA + Restructuring add-back ${S.toggles.sbcAddBack?"+ SBC":""} + Pension service adj − Capitalised dev costs. IFRS 16 lease depreciation already in EBITDA; lease liability fully consolidated in S&P-adjusted Net Debt. Pension haircut applied post-tax (22%). Hybrid debt: ${100-S.toggles.hybridEquityCredit}% treated as debt. Cash haircut ${S.toggles.cashHaircut}% (operational/trapped).</p>
+    </details>
+  `;
+}
+
+function rowR(label, arr, cls=""){
+  return `<tr class="${cls}"><td>${label}</td>${arr.map(v=>`<td>${fmt(v,0)}</td>`).join("")}</tr>`;
+}
+function rowX(label, arr, cls=""){
+  return `<tr class="${cls}"><td>${label}</td>${arr.map(v=>`<td>${fmtX(v)}</td>`).join("")}</tr>`;
+}
+function rowPct(label, arr, cls=""){
+  return `<tr class="${cls}"><td>${label}</td>${arr.map(v=>`<td>${fmtPct(v)}</td>`).join("")}</tr>`;
+}
+function ratingBandCls(r){
+  if(["AAA","AA","A","BBB+"].includes(r)) return "green";
+  if(["BBB","BBB-"].includes(r)) return "blue";
+  if(["BB+","BB"].includes(r)) return "amber";
+  return "red";
+}
+
+function decideVerdict(m){
+  const lev27 = m.lev_primary[2];
+  const ffo27 = m.ffoNetDebt[2];
+  const liqOK = m.totalLiquidity[0] >= S.modifiers.minLiquidityFloor;
+  const recoverByEnd = m.lev_primary[5] < S.policy.bbbAnchorNDE && m.ffoNetDebt[5] >= S.policy.bbbAnchorFFO;
+  if(lev27 < S.policy.bbbAnchorNDE && ffo27 >= S.policy.bbbAnchorFFO && liqOK){
+    return {cls:"green", label:"GREEN — Within rating envelope",
+      text:`2027 leverage ${fmtX(lev27)} below BBB anchor ${fmtX(S.policy.bbbAnchorNDE)}; FFO/Net Debt ${fmtPct(ffo27)} above ${S.policy.bbbAnchorFFO}%. Liquidity floor satisfied. No rating action expected.`};
+  }
+  if(lev27 < S.policy.deferMaNDE && recoverByEnd && liqOK){
+    return {cls:"amber", label:"AMBER — Rating pressure, recoverable in 24 months",
+      text:`2027 leverage ${fmtX(lev27)} above BBB anchor; trajectory recovers to BBB envelope by 2030. Defer transformational M&A; monitor buyback pace.`};
+  }
+  return {cls:"red", label:"RED — Rating downgrade likely / liquidity risk",
+    text:`Combined scenarios drive 2027 leverage to ${fmtX(lev27)}; FFO/Net Debt ${fmtPct(ffo27)}. ${liqOK?"":"Liquidity falls below floor. "}Equity raise, accelerated divestment or scenario reversal warranted.`};
+}
+
+// ============================================================
+// 8. CAPITAL ALLOCATION WATERFALL & POLICY
+// ============================================================
+function renderCapAlloc(el, m){
+  const i = 0; // current year
+  const focf = m.focf[i];
+  const dividend = m.dividend[i];
+  const debtSvc = m.cashInterest[i] + m.leasePrincipal[i];
+  const maintCapex = m.capexMaint[i];
+  const growthCapex = m.capexGrowth[i];
+  const buyback = m.buyback[i];
+  const pension = m.pensionTopUp[i];
+  const restruct = m.restructCash[i];
+  const allocOrder = [
+    {n:"1. Maintenance capex", v:maintCapex, type:"committed"},
+    {n:"2. Dividend (committed)", v:dividend, type:"committed"},
+    {n:"3. Mandatory debt service", v:debtSvc, type:"committed"},
+    {n:"4. Growth capex", v:growthCapex, type:"discretionary"},
+    {n:"5. Bolt-on M&A (within envelope)", v:S.scen.ma.on?S.scen.ma.ev*S.scen.ma.mixCash/100:0, type:"discretionary"},
+    {n:"6. Special items (litigation, pension)", v:pension+restruct, type:"discretionary"},
+    {n:"7. Buybacks", v:buyback, type:"discretionary"},
+    {n:"8. Transformational M&A", v:0, type:"contingent"},
+    {n:"9. Special dividend", v:0, type:"contingent"}
+  ];
+
+  // Trigger framework state
+  const lev = m.lev_primary[1]; // forward
+  const triggers = [
+    {rule:"Buybacks frozen", trigger:`ND/EBITDA > ${S.policy.freezeBuybackNDE}×`, hit:lev > S.policy.freezeBuybackNDE},
+    {rule:"M&A deferred",     trigger:`ND/EBITDA > ${S.policy.deferMaNDE}×`, hit:lev > S.policy.deferMaNDE},
+    {rule:"Equity raise considered", trigger:`ND/EBITDA > ${S.policy.equityRaiseNDE}×`, hit:lev > S.policy.equityRaiseNDE},
+    {rule:"Liquidity floor", trigger:`Liquidity ≥ ${S.modifiers.minLiquidityFloor} CHF m`, hit:m.totalLiquidity[0] < S.modifiers.minLiquidityFloor},
+    {rule:"Months coverage floor", trigger:`≥ ${S.policy.minMonthsLiquidity} months opex+debt service`, hit:liquidityRunway(m) < S.policy.minMonthsLiquidity}
+  ];
+
+  el.innerHTML = `
+    <h2>Capital Allocation Waterfall & Policy Framework</h2>
+
+    <h3>Order of priority — current year deployment (CHF m)</h3>
+    <div class="waterfall">
+      ${allocOrder.map(a=>{
+        const max = Math.max(...allocOrder.map(x=>Math.abs(x.v))) || 1;
+        const h = Math.max(8, Math.abs(a.v)/max*180);
+        const color = a.type==="committed" ? "var(--navy)" : a.type==="discretionary" ? "var(--steel)" : "var(--gold)";
+        return `<div class="bar"><div style="font-size:11px;font-weight:bold;color:var(--navy)">${fmt(a.v)}</div><div class="b" style="height:${h}px;background:${color}"></div><div style="margin-top:4px">${a.n}</div></div>`;
+      }).join("")}
+    </div>
+    <p style="font-size:11px;color:var(--muted)">Navy = committed (non-discretionary) · Steel = discretionary within envelope · Gold = contingent (transformational).</p>
+
+    <div class="grid-2">
+      <div>
+        <h3>Rating envelope</h3>
+        <table class="fin">
+          <tbody>
+            <tr><td>BBB anchor — max ND/EBITDA</td><td><strong>${fmtX(S.policy.bbbAnchorNDE)}</strong></td></tr>
+            <tr><td>BBB anchor — min FFO/Net Debt</td><td><strong>${fmtPct(S.policy.bbbAnchorFFO,0)}</strong></td></tr>
+            <tr><td>Current ND/EBITDA (forward)</td><td>${fmtX(lev)}</td></tr>
+            <tr><td>Current FFO/Net Debt (forward)</td><td>${fmtPct(m.ffoNetDebt[1])}</td></tr>
+            <tr class="total"><td>Max debt-funded outflow w/o breach</td><td><strong>${fmt(Math.max(0, m.ebitdaBEI[1]*S.policy.bbbAnchorNDE - m.adjNetDebt[1]))}</strong></td></tr>
+          </tbody>
+        </table>
+        <details><summary>Edit policy thresholds</summary>
+          ${inputCtl("policy.bbbAnchorNDE","BBB anchor ND/EBITDA",{min:1,max:5,step:0.1,unit:"×"})}
+          ${inputCtl("policy.bbbAnchorFFO","BBB anchor FFO/ND %",{min:0,max:80,step:1,unit:"%"})}
+          ${inputCtl("policy.freezeBuybackNDE","Freeze buyback @ ND/EBITDA",{min:1,max:6,step:0.1,unit:"×"})}
+          ${inputCtl("policy.deferMaNDE","Defer M&A @ ND/EBITDA",{min:1,max:6,step:0.1,unit:"×"})}
+          ${inputCtl("policy.equityRaiseNDE","Equity raise @ ND/EBITDA",{min:1,max:6,step:0.1,unit:"×"})}
+          ${inputCtl("policy.minMonthsLiquidity","Min months liquidity",{min:6,max:24,step:1,unit:"m"})}
+        </details>
+      </div>
+      <div>
+        <h3>Trigger framework (current state)</h3>
+        <table class="fin">
+          <thead><tr><th>Rule</th><th>Trigger</th><th>Status</th></tr></thead>
+          <tbody>
+            ${triggers.map(t=>`<tr><td>${t.rule}</td><td style="font-size:11px">${t.trigger}</td><td><span class="flag ${t.hit?'red':'green'}">${t.hit?'TRIGGERED':'OK'}</span></td></tr>`).join("")}
+          </tbody>
+        </table>
+        <h3 style="margin-top:14px">Liquidity policy floor</h3>
+        <p style="font-size:13px">Floor = 12 months of debt service + 1 quarter of opex.</p>
+        <table class="fin">
+          <tbody>
+            <tr><td>Required floor</td><td><strong>${fmt(S.modifiers.minLiquidityFloor)}</strong></td></tr>
+            <tr><td>Current total liquidity</td><td>${fmt(m.totalLiquidity[0])}</td></tr>
+            <tr class="total"><td>Headroom</td><td>${fmt(m.totalLiquidity[0] - S.modifiers.minLiquidityFloor)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// 9. BENCHMARKING — peer context
+// ============================================================
+function renderBench(el, m){
+  const ourNDE = m.lev_primary[0];
+  const ourFFO = m.ffoNetDebt[0];
+  const peers = S.peers.slice();
+  // medians
+  const arrNDE = peers.map(p=>p.nde).sort((a,b)=>a-b);
+  const arrFFO = peers.map(p=>p.ffo).sort((a,b)=>a-b);
+  const med = a => a[Math.floor(a.length/2)];
+  el.innerHTML = `
+    <h2>Benchmarking — Peer Context</h2>
+    <p style="font-size:13px;color:var(--muted)">Editable peer set. Median and quartile lines overlaid. ABC LTD highlighted.</p>
+
+    <table class="fin">
+      <thead><tr><th>Peer</th><th>ND/EBITDA</th><th>FFO/ND %</th><th>S&P</th><th>Moody's</th><th>Fitch</th><th>Div Yield %</th><th>Payout %</th></tr></thead>
+      <tbody>
+        ${peers.map((p,i)=>`<tr>
+          <td><input type="text" data-text="peers[${i}].name" value="${p.name}" style="border:0;background:transparent;font-weight:bold;width:140px"/></td>
+          <td><input type="number" step="0.05" data-path="peers[${i}].nde" value="${p.nde}" style="width:60px;text-align:right;border:1px solid var(--line);border-radius:3px"/></td>
+          <td><input type="number" step="1" data-path="peers[${i}].ffo" value="${p.ffo}" style="width:60px;text-align:right;border:1px solid var(--line);border-radius:3px"/></td>
+          <td>${p.sp}</td><td>${p.moody}</td><td>${p.fitch}</td>
+          <td>${fmtPct(p.divY)}</td><td>${fmtPct(p.payout,0)}</td>
+        </tr>`).join("")}
+        <tr class="total"><td>Median</td><td>${fmtX(med(arrNDE))}</td><td>${fmtPct(med(arrFFO),0)}</td><td colspan="3"></td><td colspan="2"></td></tr>
+        <tr class="total" style="background:#fffbf2"><td><strong>ABC LTD (current scenario)</strong></td><td>${fmtX(ourNDE)}</td><td>${fmtPct(ourFFO)}</td><td>${m.rating[0]}</td><td colspan="2"></td><td colspan="2">Position vs peer median: ND/EBITDA ${ourNDE>med(arrNDE)?"above":"below"}, FFO/ND ${ourFFO>med(arrFFO)?"above":"below"}</td></tr>
+      </tbody>
+    </table>
+
+    <div class="grid-2">
+      <div><h3>Peer scatter — ND/EBITDA vs FFO/ND</h3><div class="canvas-wrap"><canvas id="ch-peer-scatter"></canvas></div></div>
+      <div><h3>Leverage vs peer median (bar)</h3><div class="canvas-wrap"><canvas id="ch-peer-bar"></canvas></div></div>
+    </div>
+  `;
+}
+
+// ============================================================
+// 10. RISK CHECKLIST — "What you may have missed"
+// ============================================================
+function renderChecklist(el, m){
+  const items = [
+    {n:1,  t:"Pension de-risking", note:"Buy-in/buy-out cost vs status quo. Premium typically 3–5% of liabilities.", flag: S.bs2025.pensionDBO > S.bs2025.pensionAssets ? "amber" : "green", val:`Deficit: ${fmt(m.pensionDeficitGross[0])} CHF m · Adj (post-tax): ${fmt(m.pensionAdj[0])}`},
+    {n:2,  t:"Hybrid bond capacity", note:"Cap typically 15% of capitalisation before S&P withdraws equity credit.", flag:"blue", val:`Outstanding: ${fmt(S.bs2025.hybridOutstanding)} · Indicative cap (15%): ${fmt(m.adjNetDebt[0]*0.15)}`},
+    {n:3,  t:"FX translation on debt", note:"EUR/USD debt vs CHF reporting — model in Sensitivity tab.", flag:"amber", val:`Sensitivity: 10% CHF strengthening adds ~${(m.adjNetDebt[0]*0.10/m.ebitdaBEI[0]).toFixed(2)}× to leverage`},
+    {n:4,  t:"Bank covenant headroom", note:"Typical: ND/EBITDA < 3.5–4.0×, IC > 4×.", flag: m.lev_bank[0] < 3.0 ? "green" : "amber", val:`Bank ND/EBITDA: ${fmtX(m.lev_bank[0])} · IC: ${fmtX(m.ebitdaIntCov[0])} · Headroom to 3.5×: ${fmt(m.ebitdaBEI[0]*3.5 - (m.grossDebt[0]+m.osbsItems[0]))}`},
+    {n:5,  t:"MAC clauses & rating triggers", note:"Step-up coupons / change-of-control puts — quantify cash trigger.", flag:"blue", val:"Document review required — flag any rating-linked step-ups in EMTN."},
+    {n:6,  t:"Working capital normalisation", note:"M&A absorbs WC at close (modelled); divestments release WC.", flag:"blue", val:`Day-one WC absorption (M&A): ${fmt(S.scen.ma.on?S.scen.ma.wcAbsorption:0)} · Divestment release: ${fmt(S.scen.div.on?S.scen.div.wcRelease:0)}`},
+    {n:7,  t:"Tax shield from M&A / BEPS Pillar 2", note:"Goodwill amortisation, interest deductibility limits, 15% global minimum tax.", flag:"amber", val:"Swiss top-up tax (QDMTT) effective 2024; impact already in cash taxes baseline."},
+    {n:8,  t:"Cash repatriation friction", note:"Trapped cash in CN/IN/BR/AR — apply discount.", flag:"amber", val:`Trapped: ${fmt(S.bs2025.cashTrapped)} of ${fmt(S.bs2025.cashTotal)} (${(S.bs2025.cashTrapped/S.bs2025.cashTotal*100).toFixed(0)}%)`},
+    {n:9,  t:"Bridge-to-bond execution risk", note:"Timing gap, market window, fees on backstop (typically 10–25 bps p.a.).", flag: S.scen.ma.on && S.scen.ma.bridgeUsed ? "amber" : "green", val: S.scen.ma.on && S.scen.ma.bridgeUsed ? `Bridge active: ${fmt(S.scen.ma.ev * (S.scen.ma.mixDebt+S.scen.ma.mixHybrid)/100)} CHF m` : "No bridge currently used"},
+    {n:10, t:"Counter-cyclical buffer", note:"Min liquidity > worst 12-month historical cash burn × safety factor (1.5×).", flag:"blue", val:`Stress 12m burn: ${fmt(450)} (illustrative) · 1.5× = ${fmt(675)} · Liquidity ${fmt(m.totalLiquidity[0])}`},
+    {n:11, t:"ESG / sustainability-linked finance", note:"KPI step-up/down on RCF/SLBs.", flag:"green", val:`Sustainability-linked RCF active. ±2.5 bps grid based on emissions KPI.`},
+    {n:12, t:"Insurance proceeds timing", note:"Recovery often lags outflow 12–24 months.", flag: S.scen.lit.on ? "amber" : "blue", val: S.scen.lit.on ? `Lag: ${S.scen.lit.insLagYears} yrs · Recovery rate: ${S.scen.lit.insRecoveryPct}%` : "No litigation scenario active"},
+    {n:13, t:"Earnout treatment", note:"S&P typically includes earnouts in adjusted debt at fair value.", flag: S.toggles.earnoutInDebt ? "green" : "amber", val:`Toggle: ${S.toggles.earnoutInDebt?"ON — included":"OFF"} · FV: ${fmt(S.bs2025.earnoutFV)}`},
+    {n:14, t:"Operating leases not yet commenced", note:"Signed leases not yet on B/S — disclose as commitment.", flag:"blue", val:"Disclosure pending — flag during AC review."},
+    {n:15, t:"Factoring / supply chain finance reclassification", note:"S&P may reclassify as debt if economically debt-like.", flag: S.toggles.factoringAsDebt ? "green" : "amber", val:`Toggle: ${S.toggles.factoringAsDebt?"ON":"OFF"} · Factoring: ${fmt(S.bs2025.factoringRecourse)} · Securitisation: ${fmt(S.bs2025.securitisation)}`},
+    {n:16, t:"Sale & leaseback optionality", note:"Real estate firepower lever.", flag:"blue", val:`S&LB capacity: ${fmt(350)} CHF m at ~7% yield`},
+    {n:17, t:"Receivables securitisation capacity", note:"Separate from RCF.", flag:"green", val:`Committed: 200 · Drawn: 80 · Available: 120`},
+    {n:18, t:"Equity issuance dilution (TERP)", note:"AGM authorisation typically 10% of share capital.", flag:"blue", val:`Indicative capacity: ${fmt(900)} CHF m (10% of mkt cap)`},
+    {n:19, t:"Convertible bond", note:"Lower coupon vs straight debt; debt-treated until conversion.", flag:"blue", val:`Capacity: 400 CHF m · Coupon saving ~150 bps vs straight`},
+    {n:20, t:"Restructuring CASH flows (vs P&L)", note:"Book the cash, not the accrual.", flag:"green", val:`Cash restructuring 2025: ${fmt(S.pl.restructCash[0])} (vs P&L charge ${fmt(S.pl.restructuring[0])})`},
+    {n:21, t:"R&D capitalisation policy change", note:"Impacts EBITDA add-back.", flag:"blue", val:`Capitalised dev 2025: ${fmt(S.pl.capDevCost[0])} (subtracted from EBITDA b.e.i.)`},
+    {n:22, t:"Hyperinflation accounting", note:"IAS 29 — Argentina/Türkiye exposure.", flag:"amber", val:"Flag for jurisdictional exposure review."},
+    {n:23, t:"Pension contribution holiday risk", note:"Mandatory top-ups crystallise if scheme moves to deficit.", flag: m.pensionDeficitGross[0] > 100 ? "amber" : "green", val:`Current deficit: ${fmt(m.pensionDeficitGross[0])} · Top-up plan: ${fmt(S.pl.pensionTopUp[0])} p.a.`},
+    {n:24, t:"Antitrust remedies (forced divestments)", note:"M&A condition — separate firepower drag.", flag: S.scen.ma.on ? "amber" : "blue", val: S.scen.ma.on ? "Active M&A — review competition exposure" : "Not currently relevant"},
+    {n:25, t:"Carve-out cost", note:"Typically 3–8% of disposal EV; 12–24 months of separation.", flag: S.scen.div.on ? "amber" : "blue", val: S.scen.div.on ? `Carve-out: ${fmtPct(S.scen.div.carveOutPct)} of EV = ${fmt(S.scen.div.gross*S.scen.div.carveOutPct/100)}` : "Not currently relevant"}
+  ];
+
+  el.innerHTML = `
+    <h2>Risk Checklist — 25 Aspects ("What You May Have Missed")</h2>
+    <p style="font-size:13px;color:var(--muted)">Each item flagged GREEN (addressed/in policy) · BLUE (informational) · AMBER (review) · RED (action required).</p>
+    <table class="fin">
+      <thead><tr><th>#</th><th>Aspect</th><th>Status</th><th>Note</th><th>Current value / observation</th></tr></thead>
+      <tbody>
+        ${items.map(it=>`<tr>
+          <td>${it.n}</td>
+          <td><strong>${it.t}</strong></td>
+          <td><span class="flag ${it.flag}">${it.flag.toUpperCase()}</span></td>
+          <td style="font-size:11px;color:var(--muted)">${it.note}</td>
+          <td style="font-size:12px">${it.val}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:14px">Inputs needed (if missing in source data)</h3>
+    <ul style="font-size:13px;line-height:1.6">
+      <li>2025 Reported EBITDA, revenue, net income — <span class="placeholder">[ASSUMPTION — REPLACE]</span></li>
+      <li>Current gross debt by instrument with maturities — <em>populated illustratively</em></li>
+      <li>Cash position split by jurisdiction — <em>partial: trapped cash assumption</em></li>
+      <li>Pension funded status (assets, DBO, deficit) — <span class="placeholder">[ASSUMPTION — REPLACE]</span></li>
+      <li>IFRS 16 lease liability — <em>populated</em></li>
+      <li>Current S&P / Moody's / Fitch ratings — <span class="placeholder">[ADD ACTUAL]</span></li>
+      <li>RCF size, drawn, maturity, margin grid — <em>populated illustratively</em></li>
+      <li>CP and EMTN programme sizes/outstandings — <em>populated</em></li>
+      <li>Effective tax rate — using 22% Swiss baseline (override in inputs)</li>
+      <li>Forecast EBITDA growth and capex plans — <em>editable in Cash Projection</em></li>
+      <li>Dividend policy — <em>editable</em></li>
+      <li>M&A / divestment in pipeline — <em>scenario engine</em></li>
+      <li>Pending litigation provisions — <em>scenario engine</em></li>
+    </ul>
+  `;
+}
+
+// ============================================================
+// 7. SENSITIVITY — Tornado + Heat-map + Stress
+// ============================================================
+function renderSensitivity(el, m){
+  // Compute single-variable impacts on 2027 leverage
+  const baseSnapshot = JSON.parse(JSON.stringify(S.sens));
+  function withSens(patch){
+    const saved = JSON.parse(JSON.stringify(S.sens));
+    Object.assign(S.sens, patch);
+    const r = compute();
+    S.sens = saved;
+    return r.lev_primary[2];
+  }
+  const base27 = m.lev_primary[2];
+  const tornado = [
+    {v:"EBITDA −20%", neg:withSens({ebitdaShock:-20})-base27, pos:withSens({ebitdaShock:20})-base27, label:"EBITDA ±20%"},
+    {v:"EBITDA −10%", neg:withSens({ebitdaShock:-10})-base27, pos:withSens({ebitdaShock:10})-base27, label:"EBITDA ±10%"},
+    {v:"FX 10%",     neg:withSens({fxShock:-10})-base27, pos:withSens({fxShock:10})-base27, label:"FX ±10% (CHF)"},
+    {v:"FX 5%",      neg:withSens({fxShock:-5})-base27,  pos:withSens({fxShock:5})-base27, label:"FX ±5%"},
+    {v:"Rates +200bps",neg:0, pos:withSens({rateShockBps:200})-base27, label:"Rates +100/+200 bps"},
+    {v:"Rates +100bps",neg:0, pos:withSens({rateShockBps:100})-base27, label:"Rates +100 bps"},
+    {v:"WC ±5d",     neg:withSens({wcDays:-5})-base27,  pos:withSens({wcDays:5})-base27, label:"WC efficiency ±5 days"},
+    {v:"Pension disc ±50bps",neg:withSens({pensionDiscBps:-50})-base27, pos:withSens({pensionDiscBps:50})-base27, label:"Pension disc rate ±50bps"},
+    {v:"Capex ±20%", neg:withSens({capexShock:-20})-base27, pos:withSens({capexShock:20})-base27, label:"Capex ±20%"},
+    {v:"Payout ±10pp",neg:withSens({payoutShock:-10})-base27, pos:withSens({payoutShock:10})-base27, label:"Dividend payout ±10pp"},
+    {v:"Commodity ±15%", neg:withSens({commodityShock:-15})-base27, pos:withSens({commodityShock:15})-base27, label:"Commodity input ±15%"}
+  ];
+  // Range of impacts for scaling
+  const maxAbs = Math.max(...tornado.map(t=>Math.max(Math.abs(t.neg||0), Math.abs(t.pos||0))));
+
+  // Two-way heatmap
+  const ebitdaCAGRs = [-5, -2.5, 0, 2.5, 5, 7.5, 10];
+  const deploymentSteps = [-1000, -500, 0, 500, 1000, 1500, 2000];
+  const heatRows = deploymentSteps.map(d => ebitdaCAGRs.map(c => heatmapCell(c, d)));
+
+  // Stress test (GFC-lite)
+  const stress = computeStress();
+
+  el.innerHTML = `
+    <h2>Sensitivity Analysis — Tornado · Heat-map · Stress</h2>
+
+    <h3>6a. Tornado — single-variable impact on 2027 ND/EBITDA</h3>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Base 2027 leverage: <strong>${fmtX(base27)}</strong> · Bars show Δ leverage (× turns) vs base. Red = downside, blue = upside.</div>
+      ${tornado.map(t=>{
+        const wn = Math.abs(t.neg||0)/maxAbs*48;
+        const wp = Math.abs(t.pos||0)/maxAbs*48;
+        return `<div class="tornado-bar">
+          <span>${t.label}</span>
+          <div class="track">
+            <div class="neg-bar" style="width:${wn}%"></div>
+            <div class="pos-bar" style="width:${wp}%"></div>
+          </div>
+          <span style="text-align:right">${(t.pos>=0?"+":"")}${(t.pos||0).toFixed(2)} / ${(t.neg||0).toFixed(2)}</span>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <h3 style="margin-top:14px">6b. Two-way leverage heat-map (2030 ND/EBITDA)</h3>
+    <p style="font-size:12px;color:var(--muted)">X-axis: EBITDA CAGR · Y-axis: Net cash deployment (positive = debt-funded outflow)</p>
+    <table class="heatmap fin">
+      <thead><tr><th>Deploy ↓ / CAGR →</th>${ebitdaCAGRs.map(c=>`<th>${c>0?"+":""}${c}%</th>`).join("")}</tr></thead>
+      <tbody>
+        ${deploymentSteps.map((d,i)=>`<tr><th>${d>0?"+":""}${fmt(d)}</th>${heatRows[i].map(cell=>{
+          const cls = ratingBandCls(cell.rating);
+          const colors = {green:"#1f8a4c", blue:"#1f6fb6", amber:"#d68910", red:"#c0392b"};
+          return `<td style="background:${colors[cls]}">${fmtX(cell.lev)}<br><span style="font-weight:normal;font-size:10px;opacity:.9">${cell.rating}</span></td>`;
+        }).join("")}</tr>`).join("")}
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:var(--muted);margin-top:6px">Cell colour matches rating band: green BBB+ or better · blue BBB / BBB− · amber BB+ · red BB or below.</p>
+
+    <h3 style="margin-top:14px">6c. Stress test — GFC-lite (EBITDA −25% Y1, −10% Y2, recovery Y3)</h3>
+    <div class="kpi-row">
+      <div class="kpi small ice"><div class="lbl">Stress 2026 leverage</div><div class="val">${fmtX(stress.lev27)}</div><div class="sub">Δ vs base ${(stress.lev27 - m.lev_primary[1]).toFixed(2)}×</div></div>
+      <div class="kpi small ice"><div class="lbl">Stress 2027 leverage</div><div class="val">${fmtX(stress.lev28)}</div><div class="sub">Rating: ${stress.rating}</div></div>
+      <div class="kpi small ice"><div class="lbl">Liquidity runway in stress</div><div class="val">${stress.runway.toFixed(0)}<span style="font-size:18px">m</span></div><div class="sub">Cash + committed undrawn</div></div>
+      <div class="kpi small ice"><div class="lbl">Covenant headroom (3.5×)</div><div class="val">${fmtX(3.5 - stress.lev28Bank)}</div><div class="sub">${(3.5 - stress.lev28Bank)<0.5?"Tight":"OK"}</div></div>
+    </div>
+
+    <h3 style="margin-top:12px">Sensitivity inputs (override individually)</h3>
+    <div class="grid-3">
+      ${inputCtl("sens.ebitdaShock","EBITDA shock %",{min:-30,max:30,step:1,unit:"%"})}
+      ${inputCtl("sens.fxShock","FX translation shock %",{min:-15,max:15,step:1,unit:"%"})}
+      ${inputCtl("sens.rateShockBps","Interest rate shock (bps)",{min:-200,max:300,step:25,unit:"bps"})}
+      ${inputCtl("sens.wcDays","WC days shock",{min:-15,max:15,step:1,unit:"d"})}
+      ${inputCtl("sens.pensionDiscBps","Pension disc rate (bps)",{min:-100,max:100,step:10,unit:"bps"})}
+      ${inputCtl("sens.capexShock","Capex shock %",{min:-30,max:30,step:5,unit:"%"})}
+      ${inputCtl("sens.payoutShock","Payout shock pp",{min:-20,max:20,step:1,unit:"pp"})}
+      ${inputCtl("sens.commodityShock","Commodity input %",{min:-25,max:25,step:5,unit:"%"})}
+    </div>
+
+    <p style="font-size:11px;color:var(--muted);margin-top:8px">Note: Combined sensitivities apply on top of currently active scenario combinations. Reset state to clear.</p>
+  `;
+}
+
+function heatmapCell(cagr, deployment){
+  // simulate ending leverage
+  const saved = JSON.parse(JSON.stringify(S));
+  // EBITDA CAGR override
+  const baseE = S.pl.revenue[0]*S.pl.ebitdaMargin[0]/100;
+  for(let i=1;i<YEARS.length;i++){
+    const factor = Math.pow(1+cagr/100, i);
+    S.pl.ebitdaMargin[i] = (baseE*factor) / S.pl.revenue[i] * 100;
+  }
+  // Deployment in 2027 (year index 2)
+  S.pl.buyback[2] += deployment;  // crude proxy
+  const r = compute();
+  const lev = r.lev_primary[5];
+  const rating = r.rating[5];
+  S = saved;
+  return {lev, rating};
+}
+
+function computeStress(){
+  const saved = JSON.parse(JSON.stringify(S.sens));
+  const savedM = JSON.parse(JSON.stringify(S.pl.ebitdaMargin));
+  S.pl.ebitdaMargin[1] = S.pl.ebitdaMargin[0] * 0.75;
+  S.pl.ebitdaMargin[2] = S.pl.ebitdaMargin[0] * 0.90;
+  const r = compute();
+  S.sens = saved;
+  S.pl.ebitdaMargin = savedM;
+  return {
+    lev27: r.lev_primary[1],
+    lev28: r.lev_primary[2],
+    lev28Bank: r.lev_bank[2],
+    rating: r.rating[2],
+    runway: r.totalLiquidity[1] / 60   // crude monthly burn
+  };
+}
+
+// ============================================================
+// 6. SCENARIO ENGINE — M&A / Divestment / Litigation / Refi
+// ============================================================
+function renderScenarios(el, m){
+  const x = S.scen;
+  el.innerHTML = `
+    <h2>Scenario Engine — Individual & Combined</h2>
+    <p style="font-size:13px;color:var(--muted)">Toggle each event on/off. All events recompute leverage, cash and rating in real time. Combinations supported.</p>
+
+    <div class="kpi-row" style="margin-top:8px">
+      <div class="kpi small ice"><div class="lbl">Active scenarios</div><div class="val">${[x.ma.on,x.div.on,x.lit.on,x.refi.on].filter(Boolean).length}</div><div class="sub">of 4</div></div>
+      <div class="kpi small"><div class="lbl">2027 ND/EBITDA (combined)</div><div class="val">${fmtX(m.lev_primary[2])}</div><div class="sub">Rating: ${m.rating[2]}</div></div>
+      <div class="kpi small"><div class="lbl">2027 FFO/Net Debt</div><div class="val">${fmtPct(m.ffoNetDebt[2])}</div><div class="sub">vs BBB anchor ${S.policy.bbbAnchorFFO}%</div></div>
+      <div class="kpi small gold"><div class="lbl">Peak leverage 2025–30</div><div class="val">${fmtX(Math.max(...m.lev_primary))}</div><div class="sub">Year ${YEARS[m.lev_primary.indexOf(Math.max(...m.lev_primary))]}</div></div>
+    </div>
+
+    <div class="grid-2">
+      <!-- M&A -->
+      <div class="scenario-card ${x.ma.on?'active':''}">
+        <h4>5a. Merger / Acquisition <label class="toggle"><input type="checkbox" data-toggle="scen.ma.on" ${x.ma.on?'checked':''}/> ON</label></h4>
+        <div class="input-row"><label>Target</label><input type="text" data-text="scen.ma.target" value="${x.ma.target}" style="width:200px;padding:4px;border:1px solid var(--line);border-radius:4px"/></div>
+        ${inputCtl("scen.ma.year","Year of close",{min:2026,max:2030,step:1})}
+        ${inputCtl("scen.ma.ev","Enterprise Value (CHF m)",{min:0,max:5000,step:50})}
+        ${inputCtl("scen.ma.ebitda","Target LTM EBITDA",{min:0,max:600,step:5})}
+        <div style="font-size:12px;color:var(--muted);margin:4px 0">Implied EV/EBITDA: <strong>${(x.ev/x.ebitda).toFixed(1)}×</strong></div>
+        <div style="margin:6px 0;font-weight:bold;font-size:12px">Financing mix (must sum to 100%)</div>
+        ${inputCtl("scen.ma.mixCash","% Cash",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.mixDebt","% New debt",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.mixEquity","% Equity",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.mixHybrid","% Hybrid",{min:0,max:100,step:5,unit:"%"})}
+        <div style="font-size:11px;color:${(x.ma.mixCash+x.ma.mixDebt+x.ma.mixEquity+x.ma.mixHybrid)===100?'var(--green)':'var(--red)'}">Sum: ${x.ma.mixCash+x.ma.mixDebt+x.ma.mixEquity+x.ma.mixHybrid}%</div>
+        <div style="margin-top:8px;font-weight:bold;font-size:12px">Synergies & costs</div>
+        ${inputCtl("scen.ma.synergyRR","Run-rate cost synergies (CHF m)",{min:0,max:500,step:5})}
+        ${inputCtl("scen.ma.synergyY1","Phasing Y1 %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.synergyY2","Phasing Y2 %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.synergyY3","Phasing Y3 %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.ma.integrationPct","Integration cost % of synergy run-rate",{min:0,max:200,step:10,unit:"%"})}
+        ${inputCtl("scen.ma.txCostPct","Transaction costs % of EV",{min:0,max:5,step:0.1,unit:"%"})}
+        ${inputCtl("scen.ma.stampDuty","Stamp duty / transfer tax % of EV",{min:0,max:5,step:0.1,unit:"%"})}
+        ${inputCtl("scen.ma.earnout","Earnout / contingent (CHF m)",{min:0,max:500,step:5})}
+        ${inputCtl("scen.ma.earnoutYear","Earnout payment year",{min:2026,max:2030,step:1})}
+        ${inputCtl("scen.ma.wcAbsorption","Day-one WC absorption (CHF m)",{min:0,max:300,step:5})}
+        <label class="toggle"><input type="checkbox" data-toggle="scen.ma.bridgeUsed" ${x.ma.bridgeUsed?'checked':''}/> Use bridge-to-bond</label>
+        <label class="toggle"><input type="checkbox" data-toggle="scen.ma.goodwillRiskFlag" ${x.ma.goodwillRiskFlag?'checked':''}/> Goodwill impairment risk flag</label>
+      </div>
+
+      <!-- Divestment -->
+      <div class="scenario-card ${x.div.on?'active':''}">
+        <h4>5b. Divestment <label class="toggle"><input type="checkbox" data-toggle="scen.div.on" ${x.div.on?'checked':''}/> ON</label></h4>
+        <div class="input-row"><label>Asset/segment</label><input type="text" data-text="scen.div.asset" value="${x.div.asset}" style="width:200px;padding:4px;border:1px solid var(--line);border-radius:4px"/></div>
+        ${inputCtl("scen.div.year","Year of close",{min:2026,max:2030,step:1})}
+        ${inputCtl("scen.div.gross","Gross proceeds (CHF m)",{min:0,max:5000,step:25})}
+        ${inputCtl("scen.div.taxLeakPct","Tax leakage %",{min:0,max:40,step:1,unit:"%"})}
+        ${inputCtl("scen.div.txCostPct","Transaction costs %",{min:0,max:5,step:0.1,unit:"%"})}
+        ${inputCtl("scen.div.carveOutPct","Carve-out costs % of EV",{min:0,max:10,step:0.5,unit:"%"})}
+        ${inputCtl("scen.div.ebitdaLost","EBITDA lost (perimeter shrink)",{min:0,max:500,step:5})}
+        ${inputCtl("scen.div.strandedPct","Stranded costs % of lost EBITDA",{min:0,max:30,step:1,unit:"%"})}
+        ${inputCtl("scen.div.strandedYears","Stranded cost period (years)",{min:0,max:4,step:1})}
+        ${inputCtl("scen.div.tsaNet","TSA net contribution p.a. (CHF m)",{min:-50,max:50,step:1})}
+        ${inputCtl("scen.div.pensionTransfer","Pension transfer cost",{min:0,max:200,step:5})}
+        ${inputCtl("scen.div.wcRelease","WC release at close",{min:-100,max:300,step:5})}
+        <div style="margin-top:8px;font-weight:bold;font-size:12px">Use of proceeds (must sum to 100%)</div>
+        ${inputCtl("scen.div.useDebt","% Debt reduction",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.div.useBuyback","% Buyback",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.div.useReinvest","% Reinvest",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.div.useDiv","% Special dividend",{min:0,max:100,step:5,unit:"%"})}
+      </div>
+
+      <!-- Litigation -->
+      <div class="scenario-card ${x.lit.on?'active':''}">
+        <h4>5c. Litigation / Settlement <label class="toggle"><input type="checkbox" data-toggle="scen.lit.on" ${x.lit.on?'checked':''}/> ON</label></h4>
+        <div class="input-row"><label>Case</label><input type="text" data-text="scen.lit.desc" value="${x.lit.desc}" style="width:200px;padding:4px;border:1px solid var(--line);border-radius:4px"/></div>
+        ${inputCtl("scen.lit.year","Cash outflow year",{min:2026,max:2030,step:1})}
+        ${inputCtl("scen.lit.provisionBooked","Provision already booked",{min:0,max:1000,step:10})}
+        <div style="margin-top:6px;font-weight:bold;font-size:12px">Probability-weighted case (sum = 100%)</div>
+        ${inputCtl("scen.lit.probLow","Low prob %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.lit.low","Low scenario amount",{min:0,max:2000,step:10})}
+        ${inputCtl("scen.lit.probBase","Base prob %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.lit.base","Base scenario amount",{min:0,max:2000,step:10})}
+        ${inputCtl("scen.lit.probHigh","High prob %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.lit.high","High scenario amount",{min:0,max:5000,step:25})}
+        <div style="font-size:12px;color:var(--steel);margin:4px 0">Probability-weighted: <strong>${fmt((x.lit.probLow*x.lit.low+x.lit.probBase*x.lit.base+x.lit.probHigh*x.lit.high)/100)}</strong></div>
+        ${inputCtl("scen.lit.insRecoveryPct","Insurance recovery %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.lit.insLagYears","Insurance recovery lag (years)",{min:0,max:3,step:1})}
+        ${inputCtl("scen.lit.taxDeductPct","Tax deductibility %",{min:0,max:100,step:5,unit:"%"})}
+        ${inputCtl("scen.lit.reputationShockPct","Reputational EBITDA shock % (Y1)",{min:0,max:10,step:0.5,unit:"%"})}
+      </div>
+
+      <!-- Refinancing -->
+      <div class="scenario-card ${x.refi.on?'active':''}">
+        <h4>5d. Refinancing event <label class="toggle"><input type="checkbox" data-toggle="scen.refi.on" ${x.refi.on?'checked':''}/> ON</label></h4>
+        <div class="input-row"><label>Tranche</label>
+          <select data-path="scen.refi.tranche" style="width:240px">
+            ${S.maturities.map(t=>`<option ${t.instr===x.refi.tranche?"selected":""}>${t.instr}</option>`).join("")}
+          </select>
+        </div>
+        ${inputCtl("scen.refi.year","Refi year",{min:2026,max:2030,step:1})}
+        ${inputCtl("scen.refi.spreadBps","Spread change (bps)",{min:-200,max:300,step:5,unit:"bps"})}
+        ${inputCtl("scen.refi.tenorAdd","Tenor extension (years)",{min:0,max:15,step:1})}
+        ${inputCtl("scen.refi.feesPct","Fees % of principal",{min:0,max:3,step:0.1,unit:"%"})}
+        <label class="toggle"><input type="checkbox" data-toggle="scen.refi.ccySwitch" ${x.refi.ccySwitch?'checked':''}/> Currency switch</label>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">Refinancing affects forward interest cost and one-off fees. Bridge-to-bond execution risk discussed in checklist.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px">Combined scenario impact on key metrics</h3>
+    <div class="grid-2">
+      <div><h4>Net Debt / EBITDA — base vs scenario</h4><div class="canvas-wrap"><canvas id="ch-scen-lev"></canvas></div></div>
+      <div><h4>Closing cash — base vs scenario</h4><div class="canvas-wrap"><canvas id="ch-scen-cash"></canvas></div></div>
+    </div>
+
+    <h3>Scenario log</h3>
+    <table class="fin">
+      <thead><tr><th>Year</th><th>Cash impact (CHF m)</th><th>Debt added (CHF m)</th><th>EBITDA impact (CHF m)</th><th>Equity raised</th><th>Notes</th></tr></thead>
+      <tbody>
+        ${YEARS.map((y,i)=>`<tr><td>${y}</td><td>${fmt(m.scenCashImpact[i])}</td><td>${fmt(m.scenDebtAdd[i])}</td><td>${fmt(m.scenEbitdaAdd[i])}</td><td>${fmt(m.scenEquityAdd[i])}</td><td style="font-size:11px">${m.scenNotes[i].join("; ")||"—"}</td></tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// 5. SOURCES OF FUNDS — Liquidity & Firepower
+// ============================================================
+function renderSources(el, m){
+  const totalCommitted = S.sources.filter(s=>["liquidity","committed","programme"].includes(s.cat) && s.cat!=="programme")
+    .reduce((a,s)=> a + (s.size - (s.cat==="liquidity" ? 0 : s.drawn)), 0);
+  const cashAvail = S.bs2025.cashTotal - S.bs2025.cashTrapped;
+  const undrawnRCF = S.bs2025.rcfSize - S.bs2025.rcfDrawn;
+  const undrawnSecur = 200 - 80;
+  const totalLiquidity = cashAvail + undrawnRCF + undrawnSecur;
+  const contingent = S.sources.filter(s=>s.cat==="contingent" || s.cat==="alt").reduce((a,s)=> a + (s.size - s.drawn), 0);
+  const firepower = totalLiquidity + contingent;
+
+  // Maturity wall data
+  const wall = {};
+  S.maturities.forEach(t=>{ wall[t.year] = (wall[t.year]||0) + t.amount; });
+  const wallYears = Object.keys(wall).sort();
+  const refiConcentration = Math.max(...Object.values(wall));
+  const refiRiskScore = refiConcentration > 600 ? "High" : refiConcentration > 400 ? "Moderate" : "Low";
+
+  el.innerHTML = `
+    <h2>Sources of Funds — Capital Stack & Liquidity</h2>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">Total committed liquidity</div><div class="val">${fmt(totalLiquidity)}</div><div class="sub">Accessible cash + undrawn committed</div></div>
+      <div class="kpi gold"><div class="lbl">Total firepower (incl. contingent)</div><div class="val">${fmt(firepower)}</div><div class="sub">Liquidity + bridge + equity + disposals + alt</div></div>
+      <div class="kpi ice small"><div class="lbl">Avg cost of debt (current)</div><div class="val">${fmtPct(S.bs2025.avgCostDebt)}</div><div class="sub">Floating: ${fmtPct(S.bs2025.floatingPct,0)} of stack</div></div>
+      <div class="kpi ice small"><div class="lbl">Refi concentration risk</div><div class="val"><span class="flag ${refiRiskScore==='High'?'red':refiRiskScore==='Moderate'?'amber':'green'}">${refiRiskScore}</span></div><div class="sub">Max 12-month wall: ${fmt(refiConcentration)} CHF m</div></div>
+    </div>
+
+    <h3>Liquidity & Firepower Table</h3>
+    <table class="fin">
+      <thead><tr><th>Source</th><th>Size</th><th>Drawn</th><th>Available</th><th>Maturity</th><th>Cost</th><th>Ccy</th><th>Covenants</th></tr></thead>
+      <tbody>
+        ${S.sources.map((s,i)=>`<tr>
+          <td>${s.src}</td>
+          <td>${fmt(s.size)}</td>
+          <td>${fmt(s.drawn)}</td>
+          <td><strong>${fmt(s.size - s.drawn)}</strong></td>
+          <td>${s.maturity}</td>
+          <td style="font-size:11px">${s.cost}</td>
+          <td style="font-size:11px">${s.ccy}</td>
+          <td style="font-size:11px;color:var(--muted)">${s.cov}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:var(--muted)">Categories: liquidity = cash & MTM | committed = signed/legally bound | uncommitted = 364-day or demand | programme = capacity in place | contingent = available subject to market/transaction | alt = alternative levers (S&LB, disposals, insurance) | factoring = supply chain finance.</p>
+
+    <h3>Maturity wall</h3>
+    <div class="canvas-wrap"><canvas id="ch-maturity"></canvas></div>
+    <table class="fin" style="margin-top:8px">
+      <thead><tr><th>Instrument</th><th>Ccy</th><th>Amount</th><th>Year</th><th>Coupon</th><th>Type</th></tr></thead>
+      <tbody>
+        ${S.maturities.map(t=>`<tr><td>${t.instr}</td><td>${t.ccy}</td><td>${fmt(t.amount)}</td><td>${t.year}</td><td>${fmtPct(t.coupon,2)}</td><td>${t.type}</td></tr>`).join("")}
+      </tbody>
+    </table>
+
+    <h3>Currency mix — natural hedge view</h3>
+    <div class="grid-2">
+      <div><h4>Debt by currency</h4><div class="canvas-wrap" style="height:240px"><canvas id="ch-ccy-debt"></canvas></div></div>
+      <div><h4>EBITDA generation by currency (illustrative)</h4><div class="canvas-wrap" style="height:240px"><canvas id="ch-ccy-ebitda"></canvas></div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Mismatch between debt currency and cash-flow generation creates translation risk on leverage even with no operational change. Consider cross-currency swaps or natural-hedge issuance.</p>
+
+    <details><summary>Edit balance sheet inputs (opening 2025)</summary>
+      <div class="grid-3">
+        ${inputCtl("bs2025.bonds","Bonds outstanding",{min:0,max:5000,step:50})}
+        ${inputCtl("bs2025.termLoan","Term loan",{min:0,max:2000,step:25})}
+        ${inputCtl("bs2025.rcfSize","RCF size",{min:0,max:2000,step:50})}
+        ${inputCtl("bs2025.rcfDrawn","RCF drawn",{min:0,max:2000,step:25})}
+        ${inputCtl("bs2025.cpProgramme","CP programme",{min:0,max:2000,step:50})}
+        ${inputCtl("bs2025.cpOutstanding","CP outstanding",{min:0,max:2000,step:25})}
+        ${inputCtl("bs2025.hybridOutstanding","Hybrid outstanding",{min:0,max:1500,step:25})}
+        ${inputCtl("bs2025.leaseLiability","Lease liability",{min:0,max:2000,step:25})}
+        ${inputCtl("bs2025.pensionDBO","Pension DBO",{min:0,max:5000,step:50})}
+        ${inputCtl("bs2025.pensionAssets","Pension assets",{min:0,max:5000,step:50})}
+        ${inputCtl("bs2025.cashTotal","Total cash",{min:0,max:3000,step:25})}
+        ${inputCtl("bs2025.cashTrapped","Trapped cash (jurisdiction)",{min:0,max:1500,step:25})}
+        ${inputCtl("bs2025.factoringRecourse","Factoring with recourse",{min:0,max:500,step:10})}
+        ${inputCtl("bs2025.securitisation","Securitisation outstanding",{min:0,max:500,step:10})}
+        ${inputCtl("bs2025.arOblig","Asset retirement obligations",{min:0,max:500,step:10})}
+        ${inputCtl("bs2025.earnoutFV","Earnout FV",{min:0,max:500,step:10})}
+        ${inputCtl("bs2025.avgCostDebt","Avg cost of debt %",{min:0,max:10,step:0.05})}
+        ${inputCtl("bs2025.floatingPct","Floating % of debt",{min:0,max:100,step:5})}
+      </div>
+    </details>
+  `;
+}
+
+// ============================================================
+// 3. RATING POSITIONING
+// ============================================================
+function renderRating(el, m){
+  const yh = YEARS.map(y=>`<th>${y}${y===2025?"A":"E"}</th>`).join("");
+  const out = outlookFlag(m);
+  const positions = m.rating.map((r,i)=>({year:YEARS[i], rating:r, pos:ratingToPosition(r)}));
+  const hr = ratingHeadroom(m, 2027);
+  el.innerHTML = `
+    <h2>Rating Positioning — S&P Methodology</h2>
+
+    <div class="grid-2">
+      <div>
+        <h3>Current rating dial</h3>
+        <div class="gauge"><div class="needle" style="left:${ratingToPosition(m.rating[0])}%"></div></div>
+        <div class="labels"><span>AAA</span><span>AA</span><span>A</span><span>BBB+</span><span>BBB</span><span>BBB−</span><span>BB+</span><span>BB</span><span>BB−</span></div>
+        <p style="font-size:13px;margin-top:8px"><strong>${m.rating[0]}</strong> — Outlook: <span class="flag ${out.cls}">${out.label}</span></p>
+        <p style="font-size:12px;color:var(--muted)">Modifiers — Business risk: <strong>${S.modifiers.businessRisk}</strong> · Liquidity: <strong>${S.modifiers.liquidity}</strong> · Comparable ratings cross-check applied.</p>
+        <select data-path="modifiers.businessRisk" style="margin:4px 4px 4px 0">
+          <option ${S.modifiers.businessRisk==="Excellent"?"selected":""}>Excellent</option>
+          <option ${S.modifiers.businessRisk==="Strong"?"selected":""}>Strong</option>
+          <option ${S.modifiers.businessRisk==="Satisfactory"?"selected":""}>Satisfactory</option>
+          <option ${S.modifiers.businessRisk==="Fair"?"selected":""}>Fair</option>
+          <option ${S.modifiers.businessRisk==="Weak"?"selected":""}>Weak</option>
+        </select>
+        <select data-path="modifiers.liquidity">
+          <option ${S.modifiers.liquidity==="Strong"?"selected":""}>Strong</option>
+          <option ${S.modifiers.liquidity==="Adequate"?"selected":""}>Adequate</option>
+          <option ${S.modifiers.liquidity==="Less than adequate"?"selected":""}>Less than adequate</option>
+          <option ${S.modifiers.liquidity==="Weak"?"selected":""}>Weak</option>
+        </select>
+      </div>
+      <div>
+        <h3>Year-by-year rating trajectory</h3>
+        <div class="canvas-wrap"><canvas id="ch-rating-traj"></canvas></div>
+      </div>
+    </div>
+
+    <h3>S&P thresholds (financial risk anchor)</h3>
+    <table class="fin">
+      <thead><tr><th>Rating</th><th>Net Debt / EBITDA (max)</th><th>FFO / Net Debt (min)</th><th>Anchor</th></tr></thead>
+      <tbody>
+        ${S.thresholds.map(r=>`<tr><td><span class="flag ${ratingBandCls(r.rating)}">${r.rating}</span></td><td>${r.ndeMax<99?fmtX(r.ndeMax):"—"}</td><td>${fmtPct(r.ffoMin,0)}</td><td>${r.rating==="BBB+"||r.rating==="BBB"||r.rating==="BBB-"?"Investment grade":r.rating.startsWith("BB")?"Speculative":"High grade"}</td></tr>`).join("")}
+      </tbody>
+    </table>
+
+    <h3>Rating per year vs metrics</h3>
+    <table class="fin">
+      <thead><tr><th></th>${yh}</tr></thead>
+      <tbody>
+        ${rowX("Net Debt / EBITDA", m.lev_primary)}
+        ${rowPct("FFO / Net Debt", m.ffoNetDebt)}
+        <tr><td>Implied rating</td>${m.rating.map(r=>`<td><span class="flag ${ratingBandCls(r)}">${r}</span></td>`).join("")}</tr>
+      </tbody>
+    </table>
+
+    <h3>Rating Headroom (@ 2027)</h3>
+    <div class="grid-2">
+      <div class="kpi ice"><div class="lbl">EBITDA decline before BBB anchor breach</div><div class="val">${fmtPct(hr.pct_to_BBB)}</div><div class="sub">${fmt(hr.chf_debt_room_BBB)} CHF m of debt headroom to BBB</div></div>
+      <div class="kpi ice"><div class="lbl">EBITDA decline before BBB− breach</div><div class="val">${fmtPct(hr.pct_to_BBBm)}</div><div class="sub">${fmt(hr.chf_debt_room_BBBm)} CHF m to BBB−</div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Calculation: required EBITDA = Adjusted Net Debt / threshold multiple. Difference vs current EBITDA shown as % decline tolerance.</p>
+
+    <details><summary>Modifiers / floor inputs</summary>
+      ${inputCtl("modifiers.minLiquidityFloor","Minimum liquidity floor (CHF m)",{min:0,max:3000,step:50,unit:"CHF m"})}
+    </details>
+  `;
+}
+
+// ============================================================
+// 4. CASH PROJECTION — full waterfall + FFO reconciliation
+// ============================================================
+function renderCash(el, m){
+  const yh = YEARS.map(y=>`<th>${y}${y===2025?"A":"E"}</th>`).join("");
+  el.innerHTML = `
+    <h2>Cash Projection 2025–2030 — Integrated Waterfall</h2>
+
+    <table class="fin">
+      <thead><tr><th>CHF m</th>${yh}</tr></thead>
+      <tbody>
+        ${rowR("Opening cash", m.openingCash)}
+        ${rowR("(+) EBITDA b.e.i.", m.ebitdaBEI)}
+        <tr class="sub"><td>(−) Cash interest paid</td>${m.cashInterest.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Cash taxes paid</td>${m.cashTaxes.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(±) Working capital movement (DSO/DPO/DIO)</td>${m.nwcDelta.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Capex — maintenance</td>${m.capexMaint.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Capex — growth</td>${m.capexGrowth.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        ${rowR("Free Operating Cash Flow (FOCF)", m.focf, "subtotal")}
+        <tr class="sub"><td>(−) Dividends</td>${m.dividend.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Share buybacks</td>${m.buyback.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Pension top-ups / de-risking</td>${m.pensionTopUp.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Lease principal repayments</td>${m.leasePrincipal.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Restructuring cash outflows</td>${m.restructCash.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        ${rowR("Discretionary Cash Flow (DCF)", m.dcf, "subtotal")}
+        <tr class="add"><td>(±) Scenario impacts (M&A / Divestment / Litigation / Refi)</td>${m.scenCashImpact.map((v,i)=>`<td>${fmt(v)}${(m.scenEquityAdd[i]?` <span style="color:var(--steel);font-size:10px">+${fmt(m.scenEquityAdd[i])} eq</span>`:"")}</td>`).join("")}</tr>
+        ${rowR("Closing cash", m.closingCash, "total")}
+      </tbody>
+    </table>
+
+    <h3>Funds From Operations (FFO) Reconciliation</h3>
+    <table class="fin">
+      <thead><tr><th>CHF m</th>${yh}</tr></thead>
+      <tbody>
+        ${rowR("EBITDA b.e.i.", m.ebitdaBEI)}
+        <tr class="sub"><td>(−) Cash interest</td>${m.cashInterest.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Cash taxes</td>${m.cashTaxes.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        ${rowR("Funds From Operations (FFO)", m.ffo, "total")}
+      </tbody>
+    </table>
+
+    <h3>Cash waterfall — chart</h3>
+    <div class="canvas-wrap" style="height:340px"><canvas id="ch-cash-stack"></canvas></div>
+
+    <details><summary>Edit cash drivers</summary>
+      <table class="fin"><thead><tr><th>Driver</th>${yh}</tr></thead><tbody>
+        ${arrRow("pl.cashInterest","Cash interest")}
+        ${arrRow("pl.cashTaxes","Cash taxes")}
+        ${arrRow("pl.capexMaint","Capex — maintenance")}
+        ${arrRow("pl.capexGrowth","Capex — growth")}
+        ${arrRow("pl.dso","DSO (days)")}
+        ${arrRow("pl.dpo","DPO (days)")}
+        ${arrRow("pl.dio","DIO (days)")}
+        ${arrRow("pl.dividend","Dividend")}
+        ${arrRow("pl.buyback","Buyback")}
+        ${arrRow("pl.pensionTopUp","Pension top-ups")}
+        ${arrRow("pl.leasePrincipal","Lease principal")}
+        ${arrRow("pl.restructCash","Restructuring cash")}
+      </tbody></table>
+    </details>
+  `;
+}
+
+// ============================================================
+// 2. CORE METRICS — EBITDA & Net Debt builds (S&P)
+// ============================================================
+function renderCore(el, m){
+  const yh = YEARS.map(y=>`<th>${y}${y===2025?"A":"E"}</th>`).join("");
+  el.innerHTML = `
+    <h2>Core Metrics — S&P Adjusted Framework</h2>
+
+    <h3>EBITDA Build (b.e.i. — before exceptional items, S&P Adjusted)</h3>
+    <table class="fin">
+      <thead><tr><th>CHF m</th>${yh}</tr></thead>
+      <tbody>
+        ${rowR("Revenue", m.revenue)}
+        ${rowR("Reported EBITDA", m.ebitdaReported)}
+        <tr class="add"><td>(+) Restructuring & one-offs</td>${m.restruct.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Stock-based compensation ${S.toggles.sbcAddBack?"":'<span class="placeholder">(toggle off — left in)</span>'}</td>${m.sbcAdd.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Pension service cost adj (S&P)</td>${m.pensionSvc.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Operating lease depreciation (IFRS 16 — already in EBITDA, no further adj)</td>${YEARS.map(()=>`<td style="color:var(--muted)">flagged</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Capitalised development costs</td>${m.capDev.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        ${rowR("EBITDA b.e.i. (S&P Adjusted)", m.ebitdaBEI, "total")}
+        ${rowPct("EBITDA margin (b.e.i.)", m.ebitdaBEI.map((v,i)=>v/m.revenue[i]*100))}
+      </tbody>
+    </table>
+
+    <details><summary>Edit P&L drivers (annual)</summary>
+      <table class="fin"><thead><tr><th>Driver (CHF m unless noted)</th>${yh}</tr></thead><tbody>
+        ${arrRow("pl.revenue","Revenue")}
+        ${arrRow("pl.ebitdaMargin","EBITDA margin %", 0.1)}
+        ${arrRow("pl.restructuring","Restructuring add-back")}
+        ${arrRow("pl.sbc","Stock-based comp")}
+        ${arrRow("pl.pensionSvcAdj","Pension service adj")}
+        ${arrRow("pl.capDevCost","Capitalised dev")}
+      </tbody></table>
+    </details>
+
+    <h3>Net Debt Build (S&P Adjusted)</h3>
+    <table class="fin">
+      <thead><tr><th>CHF m</th>${yh}</tr></thead>
+      <tbody>
+        ${rowR("Gross financial debt (bonds, loans, CP, RCF, bilateral)", m.grossDebt, "subtotal")}
+        <tr class="add"><td>(+) Lease liabilities (IFRS 16, full inclusion)</td>${m.leaseLiab.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Unfunded pension (post-tax, ${S.toggles.pensionHaircutPct}% haircut)</td>${m.pensionAdj.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Hybrid debt portion (${100-S.toggles.hybridEquityCredit}%)</td>${m.hybridAsDebt.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Off-B/S: factoring${S.toggles.factoringAsDebt?"":' <em>(toggle off)</em>'}, securitisation, guarantees</td>${m.osbsItems.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Asset retirement obligations</td>${m.aroAdj.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="add"><td>(+) Earnout / contingent consideration ${S.toggles.earnoutInDebt?"":'<em>(toggle off)</em>'}</td>${m.earnoutAdj.map(v=>`<td>${fmt(v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Surplus cash (${100-S.toggles.cashHaircut}% accessible)</td>${m.surplusCash.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        <tr class="sub"><td>(−) Marketable securities (FV)</td>${m.marketableSec.map(v=>`<td>${fmt(-v)}</td>`).join("")}</tr>
+        ${rowR("Adjusted Net Debt (S&P)", m.adjNetDebt, "total")}
+      </tbody>
+    </table>
+
+    <h3>Three Leverage Views (parallel)</h3>
+    <table class="fin">
+      <thead><tr><th></th>${yh}</tr></thead>
+      <tbody>
+        ${rowX("(1) ND/EBITDA b.e.i. — S&P primary (incl. lease & pension)", m.lev_primary, "total")}
+        ${rowX("(2) ND/EBITDA — bank covenant view (excl. lease, excl. pension)", m.lev_bank)}
+        ${rowX("(3) Gross Debt/EBITDA — agency stress view", m.lev_gross)}
+      </tbody>
+    </table>
+
+    <h3>Coverage & Credit Ratios</h3>
+    <table class="fin">
+      <thead><tr><th></th>${yh}</tr></thead>
+      <tbody>
+        ${rowPct("FFO / Adjusted Net Debt", m.ffoNetDebt)}
+        ${rowX("FFO Interest Coverage", m.ffoIntCov)}
+        ${rowX("EBITDA / Interest Expense", m.ebitdaIntCov)}
+        ${rowPct("Debt / Capital", m.debtCap)}
+        ${rowPct("FOCF / Adjusted Net Debt", m.focfNetDebt)}
+        ${rowPct("DCF / Adjusted Net Debt", m.dcfNetDebt)}
+        ${rowPct("CFO / Adjusted Net Debt", m.cfoNetDebt)}
+      </tbody>
+    </table>
+
+    <h3>S&P Methodology Toggles</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <label class="toggle"><input type="checkbox" data-toggle="toggles.sbcAddBack" ${S.toggles.sbcAddBack?"checked":""}/> Add back SBC</label>
+      <label class="toggle"><input type="checkbox" data-toggle="toggles.factoringAsDebt" ${S.toggles.factoringAsDebt?"checked":""}/> Factoring as debt</label>
+      <label class="toggle"><input type="checkbox" data-toggle="toggles.earnoutInDebt" ${S.toggles.earnoutInDebt?"checked":""}/> Earnouts in debt (FV)</label>
+      <label class="toggle"><input type="checkbox" data-toggle="toggles.iso16FullInclusion" ${S.toggles.iso16FullInclusion?"checked":""}/> IFRS 16 full inclusion</label>
+      <label class="toggle"><input type="checkbox" data-toggle="toggles.sustainabilityLinked" ${S.toggles.sustainabilityLinked?"checked":""}/> Sustainability-linked RCF margin grid</label>
+    </div>
+    <div class="grid-3">
+      ${inputCtl("toggles.hybridEquityCredit","Hybrid equity credit %",{min:0,max:100,step:5,unit:"%"})}
+      ${inputCtl("toggles.cashHaircut","Cash haircut %",{min:0,max:100,step:5,unit:"%"})}
+      ${inputCtl("toggles.pensionHaircutPct","Pension haircut %",{min:0,max:100,step:5,unit:"%"})}
+    </div>
+
+    <h3>Charts</h3>
+    <div class="grid-2">
+      <div><h4>EBITDA bridge: Reported → b.e.i.</h4><div class="canvas-wrap"><canvas id="ch-core-ebitda"></canvas></div></div>
+      <div><h4>Adjusted Net Debt composition</h4><div class="canvas-wrap"><canvas id="ch-core-debt"></canvas></div></div>
+    </div>
+  `;
+}
+
+function dynamicCommentary(m){
+  const parts = [];
+  const events = [];
+  if(S.scen.ma.on)  events.push(`M&A ${S.scen.ma.target} (${fmt(S.scen.ma.ev)})`);
+  if(S.scen.div.on) events.push(`Divestment ${S.scen.div.asset} (gross ${fmt(S.scen.div.gross)})`);
+  if(S.scen.lit.on) events.push(`Litigation ${S.scen.lit.desc}`);
+  if(S.scen.refi.on)events.push(`Refi ${S.scen.refi.tranche}`);
+  if(events.length){
+    parts.push(`<strong>Active scenarios:</strong> ${events.join(" + ")}.`);
+  } else {
+    parts.push("<strong>Base case</strong> — no scenarios active.");
+  }
+  // Peak leverage
+  const maxLev = Math.max(...m.lev_primary);
+  const peakYear = YEARS[m.lev_primary.indexOf(maxLev)];
+  parts.push(`Peak S&P-adjusted leverage: <strong>${fmtX(maxLev)} in ${peakYear}</strong> (rating ${m.rating[m.lev_primary.indexOf(maxLev)]}).`);
+  // Anchor breach
+  if(maxLev > S.policy.bbbAnchorNDE){
+    parts.push(`<span style="color:var(--red)">Breach of BBB anchor (${fmtX(S.policy.bbbAnchorNDE)}) by ${fmtX(maxLev - S.policy.bbbAnchorNDE)}.</span>`);
+  }
+  // Recovery
+  if(m.lev_primary[5] < S.policy.bbbAnchorNDE){
+    parts.push(`Recovery to BBB envelope by 2030 (${fmtX(m.lev_primary[5])}).`);
+  } else {
+    parts.push(`<span style="color:var(--red)">No recovery to BBB envelope by 2030 (${fmtX(m.lev_primary[5])}).</span>`);
+  }
+  // Headroom
+  const hr = ratingHeadroom(m, 2027);
+  if(hr) parts.push(`Headroom @ 2027: ${fmt(hr.chf_debt_room_BBB)} CHF m of additional debt before BBB anchor breach.`);
+  return parts.join(" ");
+}
+</script>
+<script id="charts">
+// ============================================================
+// CHART RENDERING
+// ============================================================
+const CHART_INSTANCES = {};
+function makeChart(id, cfg){
+  const can = document.getElementById(id);
+  if(!can) return;
+  if(CHART_INSTANCES[id]) CHART_INSTANCES[id].destroy();
+  CHART_INSTANCES[id] = new Chart(can.getContext("2d"), cfg);
+}
+const CC = { navy:"#0D2680", steel:"#4A6FA5", gold:"#C5A572", ice:"#E8EEF7", red:"#c0392b", green:"#1f8a4c", amber:"#d68910" };
+
+function renderCharts(m){
+  const labels = YEARS.map(y=>y.toString());
+
+  // Executive summary: leverage trajectory
+  if(document.getElementById("ch-summary-lev"))
+  makeChart("ch-summary-lev", {
+    type:"line",
+    data:{labels, datasets:[
+      {label:"ND/EBITDA (S&P primary)", data:m.lev_primary, borderColor:CC.navy, backgroundColor:"rgba(13,38,128,.15)", tension:.3, fill:true},
+      {label:"Bank covenant view", data:m.lev_bank, borderColor:CC.steel, borderDash:[4,4], tension:.3},
+      {label:"BBB anchor (2.5×)", data:labels.map(()=>S.policy.bbbAnchorNDE), borderColor:CC.amber, borderDash:[2,2], pointRadius:0},
+      {label:"BBB− anchor (3.0×)", data:labels.map(()=>3.0), borderColor:CC.red, borderDash:[2,2], pointRadius:0}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}, scales:{y:{title:{display:true,text:"× turns"}}}}
+  });
+
+  // Executive summary: cash trajectory
+  if(document.getElementById("ch-summary-cash"))
+  makeChart("ch-summary-cash", {
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"Closing cash", data:m.closingCash, backgroundColor:CC.navy},
+      {label:"Total liquidity", data:m.totalLiquidity, backgroundColor:CC.steel, type:"line", borderColor:CC.steel, fill:false},
+      {label:"Total firepower", data:m.firepower, backgroundColor:CC.gold, type:"line", borderColor:CC.gold, fill:false}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}}
+  });
+
+  // Core metrics: EBITDA bridge
+  if(document.getElementById("ch-core-ebitda"))
+  makeChart("ch-core-ebitda", {
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"Reported EBITDA", data:m.ebitdaReported, backgroundColor:CC.steel, stack:"a"},
+      {label:"Restructuring", data:m.restruct, backgroundColor:CC.gold, stack:"a"},
+      {label:"Pension svc", data:m.pensionSvc, backgroundColor:CC.amber, stack:"a"},
+      {label:"− Cap Dev", data:m.capDev.map(v=>-v), backgroundColor:CC.red, stack:"a"}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}, scales:{x:{stacked:true}, y:{stacked:true}}}
+  });
+
+  // Core metrics: debt composition
+  if(document.getElementById("ch-core-debt"))
+  makeChart("ch-core-debt", {
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"Gross debt", data:m.grossDebt, backgroundColor:CC.navy, stack:"d"},
+      {label:"Lease", data:m.leaseLiab, backgroundColor:CC.steel, stack:"d"},
+      {label:"Pension adj", data:m.pensionAdj, backgroundColor:CC.amber, stack:"d"},
+      {label:"Hybrid as debt", data:m.hybridAsDebt, backgroundColor:CC.gold, stack:"d"},
+      {label:"Off-B/S", data:m.osbsItems, backgroundColor:"#7d8ba5", stack:"d"},
+      {label:"− Surplus cash", data:m.surplusCash.map(v=>-v), backgroundColor:CC.green, stack:"d"}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom",labels:{font:{size:10}}}}, scales:{x:{stacked:true}, y:{stacked:true}}}
+  });
+
+  // Rating trajectory
+  if(document.getElementById("ch-rating-traj"))
+  makeChart("ch-rating-traj", {
+    type:"line",
+    data:{labels, datasets:[
+      {label:"ND/EBITDA", data:m.lev_primary, borderColor:CC.navy, yAxisID:"y", tension:.3},
+      {label:"FFO/Net Debt %", data:m.ffoNetDebt, borderColor:CC.gold, yAxisID:"y1", tension:.3}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}},
+      scales:{
+        y:{position:"left", title:{display:true,text:"× turns"}, reverse:true},
+        y1:{position:"right", title:{display:true,text:"FFO/ND %"}, grid:{drawOnChartArea:false}}
+      }
+    }
+  });
+
+  // Cash waterfall stack
+  if(document.getElementById("ch-cash-stack"))
+  makeChart("ch-cash-stack", {
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"FFO", data:m.ffo, backgroundColor:CC.green, stack:"in"},
+      {label:"WC Δ", data:m.nwcDelta, backgroundColor:CC.steel, stack:"in"},
+      {label:"− Capex", data:m.capexTotal.map(v=>-v), backgroundColor:CC.amber, stack:"out"},
+      {label:"− Dividends", data:m.dividend.map(v=>-v), backgroundColor:CC.red, stack:"out"},
+      {label:"− Buyback", data:m.buyback.map(v=>-v), backgroundColor:"#9d4444", stack:"out"},
+      {label:"− Pension/Lease/Restr.", data:m.pensionTopUp.map((v,i)=>-(v+m.leasePrincipal[i]+m.restructCash[i])), backgroundColor:"#7d8ba5", stack:"out"},
+      {label:"Scenario impact", data:m.scenCashImpact, backgroundColor:CC.gold, stack:"sc"}
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom",labels:{font:{size:10}}}}, scales:{x:{stacked:true}, y:{stacked:true}}}
+  });
+
+  // Maturity wall
+  if(document.getElementById("ch-maturity")){
+    const allYears = []; for(let y=2025;y<=2032;y++) allYears.push(y.toString());
+    const types = ["bond","loan","ssd","hybrid"];
+    const ds = types.map((tp,idx)=>({
+      label:tp.toUpperCase(),
+      data:allYears.map(y=> S.maturities.filter(t=>t.type===tp && t.year.toString()===y).reduce((a,t)=>a+t.amount,0)),
+      backgroundColor:[CC.navy,CC.steel,CC.gold,CC.amber][idx],
+      stack:"m"
+    }));
+    makeChart("ch-maturity", {type:"bar", data:{labels:allYears, datasets:ds},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}, scales:{x:{stacked:true}, y:{stacked:true}}}
+    });
+  }
+
+  // Currency mix
+  if(document.getElementById("ch-ccy-debt")){
+    const ccyMix = {};
+    S.maturities.forEach(t=>{ ccyMix[t.ccy]=(ccyMix[t.ccy]||0)+t.amount; });
+    makeChart("ch-ccy-debt", {type:"doughnut",
+      data:{labels:Object.keys(ccyMix), datasets:[{data:Object.values(ccyMix), backgroundColor:[CC.navy,CC.steel,CC.gold,CC.amber,"#7d8ba5"]}]},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"right"}}}
+    });
+  }
+  if(document.getElementById("ch-ccy-ebitda")){
+    makeChart("ch-ccy-ebitda", {type:"doughnut",
+      data:{labels:["EUR","USD","CHF","Asia","RoW"], datasets:[{data:[35,28,22,10,5], backgroundColor:[CC.navy,CC.steel,CC.gold,CC.amber,"#7d8ba5"]}]},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"right"}}}
+    });
+  }
+
+  // Scenario base vs current
+  if(document.getElementById("ch-scen-lev")){
+    const saved = JSON.parse(JSON.stringify(S.scen));
+    S.scen.ma.on=false; S.scen.div.on=false; S.scen.lit.on=false; S.scen.refi.on=false;
+    const baseRun = compute();
+    S.scen = saved;
+    makeChart("ch-scen-lev", {type:"line",
+      data:{labels, datasets:[
+        {label:"Base case", data:baseRun.lev_primary, borderColor:CC.steel, borderDash:[4,4], tension:.3},
+        {label:"Scenario combined", data:m.lev_primary, borderColor:CC.navy, tension:.3, fill:true, backgroundColor:"rgba(13,38,128,.1)"},
+        {label:"BBB anchor", data:labels.map(()=>S.policy.bbbAnchorNDE), borderColor:CC.amber, borderDash:[2,2], pointRadius:0}
+      ]},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}}
+    });
+  }
+  if(document.getElementById("ch-scen-cash")){
+    const saved = JSON.parse(JSON.stringify(S.scen));
+    S.scen.ma.on=false; S.scen.div.on=false; S.scen.lit.on=false; S.scen.refi.on=false;
+    const baseRun = compute();
+    S.scen = saved;
+    makeChart("ch-scen-cash", {type:"line",
+      data:{labels, datasets:[
+        {label:"Base closing cash", data:baseRun.closingCash, borderColor:CC.steel, borderDash:[4,4], tension:.3},
+        {label:"Scenario closing cash", data:m.closingCash, borderColor:CC.navy, tension:.3, fill:true, backgroundColor:"rgba(13,38,128,.1)"}
+      ]},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}}
+    });
+  }
+
+  // Peer scatter
+  if(document.getElementById("ch-peer-scatter")){
+    const ourNDE = m.lev_primary[0], ourFFO = m.ffoNetDebt[0];
+    makeChart("ch-peer-scatter", {type:"scatter",
+      data:{datasets:[
+        {label:"Peers", data:S.peers.map(p=>({x:p.nde, y:p.ffo, name:p.name})), backgroundColor:CC.steel, pointRadius:6},
+        {label:"ABC LTD", data:[{x:ourNDE, y:ourFFO}], backgroundColor:CC.gold, pointRadius:10, pointStyle:"rectRot"}
+      ]},
+      options:{maintainAspectRatio:false, plugins:{legend:{position:"bottom"},
+        tooltip:{callbacks:{label:(c)=>{ const p = c.raw; return `${p.name||'ABC LTD'}: ${p.x.toFixed(2)}× / ${p.y.toFixed(0)}%`; }}}},
+        scales:{x:{title:{display:true,text:"ND/EBITDA"}}, y:{title:{display:true,text:"FFO/Net Debt %"}}}
+      }
+    });
+  }
+  if(document.getElementById("ch-peer-bar")){
+    const labels2 = [...S.peers.map(p=>p.name), "ABC LTD"];
+    const data = [...S.peers.map(p=>p.nde), m.lev_primary[0]];
+    const colors = labels2.map(n => n==="ABC LTD" ? CC.gold : CC.steel);
+    makeChart("ch-peer-bar", {type:"bar",
+      data:{labels:labels2, datasets:[{label:"ND/EBITDA", data, backgroundColor:colors}]},
+      options:{maintainAspectRatio:false, plugins:{legend:{display:false}}, indexAxis:"y"}
+    });
+  }
+}
+</script>
+<script id="boot">
+// ============================================================
+// BOOT — wire toolbar, persistence, export, print
+// ============================================================
+function exportCSV(){
+  const m = compute();
+  const lines = [];
+  lines.push("ABC LTD — CFO Firepower Model — Export");
+  lines.push("Generated,"+new Date().toISOString());
+  lines.push("");
+  lines.push("Metric,"+YEARS.join(","));
+  const rows = [
+    ["Revenue", m.revenue],
+    ["Reported EBITDA", m.ebitdaReported],
+    ["EBITDA b.e.i. (S&P Adj)", m.ebitdaBEI],
+    ["FFO", m.ffo],
+    ["FOCF", m.focf],
+    ["DCF", m.dcf],
+    ["Closing cash", m.closingCash],
+    ["Gross debt", m.grossDebt],
+    ["Adjusted Net Debt", m.adjNetDebt],
+    ["ND/EBITDA primary", m.lev_primary],
+    ["ND/EBITDA bank view", m.lev_bank],
+    ["FFO/Net Debt %", m.ffoNetDebt],
+    ["FFO Interest Cover", m.ffoIntCov],
+    ["EBITDA Interest Cover", m.ebitdaIntCov],
+    ["FOCF/Net Debt %", m.focfNetDebt],
+    ["DCF/Net Debt %", m.dcfNetDebt],
+    ["Total liquidity", m.totalLiquidity],
+    ["Firepower", m.firepower],
+    ["Implied rating", m.rating]
+  ];
+  rows.forEach(r => lines.push(r[0]+","+r[1].map(v=>typeof v==="number"?v.toFixed(2):v).join(",")));
+  const csv = lines.join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "abc_ltd_firepower_export.csv"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function init(){
+  loadState();
+  document.getElementById("gen-date").textContent = new Date().toLocaleDateString();
+  document.getElementById("btn-print").onclick = ()=> window.print();
+  document.getElementById("btn-csv").onclick = exportCSV;
+  document.getElementById("btn-reset").onclick = ()=>{ if(confirm("Reset all inputs to base assumptions?")) resetState(); };
+  renderAll();
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+else init();
+</script>
+</body>
+</html>
