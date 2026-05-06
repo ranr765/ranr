@@ -4,898 +4,424 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Liquidity Playbook 1.0 (Confidential)</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  /* Clariant brand palette */
-  --paper:#ffffff;
-  --surface:#ffffff;
+  --brand:#E6491E;
+  --brand-dark:#B83A18;
+  --brand-tint:#FCE8DD;
   --ink:#1a1a1a;
   --ink2:#333333;
   --muted:#6e6e6e;
   --hair:#e8e8e8;
   --hair2:#d4d4d4;
-  --gold:#E6491E;        /* Clariant signature orange */
-  --gold2:#B83A18;       /* Clariant orange — dark */
-  --softgold:#FCE8DD;    /* Clariant orange — tint */
-  --good:#2E7D32;
-  --warn:#E6491E;
-  --bad:#C62828;
   --soft:#FAFAFA;
+
+  /* S&P scorecard cell colours (matching screenshot) */
+  --min:#C6EFCE;  --min-t:#1B5E20;
+  --mod:#D9EAD3;  --mod-t:#2E7D32;
+  --int:#FFF2CC;  --int-t:#7F6000;
+  --sig:#FFE699;  --sig-t:#7A5700;
+  --agg:#FCD5CE;  --agg-t:#9C0006;
+  --hl: #F4B7BD;  --hl-t: #8B0000;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+html,body{margin:0;padding:0;background:#fff;color:var(--ink);
   font-family:"Open Sans","Helvetica Neue",Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;font-weight:400}
-.serif{font-family:"Open Sans","Helvetica Neue",Arial,sans-serif;letter-spacing:0}
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
 
-/* ---------- Watermark ---------- */
+/* Header */
+.brandbar{height:4px;background:var(--brand)}
+.page{max-width:1380px;margin:0 auto;padding:22px 30px 40px;position:relative}
 .watermark{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .watermark span{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);
-  font-family:inherit;font-size:140px;letter-spacing:18px;color:rgba(230,73,30,.045);font-weight:700;white-space:nowrap}
+  font-size:140px;letter-spacing:18px;color:rgba(230,73,30,.045);font-weight:700;white-space:nowrap}
+.page > *{position:relative;z-index:1}
 
-/* ---------- Page ---------- */
-.page{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:28px 36px 56px}
-
-/* ---------- Header ---------- */
 header.doc{display:flex;justify-content:space-between;align-items:flex-end;
-  border-bottom:1.5px solid var(--ink);padding-bottom:14px;margin-bottom:20px}
-header .lhs .crest{display:flex;align-items:center;gap:12px;color:var(--gold2);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
-header .lhs .crest .dot{width:8px;height:8px;background:var(--gold);border-radius:50%}
-header .lhs h1{font-family:inherit;font-size:34px;letter-spacing:.5px;margin:0;font-weight:600}
-header .lhs h1 em{color:var(--gold2);font-style:normal;font-weight:500}
-header .lhs .sub{color:var(--muted);font-size:12px;margin-top:4px;letter-spacing:.4px}
-header .rhs{text-align:right;font-size:11px;color:var(--muted);letter-spacing:.4px}
-header .rhs .stamp{display:inline-block;border:1px solid var(--bad);color:var(--bad);
-  padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:3px;margin-bottom:8px}
-header .rhs .meta{color:var(--ink);font-size:11px}
-header .rhs .meta b{color:var(--ink)}
+  border-bottom:1.5px solid var(--ink);padding-bottom:12px;margin-bottom:18px}
+header h1{font-size:22px;letter-spacing:.2px;margin:0;font-weight:700}
+header h1 em{color:var(--brand);font-style:normal}
+header .sub{color:var(--muted);font-size:12px;margin-top:3px}
+header .crest{display:flex;align-items:center;gap:8px;color:var(--brand-dark);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:5px;font-weight:700}
+header .crest .dot{width:7px;height:7px;background:var(--brand);border-radius:50%}
+header .rhs{text-align:right;font-size:11px;color:var(--muted)}
+header .stamp{display:inline-block;border:1px solid var(--brand);color:var(--brand);
+  padding:2px 9px;font-size:9.5px;font-weight:700;letter-spacing:2.5px;margin-bottom:6px}
+header .meta{font-size:11px;color:var(--ink)}
+.toolbar{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.btn{background:transparent;color:var(--ink);border:1px solid var(--ink2);padding:5px 12px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;font-weight:600;border-radius:2px}
+.btn:hover{background:var(--ink);color:#fff}
 
-/* ---------- Section labels ---------- */
-.section-label{display:flex;align-items:center;gap:10px;text-transform:uppercase;
-  font-size:10.5px;letter-spacing:3px;color:var(--gold2);font-weight:600;margin:18px 0 10px}
-.section-label .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--hair2),transparent)}
-.section-label .roman{font-family:inherit;font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px}
+/* Top input bar */
+.topbar{background:var(--soft);border:1px solid var(--hair);border-radius:3px;padding:10px 14px;margin-bottom:14px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:18px;font-size:12px}
+.topbar .group{display:flex;align-items:center;gap:8px}
+.topbar label{color:var(--ink);font-weight:600;letter-spacing:.2px}
+.topbar input,.topbar select{background:#fff;border:1px solid var(--hair2);padding:4px 8px;
+  font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--brand);font-weight:700;text-align:right;width:90px;border-radius:2px}
+.topbar input:focus,.topbar select:focus{outline:none;border-color:var(--brand)}
+.topbar select{text-align:left;color:var(--brand);background:#FFFCEB}
 
-/* ---------- KPI strip ---------- */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
-@media (max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
-.kpi{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:14px 16px;position:relative;overflow:hidden}
-.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
-.kpi .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:var(--muted)}
-.kpi .val{font-family:inherit;font-size:26px;font-weight:600;margin-top:6px;letter-spacing:-.3px}
-.kpi .delta{font-size:11px;margin-top:2px;color:var(--muted)}
-.kpi .delta.up{color:var(--good)}
-.kpi .delta.dn{color:var(--bad)}
+/* Section title */
+.sec-title{font-size:14px;font-weight:700;margin:14px 0 8px;color:var(--ink);display:flex;align-items:baseline;gap:10px}
+.sec-title .it{font-size:11px;color:var(--muted);font-style:italic;font-weight:400}
 
-/* ---------- Layout ---------- */
-.layout{display:grid;grid-template-columns:360px 1fr;gap:20px}
-@media (max-width:1100px){.layout{grid-template-columns:1fr}}
+/* Two-up grid */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px}
+@media (max-width:1100px){.two{grid-template-columns:1fr}}
 
-/* ---------- Panel ---------- */
-.panel{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px}
-.panel h2{font-family:inherit;font-size:15px;font-weight:600;margin:0 0 14px;
-  padding-bottom:8px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between;align-items:baseline}
-.panel h2 .num{color:var(--gold);font-size:11px;letter-spacing:2px}
-.subpanel{border-top:1px dashed var(--hair2);padding-top:12px;margin-top:14px}
-.subpanel:first-of-type{border-top:0;padding-top:0;margin-top:0}
-.subpanel h3{font-size:10.5px;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin:0 0 10px;font-weight:600}
+/* Facilities */
+.facilities{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.facilities h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+.facilities table{width:100%;border-collapse:collapse;font-size:12px}
+.facilities th,.facilities td{padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--hair)}
+.facilities th:first-child,.facilities td:first-child{text-align:left;color:var(--ink2)}
+.facilities th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--brand-dark);font-weight:700;border-bottom:1.5px solid var(--ink)}
+.facilities input{background:var(--soft);border:1px solid var(--hair2);padding:3px 6px;font-size:12px;width:80px;text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink)}
+.facilities input:focus{outline:none;border-color:var(--brand);background:#fff}
+.facilities tr.tot td{border-top:1.5px solid var(--ink);font-weight:700;border-bottom:0;color:var(--ink)}
 
-/* ---------- Inputs ---------- */
-.row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-bottom:7px}
-.row label{font-size:12px;color:var(--ink2)}
-.row input,.row select{background:var(--soft);border:1px solid var(--hair2);border-radius:3px;
-  padding:5px 8px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink);width:100%}
-.row input:focus,.row select:focus{outline:none;border-color:var(--gold);background:#fff}
-.row.full{grid-template-columns:1fr}
-.row.full input{text-align:left}
+/* Axis editor */
+.axis{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.axis h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+.axis .row{display:grid;grid-template-columns:170px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:6px;font-size:12px}
+.axis label{color:var(--ink2)}
+.axis input{background:var(--soft);border:1px solid var(--hair2);padding:4px 6px;font-size:12px;width:100%;text-align:right;font-variant-numeric:tabular-nums;border-radius:2px;color:var(--ink)}
+.axis input:focus{outline:none;border-color:var(--brand);background:#fff}
+.axis .hint{font-size:11px;color:var(--muted);margin-top:4px}
 
-.year-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:6px;margin-bottom:7px;align-items:center;font-size:11.5px}
-.year-grid .row-lbl{color:var(--ink2);font-size:11.5px}
-.year-grid input{background:var(--soft);border:1px solid var(--hair2);border-radius:3px;padding:4px 6px;
-  text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums;width:100%;color:var(--ink)}
-.year-grid input:focus{outline:none;border-color:var(--gold);background:#fff}
-.year-grid .yhead{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold2);text-align:center;font-weight:600}
+/* Matrix layout */
+.matrix-wrap{margin-bottom:14px}
+.matrix{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.matrix .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:12.5px}
+.matrix .hd .name{font-weight:700;color:var(--ink)}
+.matrix .hd .axis-lbl{color:var(--muted);font-size:11px}
+.matrix table{width:100%;border-collapse:collapse;table-layout:fixed}
+.matrix th,.matrix td{border:1px solid #f0f0f0;padding:0;font-size:12px}
+.matrix .corner,.matrix .colhead,.matrix .rowhead{background:#F2F2F2;color:var(--ink);font-weight:700;text-align:center;padding:6px;font-size:11px}
+.matrix .colhead-top{background:#FFF7E6;color:var(--ink);font-weight:600;font-size:11px;padding:6px;border-left:1px solid #f0f0f0;border-right:1px solid #f0f0f0;border-bottom:1px solid var(--hair)}
+.matrix .rowhead{background:#FAFAFA}
+.matrix .axis-x{background:#fff;color:var(--muted);font-size:10.5px;text-align:left;padding:4px 6px;font-style:italic;font-weight:400}
+.matrix .axis-y{background:#fff;color:var(--muted);font-size:10.5px;text-align:left;padding:4px 6px;font-style:italic;font-weight:400}
+.matrix .cell{padding:0}
+.matrix .cell .top{padding:5px 8px 1px;text-align:center;font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink2)}
+.matrix .cell .bot{padding:1px 8px 5px;text-align:center;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;font-style:italic}
 
-.toggle-pill{display:inline-flex;border:1px solid var(--hair2);border-radius:999px;overflow:hidden;font-size:11px}
-.toggle-pill button{background:transparent;border:0;padding:5px 14px;color:var(--muted);cursor:pointer}
-.toggle-pill button.on{background:var(--ink);color:#fff}
+/* Cell colours */
+.c-min{background:var(--min);color:var(--min-t)}
+.c-mod{background:var(--mod);color:var(--mod-t)}
+.c-int{background:var(--int);color:var(--int-t)}
+.c-sig{background:var(--sig);color:var(--sig-t)}
+.c-agg{background:var(--agg);color:var(--agg-t)}
+.c-hl {background:var(--hl); color:var(--hl-t)}
 
-/* ---------- Scenarios ---------- */
-.scenarios{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px}
-@media (max-width:1200px){.scenarios{grid-template-columns:repeat(3,1fr)}}
-.sc{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:12px 12px 12px 32px;cursor:pointer;transition:all .15s}
-.sc:hover{border-color:var(--gold)}
-.sc.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.sc.active .sc-title{color:#fff}
-.sc.active .sc-desc{color:rgba(255,255,255,.7)}
-.sc input[type=radio]{position:absolute;left:12px;top:14px;accent-color:var(--gold)}
-.sc .sc-title{font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
-.sc .sc-desc{font-size:11px;color:var(--muted);line-height:1.35}
+/* Scorecard */
+.scorecard{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.scorecard h3{font-size:12.5px;margin:0 0 8px;font-weight:700;color:var(--ink)}
+.scorecard table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.scorecard th,.scorecard td{padding:5px 8px;border-bottom:1px solid var(--hair);text-align:center;font-variant-numeric:tabular-nums}
+.scorecard th:first-child,.scorecard td:first-child{text-align:left}
+.scorecard th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--brand-dark);font-weight:700;border-bottom:1.5px solid var(--ink);background:#fff}
+.scorecard tr td{font-weight:600}
 
-/* ---------- Tables ---------- */
-table.elegant{width:100%;border-collapse:collapse;font-size:12.5px}
-table.elegant th,table.elegant td{padding:8px 10px;border-bottom:1px solid var(--hair);
-  text-align:right;font-variant-numeric:tabular-nums}
-table.elegant th:first-child,table.elegant td:first-child{text-align:left}
-table.elegant th{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold2);font-weight:600;border-bottom:1.5px solid var(--ink2)}
-table.elegant tr:last-child td{border-bottom:0}
-table.elegant td.label{color:var(--ink2)}
-table.elegant tr.tot td{border-top:1px solid var(--ink2);font-weight:600}
-.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600;letter-spacing:.6px}
-.pill.good{background:rgba(45,106,79,.10);color:var(--good)}
-.pill.warn{background:rgba(176,122,31,.12);color:var(--warn)}
-.pill.bad{background:rgba(155,34,38,.10);color:var(--bad)}
-.pill.gold{background:var(--softgold);color:var(--gold2)}
-.pill.ink{background:var(--ink);color:#fff}
+footer{margin-top:18px;padding-top:10px;border-top:1px solid var(--hair2);font-size:10.5px;color:var(--muted);line-height:1.55}
+footer b{color:var(--ink2)}
 
-/* ---------- Charts ---------- */
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-@media (max-width:1100px){.charts{grid-template-columns:1fr}}
-.chart-card{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:14px;height:280px;display:flex;flex-direction:column}
-.chart-card h3{font-family:inherit;font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink)}
-.chart-card .csub{font-size:11px;color:var(--muted);margin-bottom:8px}
-.chart-card .canvasWrap{flex:1;position:relative}
-
-/* ---------- S&U Waterfall ---------- */
-.waterfall{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px;margin-bottom:14px}
-.waterfall .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
-.waterfall .hd h3{font-family:inherit;font-size:15px;margin:0;font-weight:600}
-.waterfall .hd .yr-pick{display:inline-flex;border:1px solid var(--hair2);border-radius:3px;overflow:hidden;font-size:11px}
-.waterfall .hd .yr-pick button{background:transparent;border:0;padding:4px 10px;cursor:pointer;color:var(--muted)}
-.waterfall .hd .yr-pick button.on{background:var(--ink);color:#fff}
-.wf-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:18px;align-items:start}
-.wf-col h4{font-size:10.5px;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between}
-.wf-col h4 .tot{color:var(--ink);font-family:inherit;font-size:13px;letter-spacing:0;text-transform:none}
-.wf-bar{margin:6px 0}
-.wf-bar .bar-lbl{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px}
-.wf-bar .bar-lbl .name{color:var(--ink2)}
-.wf-bar .bar-lbl .v{color:var(--muted);font-variant-numeric:tabular-nums}
-.wf-bar .bar{height:8px;background:#F2F2F2;border-radius:2px;overflow:hidden}
-.wf-bar .bar > i{display:block;height:100%}
-.wf-bar.use .bar > i{background:linear-gradient(90deg,#C62828,#E57373)}
-.wf-bar.src .bar > i{background:linear-gradient(90deg,#1a1a1a,#555555)}
-.wf-bar.facil .bar > i{background:linear-gradient(90deg,#E6491E,#F5A57E)}
-.wf-balance{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:11px}
-.wf-balance .arr{font-size:24px;color:var(--gold)}
-
-/* ---------- Rating ladder ---------- */
-.rating-ladder{background:var(--surface);border:1px solid var(--hair);border-radius:4px;padding:18px;margin-top:14px}
-.rating-ladder h3{font-family:inherit;font-size:15px;margin:0 0 14px;font-weight:600}
-.ladder-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-@media (max-width:900px){.ladder-grid{grid-template-columns:repeat(2,1fr)}}
-.year-card{border:1px solid var(--hair);border-radius:4px;padding:12px;background:var(--soft);position:relative}
-.year-card .yc-hd{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:6px;font-weight:600}
-.year-card .yc-r{font-family:inherit;font-size:24px;font-weight:600;margin-bottom:2px}
-.year-card .yc-band{font-size:11px;color:var(--muted);margin-bottom:8px}
-.year-card .yc-mt{font-size:11px;color:var(--ink2);display:flex;justify-content:space-between;margin-bottom:3px}
-.year-card .yc-mt b{font-variant-numeric:tabular-nums;font-weight:600}
-.year-card.dn{border-left:3px solid var(--bad)}
-.year-card.up{border-left:3px solid var(--good)}
-.year-card.flat{border-left:3px solid var(--muted)}
-
-/* ---------- Footer ---------- */
-.docfoot{margin-top:30px;padding-top:14px;border-top:1px solid var(--hair2);font-size:10.5px;color:var(--muted);line-height:1.6}
-.docfoot strong{color:var(--ink2)}
-
-/* ---------- Buttons ---------- */
-.btn{background:var(--ink);color:#fff;border:0;padding:8px 16px;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:2px;font-weight:600}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink2)}
-.btn:hover{filter:brightness(1.15)}
-.toolbar{display:flex;gap:8px}
-
-/* ---------- Print ---------- */
 @media print{
+  .toolbar{display:none}
   body{background:#fff}
-  .watermark span{color:rgba(230,73,30,.08)}
-  .layout{grid-template-columns:1fr}
-  .toolbar,.scenarios{break-inside:avoid}
-  .panel,.kpi,.waterfall,.rating-ladder,.chart-card{break-inside:avoid;box-shadow:none}
-  header.doc{break-after:avoid}
-  .no-print{display:none!important}
+  .page{padding:14px 18px}
+  .matrix,.facilities,.axis,.scorecard,.topbar{break-inside:avoid;box-shadow:none}
 }
 </style>
 </head>
 <body>
+<div class="brandbar"></div>
 <div class="watermark"><span>CONFIDENTIAL</span></div>
-<div style="height:4px;background:#E6491E;width:100%"></div>
 
 <div class="page">
+
 <header class="doc">
-  <div class="lhs">
+  <div>
     <div class="crest"><span class="dot"></span> Group CFO &middot; Treasury</div>
     <h1>Liquidity Playbook <em>1.0</em></h1>
-    <div class="sub">Funding strategy &amp; rating impact under contingent capital deployment</div>
+    <div class="sub">Leverage Sensitivity Analysis &mdash; based on S&amp;P methodology</div>
   </div>
   <div class="rhs">
     <div class="stamp">CONFIDENTIAL</div>
-    <div class="meta">Doc Ref: <b>TR-LP-1.0</b> &nbsp;|&nbsp; Prepared: <b id="docDate"></b></div>
-    <div class="meta">Distribution: <b>CFO &middot; Group Treasurer &middot; Audit &amp; Risk</b></div>
-    <div class="toolbar no-print" style="margin-top:8px;justify-content:flex-end">
-      <button class="btn ghost" onclick="window.print()">Print / PDF</button>
-      <button class="btn ghost" onclick="exportJSON()">Export</button>
-      <button class="btn ghost" onclick="document.getElementById('imp').click()">Import</button>
+    <div class="meta">Doc Ref <b>TR-LP-1.0</b> &nbsp;|&nbsp; Prepared <b id="docDate"></b></div>
+    <div class="meta">Distribution: CFO &middot; Group Treasurer &middot; Audit &amp; Risk</div>
+    <div class="toolbar">
+      <button class="btn" onclick="window.print()">Print / PDF</button>
+      <button class="btn" onclick="exportJSON()">Export</button>
+      <button class="btn" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept="application/json" hidden onchange="importJSON(event)" />
     </div>
   </div>
 </header>
 
-<!-- I. Executive readout -->
-<div class="section-label"><span class="roman">I.</span> Executive Readout <span class="ln"></span></div>
-<div class="kpi-row">
-  <div class="kpi"><div class="lbl">Standalone rating</div><div class="val" id="kpiBase">–</div><div class="delta" id="kpiBaseSub">Pre-action / S&amp;P implied</div></div>
-  <div class="kpi"><div class="lbl">Pro-forma rating</div><div class="val" id="kpiPF">–</div><div class="delta" id="kpiPFSub">Post-scenario, year of action</div></div>
-  <div class="kpi"><div class="lbl">Notch movement</div><div class="val" id="kpiNotch">–</div><div class="delta" id="kpiNotchSub">vs. standalone</div></div>
-  <div class="kpi"><div class="lbl">Liquidity headroom</div><div class="val" id="kpiLiq">–</div><div class="delta" id="kpiLiqSub">Cash + undrawn after action</div></div>
-  <div class="kpi"><div class="lbl">Min covenant cushion</div><div class="val" id="kpiCov">–</div><div class="delta" id="kpiCovSub">vs. Net Debt/EBITDA limit</div></div>
-</div>
-
-<!-- II. Scenarios -->
-<div class="section-label"><span class="roman">II.</span> Funding Scenario <span class="ln"></span></div>
-<div class="scenarios" id="scs"></div>
-
-<!-- Layout: inputs + outputs -->
-<div class="layout">
-
-  <!-- INPUTS -->
-  <div>
-    <div class="panel">
-      <h2>Inputs <span class="num">§A</span></h2>
-
-      <div class="subpanel">
-        <h3>Document &amp; assumptions</h3>
-        <div class="row"><label>Reporting currency</label>
-          <select id="ccy">
-            <option value="$m">USD m</option>
-            <option value="€m">EUR m</option>
-            <option value="£m">GBP m</option>
-            <option value="CHFm">CHF m</option>
-            <option value="local">Local m</option>
-          </select>
-        </div>
-        <div class="row"><label>Target rating</label>
-          <select id="target">
-            <option>AAA</option><option>AA</option><option>A</option>
-            <option selected>BBB</option><option>BB</option>
-          </select>
-        </div>
-        <div class="row"><label>Net Debt / EBITDA covenant</label><input id="cov" type="number" step="0.25" value="3.5"/></div>
-        <div class="row"><label>Min operational cash floor</label><input id="cashFloor" type="number" value="200"/></div>
-      </div>
-
-      <div class="subpanel">
-        <h3>Standalone projection (S&amp;P-adjusted)</h3>
-        <div class="year-grid">
-          <div></div><div class="yhead">Y0</div><div class="yhead">Y1</div><div class="yhead">Y2</div><div class="yhead">Y3</div>
-        </div>
-        <div class="year-grid">
-          <div class="row-lbl">EBITDA</div>
-          <input data-k="ebitda" data-y="0" type="number" value="1000"/>
-          <input data-k="ebitda" data-y="1" type="number" value="1080"/>
-          <input data-k="ebitda" data-y="2" type="number" value="1160"/>
-          <input data-k="ebitda" data-y="3" type="number" value="1240"/>
-        </div>
-        <div class="year-grid">
-          <div class="row-lbl">Net Debt</div>
-          <input data-k="netDebt" data-y="0" type="number" value="2500"/>
-          <input data-k="netDebt" data-y="1" type="number" value="2300"/>
-          <input data-k="netDebt" data-y="2" type="number" value="2050"/>
-          <input data-k="netDebt" data-y="3" type="number" value="1750"/>
-        </div>
-        <div class="year-grid">
-          <div class="row-lbl">Cash &amp; equiv.</div>
-          <input data-k="cash" data-y="0" type="number" value="500"/>
-          <input data-k="cash" data-y="1" type="number" value="550"/>
-          <input data-k="cash" data-y="2" type="number" value="620"/>
-          <input data-k="cash" data-y="3" type="number" value="700"/>
-        </div>
-        <div class="year-grid">
-          <div class="row-lbl">Cash interest</div>
-          <input data-k="cint" data-y="0" type="number" value="120"/>
-          <input data-k="cint" data-y="1" type="number" value="115"/>
-          <input data-k="cint" data-y="2" type="number" value="105"/>
-          <input data-k="cint" data-y="3" type="number" value="95"/>
-        </div>
-        <div class="year-grid">
-          <div class="row-lbl">Cash tax</div>
-          <input data-k="ctax" data-y="0" type="number" value="150"/>
-          <input data-k="ctax" data-y="1" type="number" value="165"/>
-          <input data-k="ctax" data-y="2" type="number" value="180"/>
-          <input data-k="ctax" data-y="3" type="number" value="195"/>
-        </div>
-      </div>
-
-      <div class="subpanel">
-        <h3>Pillar A &middot; Litigation</h3>
-        <div class="row"><label>Settlement / award</label><input id="litAmt" type="number" value="800"/></div>
-        <div class="row"><label>Year of cash outflow</label>
-          <select id="litYr"><option value="0">Y0</option><option value="1" selected>Y1</option><option value="2">Y2</option><option value="3">Y3</option></select>
-        </div>
-        <div class="row"><label>Tax shield (%)</label><input id="litTax" type="number" value="0"/></div>
-      </div>
-
-      <div class="subpanel">
-        <h3>Pillar B &middot; M&amp;A / Divestment</h3>
-        <div class="row" style="grid-template-columns:1fr"><div class="toggle-pill" id="dealKind">
-          <button data-v="acquire" class="on">Acquisition</button>
-          <button data-v="divest">Divestment</button>
-          <button data-v="none">None</button>
-        </div></div>
-        <div class="row"><label>Price / proceeds</label><input id="maPrice" type="number" value="1500"/></div>
-        <div class="row"><label>Year of close</label>
-          <select id="maYr"><option value="0">Y0</option><option value="1" selected>Y1</option><option value="2">Y2</option><option value="3">Y3</option></select>
-        </div>
-        <div class="row"><label>Δ EBITDA p.a. (post-close)</label><input id="maEb" type="number" value="180"/></div>
-      </div>
-
-      <div class="subpanel">
-        <h3>Funding levers</h3>
-        <div class="row"><label>RCF 1 &middot; limit</label><input id="r1Lim" type="number" value="1000"/></div>
-        <div class="row"><label>RCF 1 &middot; drawn</label><input id="r1Dr" type="number" value="0"/></div>
-        <div class="row"><label>RCF 1 &middot; pricing (bps)</label><input id="r1Px" type="number" value="120"/></div>
-        <div class="row"><label>RCF 2 &middot; limit</label><input id="r2Lim" type="number" value="500"/></div>
-        <div class="row"><label>RCF 2 &middot; drawn</label><input id="r2Dr" type="number" value="0"/></div>
-        <div class="row"><label>RCF 2 &middot; pricing (bps)</label><input id="r2Px" type="number" value="150"/></div>
-        <div class="row"><label>SCF capacity (uncommitted)</label><input id="scfLim" type="number" value="400"/></div>
-        <div class="row"><label>New debt &middot; max issuance</label><input id="ndMax" type="number" value="2000"/></div>
-        <div class="row"><label>New debt &middot; coupon (bps)</label><input id="ndPx" type="number" value="450"/></div>
-      </div>
-    </div>
+<!-- Base position -->
+<div class="topbar">
+  <div class="group"><label>Select Month</label>
+    <select id="month">
+      <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
+      <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
+      <option>Sep</option><option>Oct</option><option>Nov</option><option selected>Dec</option>
+    </select>
   </div>
-
-  <!-- OUTPUTS -->
-  <div>
-
-    <!-- Sources & Uses -->
-    <div class="waterfall">
-      <div class="hd">
-        <h3>Sources &amp; Uses &middot; <span id="sceName" style="color:var(--gold2)">–</span></h3>
-        <div class="yr-pick" id="yrPick">
-          <button data-y="0">Y0</button>
-          <button data-y="1" class="on">Y1</button>
-          <button data-y="2">Y2</button>
-          <button data-y="3">Y3</button>
-        </div>
-      </div>
-      <div class="wf-grid">
-        <div class="wf-col" id="usesCol">
-          <h4>Uses <span class="tot" id="useTot">0</span></h4>
-        </div>
-        <div class="wf-balance">
-          <div class="arr">⇄</div>
-          <div style="margin-top:6px">balance</div>
-          <div id="balVal" style="font-family:inherit;color:var(--ink);font-size:14px;margin-top:4px">0</div>
-        </div>
-        <div class="wf-col" id="srcCol">
-          <h4>Sources <span class="tot" id="srcTot">0</span></h4>
-        </div>
-      </div>
-    </div>
-
-    <!-- Rating ladder -->
-    <div class="rating-ladder">
-      <h3>Rating trajectory &middot; pro-forma (S&amp;P)</h3>
-      <div class="ladder-grid" id="ladder"></div>
-    </div>
-
-    <!-- Charts -->
-    <div class="charts">
-      <div class="chart-card">
-        <h3>Net Debt / EBITDA</h3>
-        <div class="csub">Standalone vs. pro-forma</div>
-        <div class="canvasWrap"><canvas id="chDE"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>FFO / Debt (%)</h3>
-        <div class="csub">S&amp;P primary leverage metric</div>
-        <div class="canvasWrap"><canvas id="chFFO"></canvas></div>
-      </div>
-    </div>
-
-    <div class="charts">
-      <div class="chart-card">
-        <h3>Liquidity stack &middot; post-action</h3>
-        <div class="csub">Composition of available liquidity by year</div>
-        <div class="canvasWrap"><canvas id="chLiq"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>Funding mix &middot; year of action</h3>
-        <div class="csub">Share of total cash need by lever</div>
-        <div class="canvasWrap"><canvas id="chMix"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Pro-forma table -->
-    <div class="panel" style="margin-top:14px">
-      <h2>Pro-forma metrics &middot; year-by-year <span class="num">§B</span></h2>
-      <table class="elegant" id="metricTable">
-        <thead><tr>
-          <th></th><th>Y0</th><th>Y1</th><th>Y2</th><th>Y3</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
+  <div class="group"><label>Year</label><input id="year" type="number" value="2026"/></div>
+  <div class="group"><label>Adj. Net Debt</label><input id="netDebt" type="number" value="500"/></div>
+  <div class="group"><label>EBITDA</label><input id="ebitda" type="number" value="617"/></div>
+  <div class="group"><label>FFO</label><input id="ffo" type="number" value="491"/></div>
+  <div class="group"><label>FOCF</label><input id="focf" type="number" value="335"/></div>
+  <div class="group"><label>Currency</label>
+    <select id="ccy"><option>$m</option><option>€m</option><option>£m</option><option>CHFm</option></select>
   </div>
 </div>
 
-<div class="docfoot">
-  <strong>Methodology.</strong> Pro-forma metrics use S&amp;P corporate methodology under the Standard volatility table — Financial Risk Profile (FRP) read off FFO/Debt and Net&nbsp;Debt/EBITDA, mapped to a rating assuming Business&nbsp;Risk&nbsp;Profile = <em>Satisfactory</em>. FFO ≈ EBITDA − cash interest − cash tax (pre-WC). Funding waterfall allocates the year-by-year cash need across cash above operational floor, RCF 1, RCF 2, SCF and new term debt per the selected scenario rule. Incremental interest from new debt and RCF draws is reflected from the year of action. Divestment proceeds reduce gross debt before applying the waterfall.
-  &nbsp;&nbsp;<strong>Disclaimer.</strong> Internal indicative model. Not S&amp;P guidance. For board, Treasury and CFO use only — see distribution list.
+<!-- Facilities + Axis editor -->
+<div class="two">
+  <div class="facilities">
+    <h3>Facilities &middot; starting range and utilization</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>Limit</th><th>Utilization</th><th>Available</th></tr></thead>
+      <tbody id="facBody"></tbody>
+      <tfoot><tr class="tot"><td>Total</td><td id="facLim">0</td><td id="facUt">0</td><td id="facAv">0</td></tr></tfoot>
+    </table>
+  </div>
+
+  <div class="axis">
+    <h3>Sensitivity axes</h3>
+    <div class="row">
+      <label>Litigation outflow ↓</label>
+      <input data-ax="lit" data-i="0" type="number" value="0"/>
+      <input data-ax="lit" data-i="1" type="number" value="250"/>
+      <input data-ax="lit" data-i="2" type="number" value="500"/>
+      <input data-ax="lit" data-i="3" type="number" value="750"/>
+      <input data-ax="lit" data-i="4" type="number" value="1000"/>
+    </div>
+    <div class="row">
+      <label>Net transaction value →</label>
+      <input data-ax="ma" data-i="0" type="number" value="0"/>
+      <input data-ax="ma" data-i="1" type="number" value="-1000"/>
+      <input data-ax="ma" data-i="2" type="number" value="1000"/>
+      <input data-ax="ma" data-i="3" type="number" value="2000"/>
+      <input data-ax="ma" data-i="4" type="number" value="3000"/>
+    </div>
+    <div class="hint">Net transaction value = acquisition outflow (positive) net of divestment proceeds (negative). Both can run in parallel.</div>
+  </div>
 </div>
+
+<!-- Matrices -->
+<div class="sec-title">Leverage sensitivity &mdash; S&amp;P core ratios <span class="it">Cells coloured by S&amp;P financial-risk band</span></div>
+
+<div class="two">
+  <div class="matrix" id="mtxDE">
+    <div class="hd"><span class="name">Adj. Net Debt / EBITDA</span><span class="axis-lbl">target band &middot; 2.0&ndash;3.0x</span></div>
+    <div class="tbl"></div>
+  </div>
+  <div class="matrix" id="mtxFOCF">
+    <div class="hd"><span class="name">FOCF / Net Debt</span><span class="axis-lbl">target band &middot; 20&ndash;35%</span></div>
+    <div class="tbl"></div>
+  </div>
+</div>
+
+<div class="two">
+  <div class="matrix" id="mtxFFO">
+    <div class="hd"><span class="name">FFO / Adj. Net Debt</span><span class="axis-lbl">target band &middot; 30&ndash;45%</span></div>
+    <div class="tbl"></div>
+  </div>
+  <div class="scorecard">
+    <h3>S&amp;P Rating Scorecard &middot; standard volatility</h3>
+    <table>
+      <thead><tr><th>Category</th><th>Rating</th><th>FFO/Debt</th><th>Debt/EBITDA</th><th>FOCF/Debt</th></tr></thead>
+      <tbody>
+        <tr class="c-min"><td>Minimal</td>          <td>AAA / AA</td>     <td>&gt;60%</td>   <td>&lt;1.5x</td> <td>&gt;50%</td></tr>
+        <tr class="c-mod"><td>Modest</td>           <td>A / A-</td>       <td>45&ndash;60%</td><td>1.5&ndash;2.0x</td><td>35&ndash;50%</td></tr>
+        <tr class="c-int"><td>Intermediate</td>     <td>BBB+ / BBB</td>   <td>30&ndash;45%</td><td>2.0&ndash;3.0x</td><td>20&ndash;35%</td></tr>
+        <tr class="c-sig"><td>Significant</td>      <td>BBB- / BB+</td>   <td>20&ndash;30%</td><td>3.0&ndash;4.0x</td><td>12&ndash;20%</td></tr>
+        <tr class="c-agg"><td>Aggressive</td>       <td>BB / BB-</td>     <td>12&ndash;20%</td><td>4.0&ndash;5.0x</td><td>5&ndash;12%</td></tr>
+        <tr class="c-hl" ><td>Highly leveraged</td> <td>B+ / below</td>   <td>&lt;12%</td>   <td>&gt;5.0x</td>     <td>&lt;5%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <b>Note.</b> Cell <i>top</i> figure = pro-forma Adj. Net Debt = Base Net Debt + Litigation outflow + Net transaction value. Cell <i>bottom</i> figure = the resulting ratio. EBITDA, FFO and FOCF are held at the keyed-in base position. Negative net debt (net cash) is shown mechanically; ratios in that quadrant are informational only. Cells are colour-banded against the S&amp;P scorecard (standard volatility table). &nbsp;<b>Use.</b> Internal indicative model. Not S&amp;P guidance.
+</footer>
 
 </div>
 
 <script>
-/* ============================================================
-   S&P FRP thresholds (Standard volatility) and rating mapping
-   ============================================================ */
-const FRP = [
-  {name:"Minimal",         ffoMin:60, ffoMax:Infinity, deMin:0,   deMax:1.5},
-  {name:"Modest",          ffoMin:45, ffoMax:60,       deMin:1.5, deMax:2  },
-  {name:"Intermediate",    ffoMin:30, ffoMax:45,       deMin:2,   deMax:3  },
-  {name:"Significant",     ffoMin:20, ffoMax:30,       deMin:3,   deMax:4  },
-  {name:"Aggressive",      ffoMin:12, ffoMax:20,       deMin:4,   deMax:5  },
-  {name:"Highly Leveraged",ffoMin:0,  ffoMax:12,       deMin:5,   deMax:Infinity}
-];
-const FRP_TO_RATING = { Minimal:"A", Modest:"A-", Intermediate:"BBB", Significant:"BBB-", Aggressive:"BB", "Highly Leveraged":"B+" };
-const RATING_NUM = ["AAA","AA+","AA","AA-","A+","A","A-","BBB+","BBB","BBB-","BB+","BB","BB-","B+","B","B-","CCC"];
-const SCENARIOS = [
-  { id:"cash",     name:"Cash-First",      desc:"Burn surplus cash, then RCF 1 → RCF 2 → SCF → new debt.",     order:["cash","r1","r2","scf","nd"] },
-  { id:"bond",     name:"Bond Issuance",   desc:"Long-dated debt fully covers needs; cash &amp; RCF preserved.", order:["nd"] },
-  { id:"balanced", name:"Balanced Mix",    desc:"≈40% cash · 30% RCF (1+2) · 30% new term debt.",              order:"balanced" },
-  { id:"max",      name:"Maximum Liquidity",desc:"Tap RCF 1, RCF 2, SCF in full + new debt for the rest.",     order:["r1","r2","scf","nd"] },
-  { id:"asset",    name:"Asset-Sale Funded",desc:"Use divestment proceeds first, then cash → RCF → debt.",     order:["proceeds","cash","r1","r2","scf","nd"] },
-  { id:"custom",   name:"Custom",          desc:"Identical to Cash-First — overwrite live in the table below.", order:["cash","r1","r2","scf","nd"] }
-];
+/* ===== Colour bands (S&P scorecard) ===== */
+function bandDE(x){ // Net Debt / EBITDA — lower better
+  if(!isFinite(x)) return "c-int";
+  if(x < 1.5) return "c-min";
+  if(x < 2.0) return "c-mod";
+  if(x < 3.0) return "c-int";
+  if(x < 4.0) return "c-sig";
+  if(x < 5.0) return "c-agg";
+  return "c-hl";
+}
+function bandFFO(x){ // %, higher better
+  if(!isFinite(x)) return "c-int";
+  if(x >= 60) return "c-min";
+  if(x >= 45) return "c-mod";
+  if(x >= 30) return "c-int";
+  if(x >= 20) return "c-sig";
+  if(x >= 12) return "c-agg";
+  return "c-hl";
+}
+function bandFOCF(x){ // %, higher better
+  if(!isFinite(x)) return "c-int";
+  if(x >= 50) return "c-min";
+  if(x >= 35) return "c-mod";
+  if(x >= 20) return "c-int";
+  if(x >= 12) return "c-sig";
+  if(x >= 5)  return "c-agg";
+  return "c-hl";
+}
 
-/* ============================================================
-   State
-   ============================================================ */
-const state = {
-  scenario:"balanced",
-  yearView:1,
-  dealKind:"acquire" // acquire | divest | none
-};
-
-/* ============================================================
-   Helpers
-   ============================================================ */
+/* ===== Helpers ===== */
 const $ = id => document.getElementById(id);
 const num = id => parseFloat($(id).value) || 0;
-const fmt = (v,dp=0)=> isFinite(v)? Number(v).toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp}) : "–";
-const ccy = ()=> $("ccy").value;
-const yearInput = (k,y)=> parseFloat(document.querySelector(`[data-k="${k}"][data-y="${y}"]`).value) || 0;
+const fmt = (v,dp=0)=> isFinite(v) ? Number(v).toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp}) : "–";
+const ax = (a)=> [0,1,2,3,4].map(i => parseFloat(document.querySelector(`[data-ax="${a}"][data-i="${i}"]`).value) || 0);
 
-function frpBand(ffoPct, de){
-  const i1 = FRP.findIndex(r=>ffoPct>=r.ffoMin && ffoPct<r.ffoMax);
-  const i2 = FRP.findIndex(r=>de>=r.deMin && de<r.deMax);
-  return FRP[Math.max(0, Math.max(i1,i2))];
-}
-function ratingFromMetrics(ffoPct, de){
-  const b = frpBand(ffoPct, de);
-  return { band:b.name, rating: FRP_TO_RATING[b.name] };
-}
-function ratingIndex(r){
-  // Treat tiers without "+/-" as middle: we mapped only main tiers; map e.g. "A-" → 6.
-  const i = RATING_NUM.indexOf(r);
-  return i<0 ? RATING_NUM.indexOf(r.replace("+","").replace("-","")) : i;
-}
-function notchDelta(baseR, pfR){
-  return ratingIndex(baseR) - ratingIndex(pfR); // positive = upgrade, negative = downgrade
-}
-function ratingPillClass(b){
-  const idx = FRP.findIndex(r=>r.name===b);
-  if(idx<=1) return "good";
-  if(idx<=3) return "warn";
-  return "bad";
-}
-
-/* ============================================================
-   Funding waterfall: allocate cash need across levers
-   ============================================================ */
-function capacities(){
-  return {
-    cash:        Math.max(0, yearInput("cash",0) - num("cashFloor")), // surplus cash above floor at Y0
-    r1:          Math.max(0, num("r1Lim") - num("r1Dr")),
-    r2:          Math.max(0, num("r2Lim") - num("r2Dr")),
-    scf:         num("scfLim"),
-    nd:          num("ndMax"),
-    proceeds:    state.dealKind==="divest" ? num("maPrice") : 0
-  };
-}
-
-function allocate(need, scenario){
-  const cap = capacities();
-  let remaining = Math.max(0, need);
-  const draws = {cash:0, r1:0, r2:0, scf:0, nd:0, proceeds:0};
-
-  if(scenario.order === "balanced"){
-    // 40% cash, 30% RCF, 30% new debt — capped at capacities; spillover to next bucket
-    const want = {cash:0.40*need, rcf:0.30*need, nd:0.30*need};
-    draws.cash = Math.min(cap.cash, want.cash);
-    let rcfLeft = want.rcf;
-    draws.r1 = Math.min(cap.r1, rcfLeft); rcfLeft -= draws.r1;
-    draws.r2 = Math.min(cap.r2, rcfLeft); rcfLeft -= draws.r2;
-    draws.nd = Math.min(cap.nd, want.nd);
-    let unmet = need - (draws.cash+draws.r1+draws.r2+draws.nd);
-    // Spillover order: cash → RCF1 → RCF2 → SCF → ND
-    const spill = ["cash","r1","r2","scf","nd"];
-    for(const k of spill){
-      if(unmet<=0.0001) break;
-      const room = cap[k] - draws[k];
-      const t = Math.min(room, unmet);
-      draws[k]+=t; unmet -= t;
-    }
-    return draws;
+/* ===== Facilities ===== */
+const FAC_DEFAULTS = [
+  {name:"RCF 1", limit:1000, util:0},
+  {name:"RCF 2", limit:500,  util:0},
+  {name:"Supply Chain Financing", limit:400, util:0},
+  {name:"Term loan / bond capacity", limit:0, util:0}
+];
+function renderFacilities(){
+  const tb = $("facBody");
+  if(!tb.dataset.init){
+    tb.innerHTML = FAC_DEFAULTS.map((f,i)=>`
+      <tr>
+        <td><input type="text" value="${f.name}" data-fac="name" data-fi="${i}" style="width:160px;text-align:left"/></td>
+        <td><input type="number" value="${f.limit}" data-fac="limit" data-fi="${i}"/></td>
+        <td><input type="number" value="${f.util}"  data-fac="util"  data-fi="${i}"/></td>
+        <td data-av="${i}">0</td>
+      </tr>
+    `).join("");
+    tb.dataset.init = "1";
+    tb.querySelectorAll("input").forEach(el=>el.addEventListener("input",()=>{ updateFacTotals(); render(); }));
   }
-  for(const lever of scenario.order){
-    if(remaining<=0.0001) break;
-    const room = cap[lever] - (draws[lever]||0);
-    const t = Math.min(room, remaining);
-    draws[lever] = (draws[lever]||0) + t;
-    remaining -= t;
-  }
-  return draws;
+  updateFacTotals();
+}
+function updateFacTotals(){
+  let lim=0, ut=0, av=0;
+  document.querySelectorAll("#facBody tr").forEach((tr,i)=>{
+    const l = parseFloat(tr.querySelector('[data-fac="limit"]').value)||0;
+    const u = parseFloat(tr.querySelector('[data-fac="util"]').value)||0;
+    const a = Math.max(0, l-u);
+    tr.querySelector(`[data-av="${i}"]`).textContent = fmt(a);
+    lim+=l; ut+=u; av+=a;
+  });
+  $("facLim").textContent = fmt(lim);
+  $("facUt").textContent  = fmt(ut);
+  $("facAv").textContent  = fmt(av);
 }
 
-/* ============================================================
-   Scenario engine: build pro-forma path for Y0..Y3
-   ============================================================ */
-function buildPath(){
-  const sc = SCENARIOS.find(s=>s.id===state.scenario);
-  const litYr = parseInt($("litYr").value);
-  const maYr  = parseInt($("maYr").value);
-  const litAmt = num("litAmt") * (1 - num("litTax")/100);
-  const dealK = state.dealKind;
+/* ===== Matrix render ===== */
+function buildMatrix(elId, fmtCell, bandFn){
+  const root = document.querySelector(`#${elId} .tbl`);
+  const lit = ax("lit"), ma = ax("ma");
+  const baseND = num("netDebt");
+  const ccy = $("ccy").value;
 
-  const years = [0,1,2,3];
-
-  // Standalone metrics
-  const standalone = years.map(y=>{
-    const ebitda = yearInput("ebitda",y);
-    const cint   = yearInput("cint",y);
-    const ctax   = yearInput("ctax",y);
-    const nd     = yearInput("netDebt",y);
-    const cash   = yearInput("cash",y);
-    const ffo    = ebitda - cint - ctax;
-    const grossDebt = nd + cash; // approximate
-    const ffoDebt = grossDebt>0 ? (ffo/grossDebt)*100 : 0;
-    const de      = ebitda>0 ? nd/ebitda : 0;
-    const r       = ratingFromMetrics(ffoDebt, de);
-    return {y,ebitda,cint,ctax,nd,cash,ffo,grossDebt,ffoDebt,de,rating:r.rating,band:r.band};
+  let html = `<table>
+    <thead>
+      <tr>
+        <td colspan="2" class="axis-x" style="text-align:left">Litigation ↓</td>
+        <td colspan="${ma.length}" class="axis-x" style="text-align:left">Net Transaction value → (Acquisitions and / or Disposals)</td>
+      </tr>
+      <tr>
+        <td class="corner"></td><td class="corner"></td>
+        ${ma.map(v=>`<td class="colhead-top">${fmt(v)}</td>`).join("")}
+      </tr>
+    </thead><tbody>`;
+  lit.forEach((lv, ri)=>{
+    html += `<tr><td class="rowhead" rowspan="1">${fmt(lv)}</td><td class="rowhead" style="background:#fff;color:var(--muted);font-weight:400;font-size:10.5px">Net&nbsp;Debt<br/><span style="font-style:italic">ratio</span></td>`;
+    ma.forEach((mv,ci)=>{
+      const nd = baseND + lv + mv;
+      const cell = fmtCell(nd);
+      html += `<td class="cell ${bandFn(cell.raw)}">
+                 <div class="top">${fmt(nd)}</div>
+                 <div class="bot">${cell.disp}</div>
+               </td>`;
+    });
+    html += `</tr>`;
   });
-
-  // Action year cash need
-  const litCashByY = years.map(y => y===litYr ? litAmt : 0);
-  const maCashByY  = years.map(y => {
-    if(y!==maYr) return 0;
-    if(dealK==="acquire") return  num("maPrice");
-    if(dealK==="divest")  return -num("maPrice"); // negative = inflow
-    return 0;
-  });
-  const dEbitdaByY = years.map(y=>{
-    if(y < maYr) return 0;
-    if(dealK==="acquire") return  num("maEb");
-    if(dealK==="divest")  return -num("maEb");
-    return 0;
-  });
-
-  // Allocate per year
-  const alloc = years.map(y => {
-    const need = (litCashByY[y] + Math.max(0, maCashByY[y])); // proceeds handled separately if divest
-    const cap = capacities();
-    if(need<=0) return {cash:0,r1:0,r2:0,scf:0,nd:0,proceeds:0,need:0};
-
-    // Special: divestment proceeds offset only via "asset" scenario. For other scenarios, divest offsets gross cash need directly (still applied via cash inflow).
-    const wf = allocate(need, sc);
-    if(dealK==="divest" && sc.id==="asset"){
-      // proceeds already in need? No — proceeds are inflow, deduct from need first
-      // Recompute: net need = need - proceeds (first slice)
-      const proceedsApplied = Math.min(num("maPrice"), need);
-      const newNeed = Math.max(0, need - proceedsApplied);
-      const draws = allocate(newNeed, sc);
-      draws.proceeds = proceedsApplied;
-      return Object.assign({need}, draws);
-    }
-    return Object.assign({need}, wf);
-  });
-
-  // Build pro-forma
-  const proforma = years.map((y,i)=>{
-    const sa = standalone[i];
-    // Cumulative effects up to year y
-    let netDebt = sa.nd;
-    let cash    = sa.cash;
-    let extraInt = 0;
-    let dEbCum = 0;
-    for(let k=0;k<=i;k++){
-      const a = alloc[k];
-      // New term debt and RCF/SCF draws all add to net debt
-      netDebt += (a.nd||0) + (a.r1||0) + (a.r2||0) + (a.scf||0);
-      // Cash drawn from balance reduces cash
-      cash -= (a.cash||0);
-      // Litigation cash outflow (already funded via above; net effect on cash is the difference between draws and outflow)
-      // For simplicity: outflow happens, sources cover it; net cash change captured via cash draw above. We don't reduce cash for the outflow itself when funded externally.
-      // Divestment proceeds (acquire price already covered via funding)
-      if(dEbitdaByY[k] && k===maYr){
-        // For acquisition, deal price funded via levers → no net cash change beyond cash draw
-        // For divestment + non-asset scenarios, proceeds reduce gross debt directly
-        if(dealK==="divest" && state.scenario!=="asset"){
-          netDebt -= num("maPrice");
-        }
-      }
-      // Incremental annual interest from action year forward
-      const a_int = (a.nd||0)*(num("ndPx")/10000) + (a.r1||0)*(num("r1Px")/10000) + (a.r2||0)*(num("r2Px")/10000) + (a.scf||0)*(num("r1Px")/10000);
-      if(k<=i) extraInt += a_int * (i-k+1>=1?1:0); // applies in every year ≥ action
-      dEbCum += dEbitdaByY[k];
-    }
-    const ebitda = sa.ebitda + dEbCum;
-    const cint   = sa.cint + extraInt;
-    const ctax   = sa.ctax;
-    const ffo    = ebitda - cint - ctax;
-    const grossDebt = netDebt + cash;
-    const ffoDebt = grossDebt>0 ? (ffo/grossDebt)*100 : 0;
-    const de      = ebitda>0 ? netDebt/ebitda : 0;
-    const r       = ratingFromMetrics(ffoDebt, de);
-    return {y,ebitda,cint,ctax,ffo,netDebt,cash,grossDebt,ffoDebt,de,rating:r.rating,band:r.band};
-  });
-
-  return {standalone, proforma, alloc, litCashByY, maCashByY};
+  html += `</tbody></table>`;
+  root.innerHTML = html;
 }
 
-/* ============================================================
-   Renderers
-   ============================================================ */
-function renderScenarios(){
-  const wrap = $("scs");
-  wrap.innerHTML = SCENARIOS.map(s=>`
-    <label class="sc ${state.scenario===s.id?"active":""}" data-id="${s.id}">
-      <input type="radio" name="sc" ${state.scenario===s.id?"checked":""}/>
-      <div class="sc-title">${s.name}</div>
-      <div class="sc-desc">${s.desc}</div>
-    </label>
-  `).join("");
-  wrap.querySelectorAll(".sc").forEach(el=>el.addEventListener("click",()=>{
-    state.scenario = el.dataset.id; render();
-  }));
-}
-
-function renderHeaderKPIs(p){
-  const sa = p.standalone[1], pf = p.proforma[1]; // year of typical action = Y1
-  $("kpiBase").textContent = sa.rating;
-  $("kpiBaseSub").textContent = `Standalone @ Y1 · ${sa.band}`;
-  $("kpiPF").textContent = pf.rating;
-  $("kpiPFSub").innerHTML = `Post-action @ Y1 · ${pf.band}`;
-  const dN = notchDelta(sa.rating, pf.rating);
-  $("kpiNotch").textContent = (dN>0?"+":"") + dN + " notch" + (Math.abs(dN)===1?"":"es");
-  const ds = $("kpiNotchSub");
-  ds.textContent = dN>0?"upgrade vs. standalone":(dN<0?"downgrade vs. standalone":"unchanged");
-  $("kpiNotch").style.color = dN<0 ? "var(--bad)" : (dN>0 ? "var(--good)" : "var(--ink)");
-
-  // Liquidity = pro-forma cash + undrawn RCF/SCF after action year
-  const cap = capacities();
-  const used = p.alloc.reduce((acc,a)=>{acc.r1+=a.r1||0;acc.r2+=a.r2||0;acc.scf+=a.scf||0;return acc;},{r1:0,r2:0,scf:0});
-  const liq = pf.cash + Math.max(0,cap.r1-used.r1) + Math.max(0,cap.r2-used.r2) + Math.max(0,cap.scf-used.scf);
-  $("kpiLiq").textContent = fmt(liq,0)+ " " + ccy();
-  $("kpiLiqSub").textContent = "Cash + undrawn committed + SCF";
-
-  const cov = num("cov");
-  const cushion = cov - pf.de;
-  $("kpiCov").textContent = fmt(cushion,2)+"x";
-  $("kpiCov").style.color = cushion<0.5 ? (cushion<0?"var(--bad)":"var(--warn)") : "var(--good)";
-  $("kpiCovSub").textContent = `Limit ${fmt(cov,2)}x · pro-forma ${fmt(pf.de,2)}x`;
-}
-
-function renderWaterfall(p){
-  const y = state.yearView;
-  const a = p.alloc[y];
-  const sceLbl = SCENARIOS.find(s=>s.id===state.scenario).name;
-  $("sceName").textContent = sceLbl;
-
-  const usesCol = $("usesCol"); const srcCol = $("srcCol");
-  // Uses
-  const litAmt = num("litAmt")*(1-num("litTax")/100);
-  const maP = num("maPrice");
-  const dealK = state.dealKind;
-  const useItems = [];
-  if(parseInt($("litYr").value)===y) useItems.push({n:"Litigation settlement",v:litAmt,c:"use"});
-  if(parseInt($("maYr").value)===y && dealK==="acquire") useItems.push({n:"Acquisition price",v:maP,c:"use"});
-  if(parseInt($("maYr").value)===y && dealK==="divest")  useItems.push({n:"(Divestment — proceeds)",v:-maP,c:"src"});
-  const useTot = useItems.filter(u=>u.v>0).reduce((s,u)=>s+u.v,0);
-  // Sources
-  const srcItems = [];
-  if(a.cash) srcItems.push({n:"Existing cash (above floor)", v:a.cash, c:"src"});
-  if(a.proceeds) srcItems.push({n:"Divestment proceeds applied", v:a.proceeds, c:"src"});
-  if(a.r1)   srcItems.push({n:"RCF 1 draw", v:a.r1, c:"facil"});
-  if(a.r2)   srcItems.push({n:"RCF 2 draw", v:a.r2, c:"facil"});
-  if(a.scf)  srcItems.push({n:"Supply Chain Financing", v:a.scf, c:"facil"});
-  if(a.nd)   srcItems.push({n:"New term debt", v:a.nd, c:"src"});
-  const srcTot = srcItems.reduce((s,u)=>s+u.v,0);
-  const totRef = Math.max(useTot, srcTot, 1);
-
-  const draw = (items, totRef)=> items.map(u=>{
-    const w = Math.max(2, Math.min(100, (Math.abs(u.v)/totRef)*100));
-    return `<div class="wf-bar ${u.c}">
-      <div class="bar-lbl"><span class="name">${u.n}</span><span class="v">${fmt(Math.abs(u.v),0)} ${ccy()}</span></div>
-      <div class="bar"><i style="width:${w}%"></i></div>
-    </div>`;
-  }).join("");
-
-  usesCol.innerHTML = `<h4>Uses <span class="tot">${fmt(useTot,0)} ${ccy()}</span></h4>` + (useItems.filter(i=>i.v>0).length?draw(useItems.filter(i=>i.v>0),totRef):'<div style="font-size:11px;color:var(--muted);font-style:italic">No outflows in this year</div>');
-  srcCol.innerHTML = `<h4>Sources <span class="tot">${fmt(srcTot,0)} ${ccy()}</span></h4>` + (srcItems.length?draw(srcItems,totRef):'<div style="font-size:11px;color:var(--muted);font-style:italic">No funding tapped this year</div>');
-  $("useTot").textContent = fmt(useTot,0); $("srcTot").textContent = fmt(srcTot,0);
-  $("balVal").textContent = fmt(srcTot - useTot,0);
-}
-
-function renderLadder(p){
-  const wrap = $("ladder");
-  wrap.innerHTML = p.proforma.map((pf,i)=>{
-    const sa = p.standalone[i];
-    const dN = notchDelta(sa.rating, pf.rating);
-    const cls = dN<0 ? "dn" : (dN>0 ? "up" : "flat");
-    return `<div class="year-card ${cls}">
-      <div class="yc-hd">Year ${i}</div>
-      <div class="yc-r">${pf.rating}</div>
-      <div class="yc-band"><span class="pill ${ratingPillClass(pf.band)}">${pf.band}</span> · vs. standalone ${sa.rating}</div>
-      <div class="yc-mt"><span>FFO/Debt</span><b>${fmt(pf.ffoDebt,1)}%</b></div>
-      <div class="yc-mt"><span>Net Debt/EBITDA</span><b>${fmt(pf.de,2)}x</b></div>
-      <div class="yc-mt"><span>Net Debt</span><b>${fmt(pf.netDebt,0)}</b></div>
-      <div class="yc-mt" style="margin-top:6px"><span>Notch Δ</span><b style="color:${dN<0?'var(--bad)':dN>0?'var(--good)':'var(--ink)'}">${dN>0?"+":""}${dN}</b></div>
-    </div>`;
-  }).join("");
-}
-
-let charts = {};
-function destroy(c){ if(c) c.destroy(); }
-function renderCharts(p){
-  const labels = ["Y0","Y1","Y2","Y3"];
-  const ink="#1a1a1a", gold="#E6491E", muted="#6e6e6e", grid="#e8e8e8";
-  const baseOpts = {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{legend:{labels:{color:muted,font:{size:11}}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}`}}},
-    scales:{x:{grid:{color:grid},ticks:{color:muted}}, y:{grid:{color:grid},ticks:{color:muted}}}
-  };
-  destroy(charts.de);
-  charts.de = new Chart($("chDE"),{type:"line",data:{labels,datasets:[
-    {label:"Standalone", data:p.standalone.map(x=>x.de), borderColor:muted, borderDash:[4,4], tension:.25, pointRadius:3},
-    {label:"Pro-forma",  data:p.proforma.map(x=>x.de),  borderColor:ink,   tension:.25, pointRadius:3, borderWidth:2}
-  ]}, options: baseOpts });
-
-  destroy(charts.ffo);
-  charts.ffo = new Chart($("chFFO"),{type:"line",data:{labels,datasets:[
-    {label:"Standalone", data:p.standalone.map(x=>x.ffoDebt), borderColor:muted, borderDash:[4,4], tension:.25, pointRadius:3},
-    {label:"Pro-forma",  data:p.proforma.map(x=>x.ffoDebt),  borderColor:gold,  tension:.25, pointRadius:3, borderWidth:2}
-  ]}, options: baseOpts });
-
-  // Liquidity stack per year (pro-forma)
-  const cap = capacities();
-  const cumUsed = {r1:0,r2:0,scf:0};
-  const stackData = p.proforma.map((pf,i)=>{
-    cumUsed.r1 += p.alloc[i].r1||0; cumUsed.r2 += p.alloc[i].r2||0; cumUsed.scf += p.alloc[i].scf||0;
-    return {
-      cash: pf.cash,
-      r1: Math.max(0, cap.r1 - cumUsed.r1),
-      r2: Math.max(0, cap.r2 - cumUsed.r2),
-      scf: Math.max(0, cap.scf - cumUsed.scf)
-    };
-  });
-  destroy(charts.liq);
-  charts.liq = new Chart($("chLiq"),{
-    type:"bar",
-    data:{labels, datasets:[
-      {label:"Cash",  data:stackData.map(d=>d.cash), backgroundColor:"#1a1a1a"},
-      {label:"RCF 1", data:stackData.map(d=>d.r1),   backgroundColor:"#E6491E"},
-      {label:"RCF 2", data:stackData.map(d=>d.r2),   backgroundColor:"#F5A57E"},
-      {label:"SCF",   data:stackData.map(d=>d.scf),  backgroundColor:"#BDBDBD"}
-    ]},
-    options:{...baseOpts, scales:{x:{stacked:true,grid:{color:grid},ticks:{color:muted}}, y:{stacked:true,grid:{color:grid},ticks:{color:muted}}}}
-  });
-
-  // Mix donut for action year (y=state.yearView)
-  const a = p.alloc[state.yearView];
-  destroy(charts.mix);
-  charts.mix = new Chart($("chMix"),{
-    type:"doughnut",
-    data:{labels:["Cash","RCF 1","RCF 2","SCF","New debt","Divest. proceeds"], datasets:[{
-      data:[a.cash,a.r1,a.r2,a.scf,a.nd,a.proceeds||0],
-      backgroundColor:["#1a1a1a","#E6491E","#F5A57E","#BDBDBD","#C62828","#2E7D32"],
-      borderColor:"#fff", borderWidth:2
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"60%",
-      plugins:{legend:{position:"right",labels:{color:muted,boxWidth:10,font:{size:11}}}}
-    }
-  });
-}
-
-function renderTable(p){
-  const tb = document.querySelector("#metricTable tbody"); tb.innerHTML="";
-  const row = (label, fn, dp=0, suff="")=>{
-    const cells = p.proforma.map((x,i)=>`<td>${fmt(fn(x,p.standalone[i]),dp)}${suff}</td>`).join("");
-    tb.insertAdjacentHTML("beforeend", `<tr><td class="label">${label}</td>${cells}</tr>`);
-  };
-  row("EBITDA",            x=>x.ebitda);
-  row("FFO",               x=>x.ffo);
-  row("Net Debt",          x=>x.netDebt);
-  row("Cash",              x=>x.cash);
-  row("FFO / Debt",        x=>x.ffoDebt, 1, "%");
-  row("Net Debt / EBITDA", x=>x.de, 2, "x");
-  // Rating row with pills
-  const rcells = p.proforma.map((x,i)=>{
-    const sa = p.standalone[i]; const dN = notchDelta(sa.rating,x.rating);
-    const cls = dN<0?"bad":dN>0?"good":"gold";
-    return `<td><span class="pill ${cls}">${x.rating}</span></td>`;
-  }).join("");
-  tb.insertAdjacentHTML("beforeend", `<tr class="tot"><td class="label">Pro-forma rating</td>${rcells}</tr>`);
-}
-
-/* ============================================================
-   Render orchestrator
-   ============================================================ */
 function render(){
-  const p = buildPath();
-  renderScenarios();
-  renderHeaderKPIs(p);
-  renderWaterfall(p);
-  renderLadder(p);
-  renderCharts(p);
-  renderTable(p);
+  const eb = num("ebitda"), ffoV = num("ffo"), focfV = num("focf");
+
+  buildMatrix("mtxDE", nd=>{
+    const r = eb>0 ? nd/eb : NaN;
+    return {raw:r, disp: fmt(r,1)+"x"};
+  }, bandDE);
+
+  buildMatrix("mtxFOCF", nd=>{
+    const r = nd!==0 ? (focfV/nd)*100 : NaN;
+    return {raw:r, disp: fmt(r,1)+"%"};
+  }, bandFOCF);
+
+  buildMatrix("mtxFFO", nd=>{
+    const r = nd!==0 ? (ffoV/nd)*100 : NaN;
+    return {raw:r, disp: fmt(r,1)+"%"};
+  }, bandFFO);
 }
 
-/* ============================================================
-   Wiring
-   ============================================================ */
+/* ===== Wiring ===== */
+function exportJSON(){
+  const data = {fields:{}, axes:{lit:ax("lit"), ma:ax("ma")}, fac:[]};
+  ["month","year","netDebt","ebitda","ffo","focf","ccy"].forEach(k=>data.fields[k]=$(k).value);
+  document.querySelectorAll("#facBody tr").forEach(tr=>{
+    data.fac.push({
+      name: tr.querySelector('[data-fac="name"]').value,
+      limit: tr.querySelector('[data-fac="limit"]').value,
+      util:  tr.querySelector('[data-fac="util"]').value
+    });
+  });
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="liquidity-playbook.json"; a.click();
+}
+function importJSON(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = e=>{
+    try{
+      const o = JSON.parse(e.target.result);
+      Object.entries(o.fields||{}).forEach(([k,v])=>{ if($(k)) $(k).value = v; });
+      ["lit","ma"].forEach(a => (o.axes?.[a]||[]).forEach((v,i)=>{
+        const el = document.querySelector(`[data-ax="${a}"][data-i="${i}"]`); if(el) el.value = v;
+      }));
+      (o.fac||[]).forEach((row,i)=>{
+        const tr = document.querySelectorAll("#facBody tr")[i]; if(!tr) return;
+        tr.querySelector('[data-fac="name"]').value = row.name;
+        tr.querySelector('[data-fac="limit"]').value = row.limit;
+        tr.querySelector('[data-fac="util"]').value = row.util;
+      });
+      updateFacTotals(); render();
+    }catch{ alert("Invalid file"); }
+  };
+  r.readAsText(f);
+}
+
 document.querySelectorAll("input,select").forEach(el=>{
   if(el.type==="file") return;
   el.addEventListener("input", render);
   el.addEventListener("change", render);
 });
-document.querySelectorAll("#yrPick button").forEach(b=>{
-  b.addEventListener("click",()=>{
-    document.querySelectorAll("#yrPick button").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on");
-    state.yearView = parseInt(b.dataset.y);
-    render();
-  });
-});
-document.querySelectorAll("#dealKind button").forEach(b=>{
-  b.addEventListener("click",()=>{
-    document.querySelectorAll("#dealKind button").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on");
-    state.dealKind = b.dataset.v;
-    render();
-  });
-});
-
-function exportJSON(){
-  const data = {scenario:state.scenario,yearView:state.yearView,dealKind:state.dealKind,fields:{}};
-  document.querySelectorAll("input,select").forEach(el=>{
-    if(el.id) data.fields[el.id] = el.value;
-    if(el.dataset.k) data.fields[el.dataset.k+"_"+el.dataset.y] = el.value;
-  });
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="liquidity-playbook.json"; a.click();
-}
-function importJSON(ev){
-  const f=ev.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=e=>{ try{
-    const o=JSON.parse(e.target.result);
-    if(o.scenario) state.scenario=o.scenario;
-    if(o.dealKind){ state.dealKind=o.dealKind;
-      document.querySelectorAll("#dealKind button").forEach(b=>b.classList.toggle("on", b.dataset.v===o.dealKind));}
-    Object.entries(o.fields||{}).forEach(([k,v])=>{
-      const el = document.getElementById(k);
-      if(el){ el.value = v; return; }
-      const m = k.match(/^(.+)_(\d)$/);
-      if(m){ const e2=document.querySelector(`[data-k="${m[1]}"][data-y="${m[2]}"]`); if(e2) e2.value=v; }
-    });
-    render();
-  }catch{ alert("Invalid file"); } };
-  r.readAsText(f);
-}
-
 $("docDate").textContent = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+renderFacilities();
 render();
 </script>
 </body>
