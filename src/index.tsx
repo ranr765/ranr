@@ -14,6 +14,9 @@ app.use('/api/*', cors())
 // Serve static files
 app.use('/static/*', serveStatic({ root: './public' }))
 
+// S&P Firepower model
+app.get('/firepower', serveStatic({ path: './public/static/sp-firepower-model.html' }))
+
 // ============================================
 // API Routes
 // ============================================
