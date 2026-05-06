@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>S&P Firepower & Rating Impact Model</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --panel2:#0f1729; --line:#1f2a44;
+    --text:#e6ecff; --muted:#94a3b8; --accent:#3b82f6; --accent2:#22d3ee;
+    --good:#10b981; --warn:#f59e0b; --bad:#ef4444; --soft:#1b2540;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+  header{padding:22px 28px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#0e1730,#0b1220)}
+  header h1{margin:0;font-size:20px;letter-spacing:.3px}
+  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .toolbar{display:flex;gap:8px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer}
+  button.secondary{background:#1f2a44;color:var(--text)}
+  button:hover{filter:brightness(1.1)}
+  .container{display:grid;grid-template-columns:340px 1fr;gap:18px;padding:18px}
+  @media (max-width:1100px){.container{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .panel h2{margin:0 0 12px 0;font-size:14px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+  .row label{flex:1;color:var(--muted);font-size:12px}
+  .row input,.row select{width:140px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+  .row input:focus,.row select:focus{outline:none;border-color:var(--accent)}
+  .group{border-top:1px dashed var(--line);margin:14px 0 10px;padding-top:10px}
+  .group:first-child{border-top:0;margin-top:0;padding-top:0}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .kpi .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+  .kpi .val{font-size:22px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.4px}
+  .pill.good{background:rgba(16,185,129,.15);color:var(--good)}
+  .pill.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+  .pill.bad{background:rgba(239,68,68,.15);color:var(--bad)}
+  .pill.info{background:rgba(59,130,246,.15);color:var(--accent)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+  .chartbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;height:300px;position:relative}
+  .chartbox h3{margin:0 0 8px 0;font-size:13px;color:var(--muted);font-weight:500}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:1100px){.two{grid-template-columns:1fr}}
+  .ladder{display:grid;grid-template-columns:1fr;gap:6px}
+  .rung{display:grid;grid-template-columns:120px 1fr 90px;gap:10px;align-items:center;padding:6px 10px;border-radius:6px}
+  .rung .name{font-weight:600;font-size:12px}
+  .rung .bar{height:10px;border-radius:5px;background:#1b2540;position:relative;overflow:hidden}
+  .rung .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .rung.current{background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.4)}
+  .rung .num{text-align:right;font-size:12px;color:var(--muted)}
+  .legend{display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .note{color:var(--muted);font-size:11px;margin-top:6px}
+  .footnote{padding:14px 28px;color:var(--muted);font-size:11px;border-top:1px solid var(--line)}
+  .scenario-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .scenario-tabs .tab{padding:6px 12px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;font-size:12px;color:var(--muted)}
+  .scenario-tabs .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .firepower-card{background:linear-gradient(135deg,#0e2244,#0b1220);border:1px solid #234a8a;border-radius:10px;padding:18px}
+  .firepower-card .big{font-size:34px;font-weight:700;letter-spacing:-.5px}
+  .firepower-card .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+  @media print{
+    body{background:#fff;color:#000}
+    header,.panel,.kpi,.chartbox,.firepower-card{background:#fff!important;color:#000!important;border-color:#ddd!important}
+    .toolbar{display:none}
+    .container{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>S&amp;P Firepower &amp; Rating Impact Model</h1>
+    <div class="sub">Debt capacity headroom &amp; financial-risk profile sensitivity. Standard volatility table.</div>
+  </div>
+  <div class="toolbar">
+    <button class="secondary" onclick="window.print()">Print / PDF</button>
+    <button class="secondary" onclick="exportJSON()">Export Inputs</button>
+    <button onclick="document.getElementById('imp').click()">Import Inputs</button>
+    <input id="imp" type="file" accept="application/json" hidden onchange="importJSON(event)" />
+  </div>
+</header>
+
+<div class="container">
+  <!-- INPUTS -->
+  <div class="panel">
+    <h2>Inputs (in $m unless noted)</h2>
+
+    <div class="group">
+      <div class="row"><label>Currency / units</label>
+        <select id="ccy">
+          <option value="$m">USD millions</option>
+          <option value="€m">EUR millions</option>
+          <option value="£m">GBP millions</option>
+          <option value="$bn">USD billions</option>
+          <option value="local">Local m</option>
+        </select>
+      </div>
+      <div class="row"><label>Industry volatility</label>
+        <select id="vol">
+          <option value="standard" selected>Standard</option>
+          <option value="medial">Medial</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="row"><label>Target rating</label>
+        <select id="target">
+          <option>AAA</option><option>AA</option><option>A</option>
+          <option selected>BBB</option><option>BB</option><option>B</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Income statement</h2>
+      <div class="row"><label>Revenue</label><input id="rev" type="number" value="5000"/></div>
+      <div class="row"><label>EBITDA</label><input id="ebitda" type="number" value="1000"/></div>
+      <div class="row"><label>D&amp;A</label><input id="da" type="number" value="250"/></div>
+      <div class="row"><label>Cash interest expense</label><input id="cint" type="number" value="120"/></div>
+      <div class="row"><label>Cash taxes</label><input id="ctax" type="number" value="150"/></div>
+    </div>
+
+    <div class="group">
+      <h2>Balance sheet</h2>
+      <div class="row"><label>Total debt (S&amp;P adjusted)</label><input id="debt" type="number" value="3000"/></div>
+      <div class="row"><label>Cash &amp; equivalents</label><input id="cash" type="number" value="500"/></div>
+      <div class="row"><label>Surplus cash haircut %</label><input id="hair" type="number" value="25"/></div>
+      <div class="row"><label>Pension / lease adj.</label><input id="adj" type="number" value="0"/></div>
+      <div class="row"><label>Total equity</label><input id="eq" type="number" value="2500"/></div>
+    </div>
+
+    <div class="group">
+      <h2>Scenario shocks</h2>
+      <div class="row"><label>EBITDA stress (%)</label><input id="sEbitda" type="number" value="-20"/></div>
+      <div class="row"><label>EBITDA upside (%)</label><input id="uEbitda" type="number" value="10"/></div>
+      <div class="row"><label>Acquisition price</label><input id="maPrice" type="number" value="1500"/></div>
+      <div class="row"><label>Acquisition EBITDA</label><input id="maEb" type="number" value="180"/></div>
+      <div class="row"><label>% funded by debt</label><input id="maDebt" type="number" value="100"/></div>
+    </div>
+
+    <p class="note">Use S&amp;P-adjusted figures (debt incl. operating leases, pension deficit, hybrid debt portion; FFO &amp; EBITDA on the same basis).</p>
+  </div>
+
+  <!-- OUTPUTS -->
+  <div>
+    <!-- HEADLINE FIREPOWER -->
+    <div class="grid" style="margin-bottom:14px">
+      <div class="firepower-card">
+        <div class="lbl">Current S&amp;P implied rating</div>
+        <div class="big" id="implied">–</div>
+        <div class="lbl" style="margin-top:6px">Anchor (FRP &amp; BRP combination)</div>
+      </div>
+      <div class="firepower-card">
+        <div class="lbl">Firepower @ target rating</div>
+        <div class="big" id="firepower">–</div>
+        <div class="lbl" style="margin-top:6px">Additional gross debt headroom</div>
+      </div>
+      <div class="firepower-card">
+        <div class="lbl">M&amp;A capacity (EBITDA-funded)</div>
+        <div class="big" id="maCap">–</div>
+        <div class="lbl" style="margin-top:6px">Max acquisition EBITDA at 100% debt fund</div>
+      </div>
+      <div class="firepower-card">
+        <div class="lbl">Distance to downgrade</div>
+        <div class="big" id="downg">–</div>
+        <div class="lbl" style="margin-top:6px">EBITDA cushion before next-notch breach</div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="panel" style="margin-bottom:14px">
+      <h2>Current credit metrics</h2>
+      <div class="grid">
+        <div class="kpi"><div class="lbl">FFO / Debt</div><div class="val" id="kFFO">–</div><div class="sub" id="kFFOcat">–</div></div>
+        <div class="kpi"><div class="lbl">Debt / EBITDA</div><div class="val" id="kDE">–</div><div class="sub" id="kDEcat">–</div></div>
+        <div class="kpi"><div class="lbl">FFO interest cover</div><div class="val" id="kIC">–</div><div class="sub" id="kICcat">–</div></div>
+        <div class="kpi"><div class="lbl">Debt / Capital</div><div class="val" id="kDC">–</div><div class="sub" id="kDCcat">–</div></div>
+      </div>
+    </div>
+
+    <!-- LADDER -->
+    <div class="panel" style="margin-bottom:14px">
+      <h2>S&amp;P financial risk profile ladder — FFO/Debt (standard volatility)</h2>
+      <div class="ladder" id="ladder"></div>
+      <div class="legend">
+        <span><i style="background:linear-gradient(90deg,#3b82f6,#22d3ee)"></i>Threshold band</span>
+        <span><i style="background:rgba(59,130,246,.4)"></i>Current category</span>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="two" style="margin-bottom:14px">
+      <div class="chartbox"><h3>Scenario comparison — FFO / Debt (%)</h3><canvas id="chFFO"></canvas></div>
+      <div class="chartbox"><h3>Scenario comparison — Debt / EBITDA (x)</h3><canvas id="chDE"></canvas></div>
+    </div>
+    <div class="two" style="margin-bottom:14px">
+      <div class="chartbox"><h3>Sensitivity: rating impact vs. additional debt</h3><canvas id="chSens"></canvas></div>
+      <div class="chartbox"><h3>Sensitivity: rating impact vs. EBITDA shock</h3><canvas id="chEb"></canvas></div>
+    </div>
+
+    <!-- SCENARIO TABLE -->
+    <div class="panel">
+      <h2>Scenario summary</h2>
+      <table id="scTable">
+        <thead><tr>
+          <th>Scenario</th><th>EBITDA</th><th>FFO</th><th>Net Debt</th>
+          <th>FFO/Debt</th><th>Debt/EBITDA</th><th>FFO IntCov</th><th>Implied rating</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note">Net Debt uses cash with the haircut you set (default 25%, in line with S&amp;P surplus-cash treatment for IG corporates).</p>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+  <strong>Methodology.</strong> S&amp;P corporate methodology (Nov 2013, updated): Anchor = Business Risk Profile × Financial Risk Profile. The FRP is set off two core ratios — FFO/Debt and Debt/EBITDA — under the Standard volatility table:
+  Minimal (>60% / &lt;1.5x), Modest (45–60% / 1.5–2x), Intermediate (30–45% / 2–3x), Significant (20–30% / 3–4x), Aggressive (12–20% / 4–5x), Highly Leveraged (&lt;12% / >5x). Supplementary ratios (FFO IntCov, Debt/Cap) cross-check.
+  This model assumes BRP = Satisfactory and uses the FRP→rating mapping for that BRP. Adjust BRP in code if your business profile differs. <em>For internal use only — not S&amp;P guidance.</em>
+</div>
+
+<script>
+/* -------------------- S&P thresholds (standard volatility) -------------------- */
+const FRP = [
+  {name:"Minimal",        ffoMin:60, ffoMax:Infinity, deMin:0,   deMax:1.5},
+  {name:"Modest",         ffoMin:45, ffoMax:60,       deMin:1.5, deMax:2  },
+  {name:"Intermediate",   ffoMin:30, ffoMax:45,       deMin:2,   deMax:3  },
+  {name:"Significant",    ffoMin:20, ffoMax:30,       deMin:3,   deMax:4  },
+  {name:"Aggressive",     ffoMin:12, ffoMax:20,       deMin:4,   deMax:5  },
+  {name:"Highly Leveraged",ffoMin:0, ffoMax:12,       deMin:5,   deMax:Infinity}
+];
+
+// FRP → rating for BRP = Satisfactory (typical mid-market IG anchor)
+const FRP_TO_RATING = {
+  "Minimal":"A",
+  "Modest":"A-",
+  "Intermediate":"BBB",
+  "Significant":"BBB-",
+  "Aggressive":"BB",
+  "Highly Leveraged":"B+"
+};
+const RATING_ORDER = ["AAA","AA+","AA","AA-","A+","A","A-","BBB+","BBB","BBB-","BB+","BB","BB-","B+","B","B-","CCC"];
+
+/* -------------------- helpers -------------------- */
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+const fmt = (v, dp=1) => isFinite(v) ? Number(v).toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp}) : "–";
+const ccy = () => $("ccy").value;
+
+function ffo(ebitda, cint, ctax){ return ebitda - cint - ctax; }
+
+function frpFromMetrics(ffoDebtPct, debtEbitda){
+  // S&P uses both ratios, with FFO/Debt typically dominant. Take the worse of the two implied bands.
+  const byFFO = FRP.findIndex(r => ffoDebtPct >= r.ffoMin && ffoDebtPct < r.ffoMax);
+  const byDE  = FRP.findIndex(r => debtEbitda >= r.deMin && debtEbitda < r.deMax);
+  const idx = Math.max(byFFO, byDE);
+  return FRP[Math.max(0,idx)];
+}
+
+function impliedRating(ffoDebtPct, debtEbitda){
+  const band = frpFromMetrics(ffoDebtPct, debtEbitda);
+  return {band:band.name, rating: FRP_TO_RATING[band.name]};
+}
+
+function categoryColor(name){
+  const order = FRP.findIndex(r=>r.name===name);
+  if(order<=1) return "good";
+  if(order<=3) return "warn";
+  return "bad";
+}
+
+/* -------------------- core compute -------------------- */
+function compute(){
+  const ebitda = num("ebitda");
+  const cint   = num("cint");
+  const ctax   = num("ctax");
+  const debt   = num("debt") + num("adj");
+  const cash   = num("cash");
+  const hair   = num("hair")/100;
+  const eq     = num("eq");
+  const netDebt = Math.max(0, debt - cash*(1-hair));
+  const ffoVal = ffo(ebitda,cint,ctax);
+
+  const ffoDebt = debt>0 ? (ffoVal/debt)*100 : 0;
+  const de = ebitda>0 ? netDebt/ebitda : 0;
+  const ic = cint>0 ? (ffoVal+cint)/cint : 0;
+  const dc = (debt+eq)>0 ? (debt/(debt+eq))*100 : 0;
+
+  return {ebitda,cint,ctax,debt,cash,hair,eq,netDebt,ffo:ffoVal,ffoDebt,de,ic,dc};
+}
+
+function targetThresholds(){
+  // Map target rating → required FRP band → (FFO/Debt min, Debt/EBITDA max)
+  const target = $("target").value;
+  // Inverse map approx: rating buckets to FRP for BRP=Satisfactory
+  const map = {
+    "AAA":"Minimal","AA":"Minimal","A":"Minimal",
+    "BBB":"Intermediate","BB":"Significant","B":"Aggressive"
+  };
+  const bandName = map[target] || "Intermediate";
+  const band = FRP.find(b=>b.name===bandName);
+  return {bandName, band};
+}
+
+function firepowerCalc(s){
+  // Additional gross debt while keeping FFO/Debt at the target band's lower bound.
+  const {band} = targetThresholds();
+  const ffoFloor = band.ffoMin/100;
+  // FFO stays roughly constant (we ignore incremental interest at first cut, then adjust).
+  // FFO/(Debt + X) = ffoFloor → X = FFO/ffoFloor - Debt
+  const maxDebtByFFO = ffoFloor>0 ? s.ffo/ffoFloor : Infinity;
+  // Debt/EBITDA cap
+  const maxDebtByDE = band.deMax * s.ebitda;
+  const cap = Math.min(maxDebtByFFO, maxDebtByDE);
+  return Math.max(0, cap - s.debt);
+}
+
+function distanceToDowngrade(s){
+  // EBITDA drop (%) at which current FRP band breaks (FFO/Debt or Debt/EBITDA falls into next worse band)
+  const cur = frpFromMetrics(s.ffoDebt, s.de);
+  const idx = FRP.findIndex(r=>r.name===cur.name);
+  if(idx>=FRP.length-1) return 0;
+  const next = FRP[idx+1];
+  // Worse band has lower ffoMin (=cur.ffoMin) and higher deMin (=cur.deMax)
+  // Find EBITDA shock x where either ratio just breaks
+  // FFO ~ EBITDA - cint - ctax. New EBITDA = E*(1+x). New FFO = E*(1+x) - cint - ctax.
+  // FFO/Debt floor = cur.ffoMin/100 → solve E*(1+x) - cint - ctax = (cur.ffoMin/100)*Debt
+  let xByFFO = -Infinity;
+  if(cur.ffoMin>0 && s.ebitda>0){
+    const reqFFO = (cur.ffoMin/100)*s.debt;
+    const reqEbitda = reqFFO + s.cint + s.ctax;
+    xByFFO = (reqEbitda/s.ebitda) - 1;
+  }
+  // Debt/EBITDA cap → netDebt/(E*(1+x)) <= cur.deMax → 1+x >= netDebt/(cur.deMax*E)
+  let xByDE = -Infinity;
+  if(cur.deMax<Infinity && s.ebitda>0 && cur.deMax>0){
+    xByDE = (s.netDebt/(cur.deMax*s.ebitda)) - 1;
+  }
+  // EBITDA shock at which cushion first runs out (maximum of two lower bounds; in shock it's negative)
+  const breach = Math.max(xByFFO, xByDE);
+  // Cushion = -breach (positive = how much EBITDA can drop)
+  const cushionPct = -breach * 100;
+  return Math.max(0, cushionPct);
+}
+
+/* -------------------- ladder render -------------------- */
+function renderLadder(s){
+  const wrap = $("ladder"); wrap.innerHTML = "";
+  const cur = frpFromMetrics(s.ffoDebt, s.de);
+  FRP.forEach(r=>{
+    const lo = r.ffoMin, hi = r.ffoMax===Infinity?80:r.ffoMax;
+    const isCur = r.name===cur.name;
+    const fillW = Math.max(2, Math.min(100, ((hi-lo)/80)*100));
+    const div = document.createElement("div");
+    div.className = "rung"+(isCur?" current":"");
+    div.innerHTML = `
+      <div class="name">${r.name} <span class="pill ${categoryColor(r.name)}">${FRP_TO_RATING[r.name]||"–"}</span></div>
+      <div class="bar"><i style="width:${fillW}%"></i></div>
+      <div class="num">${r.ffoMin}%–${r.ffoMax===Infinity?"∞":r.ffoMax+"%"}</div>`;
+    wrap.appendChild(div);
+  });
+}
+
+/* -------------------- scenarios -------------------- */
+function buildScenarios(s){
+  const sShock = num("sEbitda")/100;
+  const uShock = num("uEbitda")/100;
+  const maP = num("maPrice"), maE = num("maEb"), maD = num("maDebt")/100;
+
+  const make = (label, dEb, dDebt) => {
+    const ebitda = s.ebitda*(1+dEb);
+    const ffoVal = ebitda - s.cint - s.ctax;
+    const debt = s.debt + dDebt;
+    const netDebt = Math.max(0, debt - s.cash*(1-s.hair));
+    const ffoDebt = debt>0 ? (ffoVal/debt)*100 : 0;
+    const de = ebitda>0 ? netDebt/ebitda : 0;
+    const ic = s.cint>0 ? (ffoVal+s.cint)/s.cint : 0;
+    const r = impliedRating(ffoDebt, de);
+    return {label, ebitda, ffo:ffoVal, netDebt, ffoDebt, de, ic, rating:r.rating, band:r.band};
+  };
+
+  return [
+    make("Base",      0,         0),
+    make("Upside",    uShock,    0),
+    make("Stress",    sShock,    0),
+    make("M&A (debt-funded)", maE/s.ebitda, maP*maD),
+    make("M&A + Stress",      sShock + maE/s.ebitda, maP*maD)
+  ];
+}
+
+/* -------------------- charts -------------------- */
+let charts = {};
+function destroy(c){ if(c) c.destroy(); }
+function paint(scenarios, s){
+  destroy(charts.ffo); destroy(charts.de); destroy(charts.sens); destroy(charts.eb);
+  const labels = scenarios.map(x=>x.label);
+  const colors = scenarios.map(x=>{
+    const c = categoryColor(x.band);
+    return c==="good"?"#10b981":c==="warn"?"#f59e0b":"#ef4444";
+  });
+  const grid = "#1f2a44", tick = "#94a3b8";
+  const baseOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}`}}},
+    scales:{x:{grid:{color:grid},ticks:{color:tick}}, y:{grid:{color:grid},ticks:{color:tick}}}
+  };
+  charts.ffo = new Chart($("chFFO"),{type:"bar",data:{labels,datasets:[{data:scenarios.map(x=>x.ffoDebt),backgroundColor:colors}]},options:baseOpts});
+  charts.de  = new Chart($("chDE"), {type:"bar",data:{labels,datasets:[{data:scenarios.map(x=>x.de),     backgroundColor:colors}]},options:baseOpts});
+
+  // Sensitivity vs. additional debt
+  const debtSteps = []; for(let i=-1000;i<=3000;i+=250) debtSteps.push(i);
+  const ffoSeries = debtSteps.map(d=>{
+    const debt = s.debt + d;
+    return debt>0 ? (s.ffo/debt)*100 : 0;
+  });
+  const deSeries = debtSteps.map(d=>{
+    const nd = Math.max(0, (s.debt+d) - s.cash*(1-s.hair));
+    return s.ebitda>0 ? nd/s.ebitda : 0;
+  });
+  charts.sens = new Chart($("chSens"),{
+    type:"line",
+    data:{labels:debtSteps.map(d=>(d>=0?"+":"")+d),datasets:[
+      {label:"FFO/Debt %", data:ffoSeries, borderColor:"#3b82f6", yAxisID:"y", tension:.2},
+      {label:"Debt/EBITDA x", data:deSeries, borderColor:"#22d3ee", yAxisID:"y2", tension:.2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:tick}}},
+      scales:{
+        x:{grid:{color:grid},ticks:{color:tick},title:{display:true,text:"Δ Debt",color:tick}},
+        y:{position:"left",grid:{color:grid},ticks:{color:tick}, title:{display:true,text:"FFO/Debt %",color:tick}},
+        y2:{position:"right",grid:{display:false},ticks:{color:tick},title:{display:true,text:"Debt/EBITDA x",color:tick}}
+      }
+    }
+  });
+
+  // EBITDA shock sensitivity
+  const ebSteps = []; for(let p=-40;p<=40;p+=5) ebSteps.push(p);
+  const ffoEb = ebSteps.map(p=>{
+    const e = s.ebitda*(1+p/100);
+    const f = e - s.cint - s.ctax;
+    return s.debt>0 ? (f/s.debt)*100 : 0;
+  });
+  const deEb = ebSteps.map(p=>{
+    const e = s.ebitda*(1+p/100);
+    return e>0 ? s.netDebt/e : 0;
+  });
+  charts.eb = new Chart($("chEb"),{
+    type:"line",
+    data:{labels:ebSteps.map(p=>(p>=0?"+":"")+p+"%"),datasets:[
+      {label:"FFO/Debt %", data:ffoEb, borderColor:"#3b82f6", yAxisID:"y", tension:.2},
+      {label:"Debt/EBITDA x", data:deEb, borderColor:"#22d3ee", yAxisID:"y2", tension:.2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:tick}}},
+      scales:{
+        x:{grid:{color:grid},ticks:{color:tick},title:{display:true,text:"EBITDA shock",color:tick}},
+        y:{position:"left",grid:{color:grid},ticks:{color:tick}},
+        y2:{position:"right",grid:{display:false},ticks:{color:tick}}
+      }
+    }
+  });
+}
+
+function fillCategoryPill(elId, ratio, isFFO){
+  const cur = isFFO
+    ? FRP.find(r=>ratio>=r.ffoMin && ratio<r.ffoMax)
+    : FRP.find(r=>ratio>=r.deMin && ratio<r.deMax);
+  if(!cur){ $(elId).innerHTML = "–"; return; }
+  $(elId).innerHTML = `<span class="pill ${categoryColor(cur.name)}">${cur.name}</span>`;
+}
+
+/* -------------------- render -------------------- */
+function render(){
+  const s = compute();
+  $("kFFO").textContent = fmt(s.ffoDebt,1)+"%";
+  $("kDE").textContent  = fmt(s.de,2)+"x";
+  $("kIC").textContent  = fmt(s.ic,1)+"x";
+  $("kDC").textContent  = fmt(s.dc,1)+"%";
+  fillCategoryPill("kFFOcat", s.ffoDebt, true);
+  fillCategoryPill("kDEcat",  s.de,      false);
+  $("kICcat").innerHTML = `<span class="pill info">FFO+IntExp / IntExp</span>`;
+  $("kDCcat").innerHTML = `<span class="pill info">Debt / (Debt + Equity)</span>`;
+
+  const ir = impliedRating(s.ffoDebt, s.de);
+  $("implied").innerHTML = `${ir.rating} <span class="pill ${categoryColor(ir.band)}" style="vertical-align:middle;font-size:11px">${ir.band}</span>`;
+
+  const fp = firepowerCalc(s);
+  $("firepower").innerHTML = `${ccy()==='$bn'?'$':''}${fmt(fp,0)} <span style="font-size:13px;color:#94a3b8">${ccy()}</span>`;
+
+  // M&A capacity at 100% debt-funded acquisition: extra debt = X, extra EBITDA = X / multiple_paid; we express as max EBITDA addable
+  // Approximation: max EBITDA addition such that band threshold holds → use firepower as max debt added → at the user's deal multiple, EBITDA_add = fp * (s.ebitda)/(s.debt+fp) is loose.
+  // Cleaner: solve combined: (FFO+ΔFFO)/(Debt+ΔDebt) ≥ floor where ΔFFO = ΔEBITDA (no inc. tax/interest), ΔDebt = ΔEBITDA * (maPrice/maEb)
+  const {band} = targetThresholds();
+  const floor = band.ffoMin/100;
+  const mult = (num("maPrice")>0 && num("maEb")>0) ? (num("maPrice")/num("maEb")) : 0;
+  let maxAddEbitda = 0;
+  if(mult>0){
+    // (FFO + dE) / (Debt + dE*mult) = floor → dE - floor*mult*dE = floor*Debt - FFO → dE(1 - floor*mult) = floor*Debt - FFO
+    const denom = 1 - floor*mult;
+    if(denom !== 0){
+      maxAddEbitda = (floor*s.debt - s.ffo) / denom;
+      // We want headroom (positive). If currently above floor, ΔE can be negative or zero (no constraint by FFO/Debt because adding deal worsens it), so flip sign logic:
+      // Actually: floor*Debt - FFO is negative when FFO/Debt>floor → numerator<0; if denom>0 → maxAddEbitda<0 means: even with no addition you're OK; need different limit.
+      // Simpler: max additional EBITDA where ratio just hits floor:
+      // dE_max = (FFO - floor*Debt) / (floor*mult - 1)
+      maxAddEbitda = (s.ffo - floor*s.debt) / (floor*mult - 1);
+    }
+  }
+  if(!isFinite(maxAddEbitda) || maxAddEbitda<0) maxAddEbitda = 0;
+  $("maCap").innerHTML = `${fmt(maxAddEbitda,0)} <span style="font-size:13px;color:#94a3b8">EBITDA / ${ccy()}</span>`;
+
+  $("downg").innerHTML = `${fmt(distanceToDowngrade(s),1)}% <span style="font-size:13px;color:#94a3b8">EBITDA drop</span>`;
+
+  renderLadder(s);
+
+  // Scenarios
+  const scs = buildScenarios(s);
+  const tb = document.querySelector("#scTable tbody"); tb.innerHTML="";
+  scs.forEach(x=>{
+    const cls = categoryColor(x.band);
+    tb.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td><strong>${x.label}</strong></td>
+        <td>${fmt(x.ebitda,0)}</td>
+        <td>${fmt(x.ffo,0)}</td>
+        <td>${fmt(x.netDebt,0)}</td>
+        <td>${fmt(x.ffoDebt,1)}%</td>
+        <td>${fmt(x.de,2)}x</td>
+        <td>${fmt(x.ic,1)}x</td>
+        <td><span class="pill ${cls}">${x.rating}</span> <span style="color:#94a3b8;font-size:11px">${x.band}</span></td>
+      </tr>`);
+  });
+
+  paint(scs, s);
+}
+
+/* -------------------- import / export -------------------- */
+const INPUT_IDS = ["ccy","vol","target","rev","ebitda","da","cint","ctax","debt","cash","hair","adj","eq","sEbitda","uEbitda","maPrice","maEb","maDebt"];
+function exportJSON(){
+  const data = {}; INPUT_IDS.forEach(i=>data[i]=$(i).value);
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "sp-firepower-inputs.json"; a.click();
+}
+function importJSON(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader(); r.onload = e => {
+    try{ const o = JSON.parse(e.target.result); INPUT_IDS.forEach(i=>{ if(o[i]!==undefined) $(i).value=o[i]; }); render(); }
+    catch{ alert("Invalid file"); }
+  };
+  r.readAsText(f);
+}
+
+/* -------------------- bind -------------------- */
+INPUT_IDS.forEach(i=>$(i).addEventListener("input",render));
+INPUT_IDS.forEach(i=>$(i).addEventListener("change",render));
+render();
+</script>
+</body>
+</html>
