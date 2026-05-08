@@ -1,826 +1,465 @@
-// Global State
-let currentUser = null;
-let diagnosticItems = [];
-let diagnosticResponses = [];
-let currentDiagnosticIndex = 0;
-let sessionData = null;
-let currentSessionSection = 0;
-let sessionResponses = [];
-let sessionStartTime = null;
-let sessionTimer = null;
-let isRecording = false;
-let mediaRecorder = null;
-let audioChunks = [];
+// Cricket selection client app
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  // Check if user exists in localStorage
-  const savedUser = localStorage.getItem('currentUser');
-  if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    showPage('dashboard');
-    loadDashboard();
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+const esc = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+const fmtDate = (d) => {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+};
+const fmtTime = (t) => {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m || 0);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// ----- Home: list of matches -----
+
+async function renderHome() {
+  const list = $('#match-list');
+  if (!list) return;
+  try {
+    const matches = await api('/api/matches');
+    if (!matches.length) {
+      list.innerHTML = `<p class="empty">No matches yet. Click <strong>New match</strong> to start.</p>`;
+      return;
+    }
+    list.innerHTML = matches
+      .map((m) => `
+        <a class="match-card" href="/m/${m.id}">
+          <div class="match-card-main">
+            <div class="match-card-name">${esc(m.name)}</div>
+            <div class="match-card-meta">
+              <span class="pill">${esc(m.match_type)}</span>
+              <span>${fmtDate(m.match_date)}</span>
+              <span>${fmtTime(m.match_time)}</span>
+            </div>
+          </div>
+          <div class="match-card-stats">
+            <div><strong>${m.voted_count ?? 0}</strong>/4 voted</div>
+            <div class="muted">${m.player_count ?? 0} players · XI of ${m.team_size}</div>
+          </div>
+        </a>
+      `)
+      .join('');
+  } catch (e) {
+    list.innerHTML = `<p class="error">Could not load matches: ${esc(e.message)}</p>`;
   }
+}
 
-  // Form handler
-  document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
+function bindNewMatchDialog() {
+  const btn = $('#new-match-btn');
+  const dialog = $('#new-match-dialog');
+  const form = $('#new-match-form');
+  if (!btn || !dialog || !form) return;
+
+  btn.addEventListener('click', () => dialog.showModal());
+  form.addEventListener('submit', async (e) => {
+    if (e.submitter && e.submitter.value !== 'ok') return;
     e.preventDefault();
-    const name = document.getElementById('user-name').value;
-    const email = document.getElementById('user-email').value;
-
+    const fd = new FormData(form);
+    const copy = fd.get('copy') === 'on';
+    let copyFrom;
+    if (copy) {
+      const matches = await api('/api/matches').catch(() => []);
+      copyFrom = matches[matches.length - 1]?.id;
+    }
     try {
-      const response = await axios.post('/api/users', { name, email });
-      currentUser = response.data;
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      
-      // Load diagnostic test
-      await loadDiagnosticTest();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      alert('Error creating user. Please try again.');
+      const created = await api('/api/matches', {
+        method: 'POST',
+        body: {
+          name: fd.get('name'),
+          match_date: fd.get('match_date'),
+          match_time: fd.get('match_time'),
+          match_type: fd.get('match_type') || 'T20',
+          team_size: Number(fd.get('team_size')) || 11,
+          copy_players_from: copyFrom,
+        },
+      });
+      dialog.close();
+      location.href = `/m/${created.id}`;
+    } catch (err) {
+      alert('Could not create match: ' + err.message);
     }
   });
-});
-
-// Show/Hide Pages
-function showPage(page) {
-  const pages = ['welcome', 'diagnostic', 'dashboard', 'session', 'progress'];
-  pages.forEach(p => {
-    document.getElementById(`${p}-screen`).classList.add('hidden');
-  });
-  document.getElementById(`${page}-screen`).classList.remove('hidden');
-  
-  if (page !== 'welcome') {
-    document.getElementById('nav-links').classList.remove('hidden');
-  }
-  
-  if (page === 'progress') {
-    loadProgress();
-  }
 }
 
-// Logout
-function logout() {
-  localStorage.removeItem('currentUser');
-  currentUser = null;
-  location.reload();
-}
+// ----- Match page -----
 
-// ========================================
-// Diagnostic Test
-// ========================================
-async function loadDiagnosticTest() {
-  try {
-    const response = await axios.get('/api/diagnostic');
-    diagnosticItems = response.data.items;
-    diagnosticResponses = new Array(diagnosticItems.length).fill(null);
-    currentDiagnosticIndex = 0;
-    
-    document.getElementById('diagnostic-total').textContent = diagnosticItems.length;
-    
-    showPage('diagnostic');
-    renderDiagnosticItem();
-  } catch (error) {
-    console.error('Error loading diagnostic:', error);
-    alert('Error loading diagnostic test. Please try again.');
-  }
-}
+let state = null; // { match, players, voters, votes }
+let activeVoterId = null;
 
-function renderDiagnosticItem() {
-  const item = diagnosticItems[currentDiagnosticIndex];
-  if (!item) return;
-  
-  const content = JSON.parse(item.content);
-  const container = document.getElementById('diagnostic-item-container');
-  
-  let html = `
-    <div class="mb-6">
-      <div class="flex items-center space-x-2 mb-2">
-        <span class="skill-badge level-${item.level.toLowerCase()}">${item.level}</span>
-        <span class="skill-badge" style="background: #f3f4f6; color: #374151;">${item.type}</span>
-        <span class="text-sm text-gray-500">${item.theme}</span>
-      </div>
-      <h3 class="text-xl font-bold mb-4">${item.title}</h3>
-    </div>
-  `;
-  
-  if (item.type === 'reading' || item.type === 'listening') {
-    html += `
-      <div class="bg-gray-50 p-6 rounded-lg mb-6">
-        ${item.type === 'listening' ? '<p class="text-sm text-gray-500 mb-2"><i class="fas fa-headphones"></i> Listen to the audio:</p>' : ''}
-        ${item.type === 'listening' ? '<p class="italic text-gray-700 mb-4">[Audio: ' + content.audio_prompt + ']</p>' : ''}
-        <div class="whitespace-pre-wrap text-gray-800">${content.text || content.transcript}</div>
-      </div>
-      
-      <div class="mb-4">
-        <p class="font-semibold mb-3">${content.question}</p>
-        <div class="space-y-2">
-    `;
-    
-    content.options.forEach((option, idx) => {
-      html += `
-        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-purple-50">
-          <input type="radio" name="diagnostic-answer" value="${idx}" class="mr-3" ${diagnosticResponses[currentDiagnosticIndex]?.answer === idx ? 'checked' : ''}>
-          <span>${option}</span>
-        </label>
-      `;
-    });
-    
-    html += `
-        </div>
-      </div>
-    `;
-  }
-  
-  container.innerHTML = html;
-  
-  // Update progress
-  document.getElementById('diagnostic-current').textContent = currentDiagnosticIndex + 1;
-  document.getElementById('diagnostic-progress').style.width = `${((currentDiagnosticIndex + 1) / diagnosticItems.length) * 100}%`;
-  
-  // Update buttons
-  document.getElementById('prev-diagnostic-btn').disabled = currentDiagnosticIndex === 0;
-  
-  // Add change listener
-  document.querySelectorAll('input[name="diagnostic-answer"]').forEach(input => {
-    input.addEventListener('change', (e) => {
-      saveDiagnosticAnswer(parseInt(e.target.value));
-    });
-  });
-}
-
-function saveDiagnosticAnswer(answer) {
-  const item = diagnosticItems[currentDiagnosticIndex];
-  const content = JSON.parse(item.content);
-  
-  diagnosticResponses[currentDiagnosticIndex] = {
-    itemId: item.id,
-    answer,
-    isCorrect: answer === content.correct_answer
-  };
-}
-
-function previousDiagnosticItem() {
-  if (currentDiagnosticIndex > 0) {
-    currentDiagnosticIndex--;
-    renderDiagnosticItem();
-  }
-}
-
-async function nextDiagnosticItem() {
-  if (currentDiagnosticIndex < diagnosticItems.length - 1) {
-    currentDiagnosticIndex++;
-    renderDiagnosticItem();
+async function loadState(matchId) {
+  state = await api(`/api/matches/${matchId}/state`);
+  const stored = Number(localStorage.getItem(`cvz:active:${matchId}`));
+  if (stored && state.voters.some((v) => v.id === stored)) {
+    activeVoterId = stored;
   } else {
-    // Submit diagnostic
-    await submitDiagnostic();
+    activeVoterId = state.voters[0]?.id ?? null;
   }
 }
 
-async function submitDiagnostic() {
-  try {
-    document.getElementById('next-diagnostic-btn').disabled = true;
-    document.getElementById('next-diagnostic-btn').textContent = 'Analyzing...';
-    
-    const response = await axios.post('/api/diagnostic/submit', {
-      userId: currentUser.userId,
-      responses: diagnosticResponses.filter(r => r !== null)
-    });
-    
-    currentUser.level = Object.values(response.data.skillLevels)[0]?.level || 'A0';
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    
-    alert(`Great job! Your starting level: ${currentUser.level}\n\nLet's begin your learning journey!`);
-    showPage('dashboard');
-    loadDashboard();
-  } catch (error) {
-    console.error('Error submitting diagnostic:', error);
-    alert('Error submitting diagnostic. Please try again.');
-    document.getElementById('next-diagnostic-btn').disabled = false;
-    document.getElementById('next-diagnostic-btn').textContent = 'Submit';
-  }
+function tally() {
+  const counts = new Map(state.players.map((p) => [p.id, 0]));
+  for (const v of state.votes) counts.set(v.player_id, (counts.get(v.player_id) ?? 0) + 1);
+  const ranked = state.players
+    .map((p) => ({ ...p, votes: counts.get(p.id) ?? 0 }))
+    .sort((a, b) => b.votes - a.votes || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  return ranked;
 }
 
-// ========================================
-// Dashboard
-// ========================================
-async function loadDashboard() {
-  try {
-    const response = await axios.get(`/api/progress/${currentUser.userId}`);
-    const data = response.data;
-    
-    // Update stats
-    document.getElementById('user-level').textContent = data.user.current_level || 'A0';
-    document.getElementById('user-streak').textContent = data.user.streak_days || 0;
-    document.getElementById('user-time').textContent = data.totalTimeMinutes || 0;
-    
-    // Update skills overview
-    const skillsHtml = data.skills.map(skill => {
-      const percentage = Math.round(skill.mastery_score * 100);
-      return `
-        <div>
-          <div class="flex justify-between mb-2">
-            <span class="font-semibold capitalize">${skill.skill}</span>
-            <span class="skill-badge level-${skill.level.toLowerCase()}">${skill.level}</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${percentage}%"></div>
-          </div>
-          <p class="text-xs text-gray-500 mt-1">${percentage}% mastery</p>
-        </div>
-      `;
-    }).join('');
-    
-    document.getElementById('skills-overview').innerHTML = skillsHtml;
-    
-    // Update weak areas
-    const weakAreasHtml = data.weakAreas.length > 0 
-      ? data.weakAreas.map(area => `
-          <div class="flex items-center justify-between py-2 border-b">
-            <span class="capitalize">${area.skill}: ${area.theme} (${area.tactic})</span>
-            <span class="text-red-600 font-semibold">${Math.round(area.mastery_score * 100)}%</span>
-          </div>
-        `).join('')
-      : '<p class="text-gray-500">No weak areas yet. Keep practicing!</p>';
-    
-    document.getElementById('weak-areas-list').innerHTML = weakAreasHtml;
-    
-  } catch (error) {
-    console.error('Error loading dashboard:', error);
-  }
+function votedSet(voterId) {
+  return new Set(state.votes.filter((v) => v.voter_id === voterId).map((v) => v.player_id));
 }
 
-// ========================================
-// Daily Session
-// ========================================
-async function startDailySession() {
-  try {
-    const response = await axios.get(`/api/session/daily/${currentUser.userId}`);
-    sessionData = response.data;
-    sessionResponses = [];
-    currentSessionSection = 0;
-    sessionStartTime = Date.now();
-    
-    showPage('session');
-    startSessionTimer();
-    renderSessionSection();
-  } catch (error) {
-    console.error('Error starting session:', error);
-    alert('Error starting session. Please try again.');
-  }
-}
+function renderMatch() {
+  const root = $('#match-root');
+  if (!root || !state) return;
+  const m = state.match;
+  const ranked = tally();
+  const teamSize = m.team_size;
+  const cutoff = ranked[teamSize - 1]?.votes ?? 0;
+  const inTeam = (p, idx) => idx < teamSize && p.votes > 0;
+  const voted = votedSet(activeVoterId);
+  const votersDone = new Set(state.votes.map((v) => v.voter_id));
 
-function startSessionTimer() {
-  sessionTimer = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = elapsed % 60;
-    document.getElementById('session-timer-display').textContent = 
-      `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, 1000);
-}
-
-function stopSessionTimer() {
-  if (sessionTimer) {
-    clearInterval(sessionTimer);
-    sessionTimer = null;
-  }
-}
-
-function renderSessionSection() {
-  const sections = [
-    { key: 'warmup', title: 'Warm-up', icon: 'fire', desc: 'Review vocabulary flashcards' },
-    { key: 'listening', title: 'Listening', icon: 'headphones', desc: 'Practice comprehension' },
-    { key: 'reading', title: 'Reading', icon: 'book', desc: 'Understand written texts' },
-    { key: 'speaking', title: 'Speaking', icon: 'microphone', desc: 'Practice conversation' },
-    { key: 'writing', title: 'Writing', icon: 'pen', desc: 'Written expression' },
-    { key: 'wrapup', title: 'Wrap-up', icon: 'check-circle', desc: 'Review and summary' }
-  ];
-  
-  const section = sections[currentSessionSection];
-  
-  // Update header
-  document.getElementById('session-section-title').innerHTML = `<i class="fas fa-${section.icon}"></i> ${section.title}`;
-  document.getElementById('session-section-desc').textContent = section.desc;
-  document.getElementById('session-progress').style.width = `${((currentSessionSection + 1) / 6) * 100}%`;
-  document.getElementById('session-progress-text').textContent = `Section ${currentSessionSection + 1} of 6`;
-  
-  // Update buttons
-  document.getElementById('prev-session-btn').disabled = currentSessionSection === 0;
-  
-  // Render content
-  const container = document.getElementById('session-content-container');
-  
-  if (section.key === 'warmup') {
-    renderWarmup(container);
-  } else if (section.key === 'listening' || section.key === 'reading') {
-    renderContentItems(container, sessionData[section.key]);
-  } else if (section.key === 'speaking') {
-    renderSpeaking(container);
-  } else if (section.key === 'writing') {
-    renderWriting(container);
-  } else if (section.key === 'wrapup') {
-    renderWrapup(container);
-  }
-}
-
-function renderWarmup(container) {
-  const vocabItems = sessionData.warmup || [];
-  
-  if (vocabItems.length === 0) {
-    container.innerHTML = '<p class="text-gray-600">No vocabulary to review today. Great job staying on top of your reviews!</p>';
-    return;
-  }
-  
-  let html = '<div class="grid md:grid-cols-2 gap-4">';
-  
-  vocabItems.forEach((item, idx) => {
-    html += `
-      <div class="vocab-card" onclick="flipVocabCard(${idx})">
-        <div class="front">
-          <div class="text-2xl font-bold text-purple-600 mb-2">${item.word}</div>
-          <div class="text-sm text-gray-500">Click to reveal</div>
-        </div>
-        <div class="back">
-          <div class="text-xl font-semibold mb-2">${item.translation}</div>
-          <div class="text-sm text-gray-700 italic">${item.example_sentence || ''}</div>
-          <div class="mt-3 space-x-2">
-            <button onclick="rateVocab(event, ${item.item_id}, 5)" class="px-3 py-1 bg-green-500 text-white rounded text-xs">Easy</button>
-            <button onclick="rateVocab(event, ${item.item_id}, 3)" class="px-3 py-1 bg-yellow-500 text-white rounded text-xs">Good</button>
-            <button onclick="rateVocab(event, ${item.item_id}, 1)" class="px-3 py-1 bg-red-500 text-white rounded text-xs">Hard</button>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function flipVocabCard(idx) {
-  const cards = document.querySelectorAll('.vocab-card');
-  if (cards[idx]) {
-    cards[idx].classList.toggle('flipped');
-  }
-}
-
-async function rateVocab(event, vocabId, quality) {
-  event.stopPropagation();
-  try {
-    await axios.post('/api/vocabulary/review', {
-      userId: currentUser.userId,
-      vocabId,
-      quality
-    });
-    
-    // Remove the card
-    event.target.closest('.vocab-card').style.opacity = '0.3';
-    event.target.closest('.vocab-card').style.pointerEvents = 'none';
-  } catch (error) {
-    console.error('Error rating vocab:', error);
-  }
-}
-
-function renderContentItems(container, items) {
-  if (!items || items.length === 0) {
-    container.innerHTML = '<p class="text-gray-600">No items available for this section.</p>';
-    return;
-  }
-  
-  let html = '';
-  items.forEach((item, idx) => {
-    const content = JSON.parse(item.content);
-    
-    html += `
-      <div class="mb-8 p-6 bg-gray-50 rounded-lg" id="item-${item.id}">
-        <div class="flex items-center space-x-2 mb-4">
-          <span class="skill-badge level-${item.level.toLowerCase()}">${item.level}</span>
-          <span class="skill-badge" style="background: #f3f4f6; color: #374151;">${item.theme}</span>
-          <span class="text-sm text-gray-500">${item.tactic}</span>
-        </div>
-        
-        <h3 class="text-lg font-bold mb-4">${item.title}</h3>
-        
-        ${item.type === 'listening' ? `<p class="text-sm text-purple-600 mb-2"><i class="fas fa-headphones"></i> Listen to the audio</p><p class="italic text-gray-600 mb-4">[Audio: ${content.audio_prompt}]</p>` : ''}
-        
-        <div class="bg-white p-4 rounded-lg mb-4 whitespace-pre-wrap">${content.text || content.transcript}</div>
-        
-        <p class="font-semibold mb-3">${content.question}</p>
-        
-        <div class="space-y-2">
-    `;
-    
-    content.options.forEach((option, optIdx) => {
-      html += `
-        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-purple-50">
-          <input type="radio" name="item-${item.id}" value="${optIdx}" class="mr-3">
-          <span>${option}</span>
-        </label>
-      `;
-    });
-    
-    html += `
-        </div>
-        <div id="feedback-${item.id}" class="mt-4"></div>
-      </div>
-    `;
-  });
-  
-  container.innerHTML = html;
-  
-  // Add listeners
-  items.forEach(item => {
-    document.querySelectorAll(`input[name="item-${item.id}"]`).forEach(input => {
-      input.addEventListener('change', (e) => {
-        checkAnswer(item.id, parseInt(e.target.value));
-      });
-    });
-  });
-}
-
-function checkAnswer(itemId, answer) {
-  const section = ['listening', 'reading'][currentSessionSection - 1];
-  const item = sessionData[section].find(i => i.id === itemId);
-  if (!item) return;
-  
-  const content = JSON.parse(item.content);
-  const isCorrect = answer === content.correct_answer;
-  
-  sessionResponses.push({
-    itemId,
-    userAnswer: answer,
-    isCorrect,
-    timeSpent: Math.floor((Date.now() - sessionStartTime) / 1000)
-  });
-  
-  const feedbackDiv = document.getElementById(`feedback-${itemId}`);
-  feedbackDiv.className = isCorrect ? 'feedback-correct' : 'feedback-incorrect';
-  feedbackDiv.innerHTML = `
-    <div class="flex items-start">
-      <i class="fas fa-${isCorrect ? 'check-circle text-green-600' : 'times-circle text-red-600'} text-xl mr-3 mt-1"></i>
+  root.innerHTML = `
+    <section class="match-header">
       <div>
-        <p class="font-semibold mb-1">${isCorrect ? 'Correct!' : 'Not quite right'}</p>
-        <p class="text-sm">${content.explanation}</p>
-        ${content.strategy_hint ? `<p class="text-sm mt-2 italic"><i class="fas fa-lightbulb"></i> Tip: ${content.strategy_hint}</p>` : ''}
+        <h1 class="match-title" data-edit="match.name">${esc(m.name)}</h1>
+        <div class="match-sub">
+          <span class="pill">${esc(m.match_type)}</span>
+          <span>${fmtDate(m.match_date)}</span>
+          <span>${fmtTime(m.match_time)}</span>
+          <span class="muted">·</span>
+          <span>Pick ${teamSize} of ${state.players.length}</span>
+        </div>
       </div>
-    </div>
+      <div class="header-actions">
+        <button class="btn" id="share-btn">Share link</button>
+        <button class="btn" id="settings-btn">Match settings</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Selectors</h2>
+        <span class="muted">${votersDone.size}/4 voted</span>
+      </div>
+      <div class="voter-tabs" role="tablist">
+        ${state.voters.map((v) => `
+          <button class="voter-tab ${v.id === activeVoterId ? 'active' : ''} ${votersDone.has(v.id) ? 'done' : ''}"
+                  data-voter-id="${v.id}" data-slot="${v.slot}">
+            <span class="voter-tab-name" data-edit="voter.${v.slot}">${esc(v.name)}</span>
+            ${votersDone.has(v.id) ? '<span class="check">✓</span>' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Vote as <span id="active-voter-name">${esc(state.voters.find((v) => v.id === activeVoterId)?.name ?? '')}</span></h2>
+        <span class="muted"><span id="vote-count">${voted.size}</span> selected</span>
+      </div>
+      <ul class="player-list" id="player-list">
+        ${state.players.map((p) => `
+          <li>
+            <label class="player-row">
+              <input type="checkbox" data-player-id="${p.id}" ${voted.has(p.id) ? 'checked' : ''} />
+              <span class="player-name" data-edit="player.${p.id}">${esc(p.name)}</span>
+              <button class="icon-btn delete-player" data-player-id="${p.id}" title="Remove player">×</button>
+            </label>
+          </li>
+        `).join('')}
+      </ul>
+      <form id="add-player-form" class="add-player">
+        <input name="name" placeholder="Add player…" required />
+        <button class="btn">Add</button>
+      </form>
+      <div class="vote-actions">
+        <button class="btn primary" id="save-vote">Save votes</button>
+        <button class="btn ghost" id="clear-vote">Clear my votes</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Live tally</h2>
+        <span class="muted">Top ${teamSize} make the XI</span>
+      </div>
+      <ol class="tally">
+        ${ranked.map((p, idx) => {
+          const picked = inTeam(p, idx);
+          const onCutoff = p.votes === cutoff && p.votes > 0 && idx >= teamSize - 1;
+          return `
+            <li class="${picked ? 'in-team' : ''} ${onCutoff ? 'cutoff' : ''}">
+              <span class="rank">${idx + 1}</span>
+              <span class="name">${esc(p.name)}</span>
+              <span class="bar"><span style="width:${p.votes * 25}%"></span></span>
+              <span class="votes">${p.votes}</span>
+            </li>
+          `;
+        }).join('')}
+      </ol>
+    </section>
+
+    <dialog id="settings-dialog">
+      <form method="dialog" id="settings-form">
+        <h3>Match settings</h3>
+        <label>Name<input name="name" value="${esc(m.name)}" required /></label>
+        <label>Date<input name="match_date" type="date" value="${esc(m.match_date)}" required /></label>
+        <label>Time<input name="match_time" type="time" value="${esc(m.match_time)}" required /></label>
+        <label>Type<input name="match_type" value="${esc(m.match_type)}" /></label>
+        <label>Team size<input name="team_size" type="number" min="1" max="20" value="${m.team_size}" /></label>
+        <div class="dialog-actions">
+          <button value="delete" class="btn danger" formnovalidate>Delete match</button>
+          <span style="flex:1"></span>
+          <button value="cancel" class="btn" formnovalidate>Cancel</button>
+          <button value="ok" class="btn primary">Save</button>
+        </div>
+      </form>
+    </dialog>
   `;
-  
-  // Disable other options
-  document.querySelectorAll(`input[name="item-${itemId}"]`).forEach(input => {
-    input.disabled = true;
+
+  bindMatchHandlers();
+}
+
+function bindMatchHandlers() {
+  const matchId = state.match.id;
+
+  // Voter tabs
+  $$('.voter-tab').forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      if (e.target.closest('[data-edit]')) return;
+      activeVoterId = Number(tab.dataset.voterId);
+      localStorage.setItem(`cvz:active:${matchId}`, String(activeVoterId));
+      renderMatch();
+    });
+  });
+
+  // Inline edits via dblclick
+  $$('[data-edit]').forEach((el) => {
+    el.addEventListener('dblclick', () => beginEdit(el));
+  });
+
+  // Checkbox count
+  const list = $('#player-list');
+  list?.addEventListener('change', () => {
+    const n = $$('#player-list input[type=checkbox]:checked').length;
+    $('#vote-count').textContent = String(n);
+  });
+
+  // Add player
+  $('#add-player-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const name = String(fd.get('name') || '').trim();
+    if (!name) return;
+    try {
+      await api(`/api/matches/${matchId}/players`, { method: 'POST', body: { name } });
+      await loadState(matchId);
+      renderMatch();
+    } catch (err) {
+      alert('Could not add: ' + err.message);
+    }
+  });
+
+  // Delete player
+  $$('.delete-player').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const pid = btn.dataset.playerId;
+      if (!confirm('Remove this player from the match?')) return;
+      try {
+        await api(`/api/matches/${matchId}/players/${pid}`, { method: 'DELETE' });
+        await loadState(matchId);
+        renderMatch();
+      } catch (err) {
+        alert('Could not remove: ' + err.message);
+      }
+    });
+  });
+
+  // Save vote
+  $('#save-vote')?.addEventListener('click', async () => {
+    const playerIds = $$('#player-list input[type=checkbox]:checked').map((cb) =>
+      Number(cb.dataset.playerId)
+    );
+    try {
+      await api(`/api/matches/${matchId}/votes`, {
+        method: 'POST',
+        body: { voter_id: activeVoterId, player_ids: playerIds },
+      });
+      await loadState(matchId);
+      renderMatch();
+    } catch (err) {
+      alert('Could not save: ' + err.message);
+    }
+  });
+
+  // Clear vote
+  $('#clear-vote')?.addEventListener('click', async () => {
+    if (!confirm('Clear your selections?')) return;
+    try {
+      await api(`/api/matches/${matchId}/votes`, {
+        method: 'POST',
+        body: { voter_id: activeVoterId, player_ids: [] },
+      });
+      await loadState(matchId);
+      renderMatch();
+    } catch (err) {
+      alert('Could not clear: ' + err.message);
+    }
+  });
+
+  // Share
+  $('#share-btn')?.addEventListener('click', async () => {
+    const url = location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: state.match.name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        flash('Link copied to clipboard');
+      }
+    } catch {}
+  });
+
+  // Settings
+  const settingsDialog = $('#settings-dialog');
+  $('#settings-btn')?.addEventListener('click', () => settingsDialog.showModal());
+  $('#settings-form')?.addEventListener('submit', async (e) => {
+    const action = e.submitter?.value;
+    if (action === 'cancel') return;
+    if (action === 'delete') {
+      e.preventDefault();
+      if (!confirm('Delete this match and all its votes?')) return;
+      await api(`/api/matches/${matchId}`, { method: 'DELETE' });
+      location.href = '/';
+      return;
+    }
+    if (action !== 'ok') return;
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    try {
+      await api(`/api/matches/${matchId}`, {
+        method: 'PUT',
+        body: {
+          name: fd.get('name'),
+          match_date: fd.get('match_date'),
+          match_time: fd.get('match_time'),
+          match_type: fd.get('match_type') || 'T20',
+          team_size: Number(fd.get('team_size')) || 11,
+        },
+      });
+      settingsDialog.close();
+      await loadState(matchId);
+      renderMatch();
+    } catch (err) {
+      alert('Could not save: ' + err.message);
+    }
   });
 }
 
-function renderSpeaking(container) {
-  const item = sessionData.speaking && sessionData.speaking[0];
-  if (!item) {
-    container.innerHTML = '<p class="text-gray-600">No speaking task available.</p>';
-    return;
-  }
-  
-  const content = JSON.parse(item.content);
-  
-  container.innerHTML = `
-    <div class="mb-8">
-      <div class="flex items-center space-x-2 mb-4">
-        <span class="skill-badge level-${item.level.toLowerCase()}">${item.level}</span>
-        <span class="skill-badge" style="background: #f3f4f6; color: #374151;">Role-play</span>
-        <span class="text-sm text-gray-500">${item.theme}</span>
-      </div>
-      
-      <h3 class="text-lg font-bold mb-4">${item.title}</h3>
-      
-      <div class="bg-gray-50 p-6 rounded-lg mb-6">
-        <h4 class="font-semibold mb-2">Scenario:</h4>
-        <p class="mb-4">${content.scenario}</p>
-        
-        <h4 class="font-semibold mb-2">Your tasks:</h4>
-        <ul class="list-disc list-inside space-y-1">
-          ${content.tasks.map(task => `<li>${task}</li>`).join('')}
-        </ul>
-      </div>
-      
-      <div class="speaking-recorder" id="recorder">
-        <i class="fas fa-microphone text-4xl text-purple-600 mb-4"></i>
-        <p class="text-lg font-semibold mb-2">Record Your Response</p>
-        <p class="text-sm text-gray-600 mb-4">Click the button to start/stop recording</p>
-        <button onclick="toggleRecording()" id="record-btn" class="btn-primary">
-          <i class="fas fa-microphone"></i> Start Recording
-        </button>
-        <p class="text-xs text-gray-500 mt-2">Aim for 1-2 minutes</p>
-      </div>
-      
-      <div id="speaking-feedback" class="hidden mt-6 p-6 bg-blue-50 rounded-lg">
-        <h4 class="font-semibold mb-3">Sample Answer:</h4>
-        <div class="bg-white p-4 rounded-lg italic">${content.sample_answer}</div>
-        
-        <div class="mt-4 grid md:grid-cols-4 gap-4">
-          <div class="text-center p-3 bg-white rounded-lg">
-            <div class="text-sm text-gray-600">Fluency</div>
-            <div class="text-2xl font-bold text-purple-600">4/5</div>
-          </div>
-          <div class="text-center p-3 bg-white rounded-lg">
-            <div class="text-sm text-gray-600">Range</div>
-            <div class="text-2xl font-bold text-blue-600">4/5</div>
-          </div>
-          <div class="text-center p-3 bg-white rounded-lg">
-            <div class="text-sm text-gray-600">Accuracy</div>
-            <div class="text-2xl font-bold text-green-600">3/5</div>
-          </div>
-          <div class="text-center p-3 bg-white rounded-lg">
-            <div class="text-sm text-gray-600">Task</div>
-            <div class="text-2xl font-bold text-orange-600">5/5</div>
-          </div>
-        </div>
-        
-        <p class="text-sm text-gray-600 mt-4">
-          <i class="fas fa-info-circle"></i> Note: In production, this would use speech recognition and AI scoring. For now, compare your response with the sample answer.
-        </p>
-      </div>
-    </div>
-  `;
-}
+function beginEdit(el) {
+  if (el.querySelector('input')) return;
+  const original = el.textContent ?? '';
+  const input = document.createElement('input');
+  input.value = original;
+  input.className = 'inline-edit';
+  el.replaceChildren(input);
+  input.focus();
+  input.select();
 
-function toggleRecording() {
-  const btn = document.getElementById('record-btn');
-  const recorder = document.getElementById('recorder');
-  const feedback = document.getElementById('speaking-feedback');
-  
-  if (!isRecording) {
-    // Start recording
-    isRecording = true;
-    recorder.classList.add('recording-active');
-    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
-    btn.classList.remove('btn-primary');
-    btn.classList.add('bg-red-600', 'text-white');
-    
-    // In production, you would use Web Speech API here
-    // navigator.mediaDevices.getUserMedia({ audio: true })
-  } else {
-    // Stop recording
-    isRecording = false;
-    recorder.classList.remove('recording-active');
-    btn.innerHTML = '<i class="fas fa-check"></i> Recording Complete';
-    btn.disabled = true;
-    
-    // Show feedback
-    feedback.classList.remove('hidden');
-    
-    // Add to responses
-    sessionResponses.push({
-      itemId: sessionData.speaking[0].id,
-      userAnswer: 'audio_recording',
-      isCorrect: true,
-      timeSpent: Math.floor((Date.now() - sessionStartTime) / 1000)
-    });
-  }
-}
-
-function renderWriting(container) {
-  const item = sessionData.writing && sessionData.writing[0];
-  if (!item) {
-    container.innerHTML = '<p class="text-gray-600">No writing task available.</p>';
-    return;
-  }
-  
-  const content = JSON.parse(item.content);
-  
-  container.innerHTML = `
-    <div class="mb-8">
-      <div class="flex items-center space-x-2 mb-4">
-        <span class="skill-badge level-${item.level.toLowerCase()}">${item.level}</span>
-        <span class="skill-badge" style="background: #f3f4f6; color: #374151;">Writing</span>
-        <span class="text-sm text-gray-500">${item.theme}</span>
-      </div>
-      
-      <h3 class="text-lg font-bold mb-4">${item.title}</h3>
-      
-      <div class="bg-gray-50 p-6 rounded-lg mb-6">
-        <p class="mb-4">${content.prompt}</p>
-        
-        <h4 class="font-semibold mb-2">Include:</h4>
-        <ul class="list-disc list-inside space-y-1">
-          ${content.tasks.map(task => `<li>${task}</li>`).join('')}
-        </ul>
-        
-        <p class="text-sm text-gray-600 mt-3">
-          <i class="fas fa-info-circle"></i> Word count: ${content.word_count.min}-${content.word_count.max} words
-        </p>
-      </div>
-      
-      <textarea id="writing-input" class="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Write your response here..."></textarea>
-      
-      <div class="mt-3 text-sm text-gray-600">
-        <span id="word-count">0</span> words
-      </div>
-      
-      <button onclick="submitWriting()" class="btn-primary mt-4">
-        <i class="fas fa-check"></i> Submit Writing
-      </button>
-      
-      <div id="writing-feedback" class="hidden mt-6"></div>
-    </div>
-  `;
-  
-  // Add word counter
-  document.getElementById('writing-input').addEventListener('input', (e) => {
-    const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-    document.getElementById('word-count').textContent = words;
+  const finish = async (commit) => {
+    const next = input.value.trim();
+    if (!commit || !next || next === original) {
+      el.textContent = original;
+      return;
+    }
+    el.textContent = next;
+    try {
+      await applyEdit(el.dataset.edit, next);
+      await loadState(state.match.id);
+      renderMatch();
+    } catch (err) {
+      alert('Could not save: ' + err.message);
+      el.textContent = original;
+    }
+  };
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = original; input.blur(); }
   });
 }
 
-function submitWriting() {
-  const text = document.getElementById('writing-input').value;
-  const item = sessionData.writing[0];
-  const content = JSON.parse(item.content);
-  
-  if (!text.trim()) {
-    alert('Please write something first!');
+async function applyEdit(key, value) {
+  const matchId = state.match.id;
+  if (key === 'match.name') {
+    return api(`/api/matches/${matchId}`, { method: 'PUT', body: { name: value } });
+  }
+  if (key.startsWith('voter.')) {
+    const slot = key.split('.')[1];
+    return api(`/api/matches/${matchId}/voters/${slot}`, { method: 'PUT', body: { name: value } });
+  }
+  if (key.startsWith('player.')) {
+    const pid = key.split('.')[1];
+    return api(`/api/matches/${matchId}/players/${pid}`, { method: 'PUT', body: { name: value } });
+  }
+}
+
+function flash(msg) {
+  let el = $('#flash');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'flash';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ----- Boot -----
+
+async function boot() {
+  if ($('#match-list')) {
+    bindNewMatchDialog();
+    await renderHome();
     return;
   }
-  
-  // Add to responses
-  sessionResponses.push({
-    itemId: item.id,
-    userAnswer: text,
-    isCorrect: true, // Auto-mark as correct for now
-    timeSpent: Math.floor((Date.now() - sessionStartTime) / 1000)
-  });
-  
-  // Show feedback
-  const feedbackDiv = document.getElementById('writing-feedback');
-  feedbackDiv.classList.remove('hidden');
-  feedbackDiv.className = 'feedback-correct';
-  feedbackDiv.innerHTML = `
-    <h4 class="font-semibold mb-3">Sample Answer:</h4>
-    <div class="bg-white p-4 rounded-lg mb-4 whitespace-pre-wrap">${content.sample_answer}</div>
-    
-    <h4 class="font-semibold mb-2">Checklist:</h4>
-    <ul class="space-y-1">
-      ${content.checklist.map(item => `
-        <li class="flex items-center">
-          <i class="fas fa-check-circle text-green-600 mr-2"></i>
-          <span>${item}</span>
-        </li>
-      `).join('')}
-    </ul>
-    
-    <p class="text-sm text-gray-600 mt-4">
-      <i class="fas fa-info-circle"></i> In production, this would provide automated feedback on grammar, vocabulary, and structure. For now, compare your answer with the sample.
-    </p>
-  `;
-  
-  document.getElementById('writing-input').disabled = true;
-  document.querySelector('button[onclick="submitWriting()"]').disabled = true;
-}
-
-function renderWrapup(container) {
-  const strategyTip = sessionData.strategyTip;
-  
-  container.innerHTML = `
-    <div class="text-center mb-8">
-      <i class="fas fa-trophy text-6xl text-yellow-500 mb-4"></i>
-      <h3 class="text-2xl font-bold mb-2">Great Session!</h3>
-      <p class="text-gray-600">You've completed today's 30-minute practice</p>
-    </div>
-    
-    ${strategyTip ? `
-      <div class="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg mb-6">
-        <h4 class="font-bold text-lg mb-2">
-          <i class="fas fa-lightbulb text-yellow-600"></i> Strategy Tip of the Day
-        </h4>
-        <h5 class="font-semibold mb-2">${strategyTip.tip_title}</h5>
-        <p class="text-gray-700 mb-3">${strategyTip.tip_content}</p>
-        ${strategyTip.example ? `<p class="text-sm italic text-gray-600">Example: ${strategyTip.example}</p>` : ''}
-      </div>
-    ` : ''}
-    
-    <div class="bg-white p-6 rounded-lg border-2 border-purple-200">
-      <h4 class="font-semibold mb-4">Today's Summary</h4>
-      <div class="grid md:grid-cols-3 gap-4">
-        <div class="text-center">
-          <div class="text-3xl font-bold text-purple-600">${sessionResponses.length}</div>
-          <div class="text-sm text-gray-600">Items Completed</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-green-600">${sessionResponses.filter(r => r.isCorrect).length}</div>
-          <div class="text-sm text-gray-600">Correct Answers</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-blue-600">${Math.round((sessionResponses.filter(r => r.isCorrect).length / sessionResponses.length) * 100)}%</div>
-          <div class="text-sm text-gray-600">Accuracy</div>
-        </div>
-      </div>
-    </div>
-    
-    <button onclick="finishSession()" class="btn-primary w-full mt-6">
-      <i class="fas fa-check-circle"></i> Finish Session
-    </button>
-  `;
-}
-
-function previousSessionSection() {
-  if (currentSessionSection > 0) {
-    currentSessionSection--;
-    renderSessionSection();
+  const root = $('#match-root');
+  if (root) {
+    const matchId = root.dataset.matchId;
+    try {
+      await loadState(matchId);
+      renderMatch();
+    } catch (e) {
+      root.innerHTML = `<p class="error">Could not load match: ${esc(e.message)}</p>`;
+    }
   }
 }
 
-function nextSessionSection() {
-  if (currentSessionSection < 5) {
-    currentSessionSection++;
-    renderSessionSection();
-  }
-}
-
-async function finishSession() {
-  try {
-    stopSessionTimer();
-    
-    const response = await axios.post('/api/session/submit', {
-      userId: currentUser.userId,
-      responses: sessionResponses,
-      sessionType: 'daily'
-    });
-    
-    alert(`Session complete! 🎉\n\nAccuracy: ${Math.round(response.data.accuracy * 100)}%\nStreak: ${response.data.streak} days`);
-    
-    showPage('dashboard');
-    loadDashboard();
-  } catch (error) {
-    console.error('Error finishing session:', error);
-    alert('Error saving session. Please try again.');
-  }
-}
-
-// ========================================
-// Progress
-// ========================================
-async function loadProgress() {
-  try {
-    const response = await axios.get(`/api/progress/${currentUser.userId}`);
-    const data = response.data;
-    
-    // Update skill levels
-    data.skills.forEach(skill => {
-      const elem = document.getElementById(`progress-${skill.skill}`);
-      if (elem) elem.textContent = skill.level;
-    });
-    
-    // Recent sessions
-    const sessionsHtml = data.recentSessions.map(session => {
-      const date = new Date(session.started_at).toLocaleDateString();
-      const accuracy = Math.round(session.accuracy * 100);
-      return `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <div>
-            <span class="font-semibold">${session.session_type}</span>
-            <span class="text-sm text-gray-500 ml-2">${date}</span>
-          </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">${session.items_completed} items</span>
-            <span class="font-semibold text-purple-600">${accuracy}%</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    document.getElementById('recent-sessions-list').innerHTML = sessionsHtml || '<p class="text-gray-500">No sessions yet</p>';
-    
-    // Load strategy tips
-    loadStrategyTips();
-    
-  } catch (error) {
-    console.error('Error loading progress:', error);
-  }
-}
-
-async function loadStrategyTips() {
-  try {
-    const response = await axios.get('/api/tips');
-    const tips = response.data.tips;
-    
-    const tipsHtml = tips.map(tip => `
-      <div class="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-        <p class="font-semibold text-sm mb-1">${tip.tip_title}</p>
-        <p class="text-xs text-gray-600">${tip.tip_content.substring(0, 100)}...</p>
-      </div>
-    `).join('');
-    
-    document.getElementById('strategy-tips-list').innerHTML = tipsHtml;
-  } catch (error) {
-    console.error('Error loading tips:', error);
-  }
-}
-
-async function startMock(type) {
-  try {
-    const response = await axios.get(`/api/mock/${currentUser.userId}?type=${type}`);
-    alert(`Mock exam loaded! This feature is coming soon.\n\nYour level: ${response.data.targetLevel}\nType: ${type}`);
-  } catch (error) {
-    console.error('Error loading mock:', error);
-    alert('Error loading mock exam. Please try again.');
-  }
-}
+document.addEventListener('DOMContentLoaded', boot);
