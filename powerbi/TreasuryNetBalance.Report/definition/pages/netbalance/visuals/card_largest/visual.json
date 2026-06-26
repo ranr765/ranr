@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
   "name": "card_largest",
   "position": { "x": 644, "y": 16, "z": 0, "width": 300, "height": 90, "tabOrder": 2 },
   "visual": {
@@ -15,17 +15,11 @@
                   "Property": "Largest Short Currency"
                 }
               },
-              "queryRef": "Summarized_Union.Largest Short Currency",
-              "nativeQueryRef": "Largest Short Currency"
+              "queryRef": "Summarized_Union.Largest Short Currency"
             }
           ]
         }
       }
-    },
-    "visualContainerObjects": {
-      "title": [
-        { "properties": { "text": { "expr": { "Literal": { "Value": "'Largest Short Currency'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
-      ]
     }
   }
 }

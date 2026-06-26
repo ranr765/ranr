@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
   "name": "card_deficit",
   "position": { "x": 330, "y": 16, "z": 0, "width": 300, "height": 90, "tabOrder": 1 },
   "visual": {
@@ -15,17 +15,11 @@
                   "Property": "Currencies in Deficit"
                 }
               },
-              "queryRef": "Summarized_Union.Currencies in Deficit",
-              "nativeQueryRef": "Currencies in Deficit"
+              "queryRef": "Summarized_Union.Currencies in Deficit"
             }
           ]
         }
       }
-    },
-    "visualContainerObjects": {
-      "title": [
-        { "properties": { "text": { "expr": { "Literal": { "Value": "'Currencies in Deficit'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
-      ]
     }
   }
 }
