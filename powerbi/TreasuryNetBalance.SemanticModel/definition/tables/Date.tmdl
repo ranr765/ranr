@@ -1,0 +1,54 @@
+table 'Date'
+
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: Date
+
+	column Year
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Year
+
+	column Month
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Month
+
+	column 'Month Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Month Name
+		sortByColumn: Month
+
+	/// Semi-monthly bucket end date (15th or month-end) — matches the
+	/// 30/06, 15/07, 31/07 ... columns on the original matrix.
+	column 'Period End'
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: Period End
+
+	column Period
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Period
+		sortByColumn: 'Period End'
+
+	partition Date = m
+		mode: import
+		source =
+				let
+					Start = #date(2026, 1, 1),
+					End = #date(2026, 12, 31),
+					Days = List.Dates(Start, Duration.Days(End - Start) + 1, #duration(1, 0, 0, 0)),
+					ToTable = Table.FromList(Days, Splitter.SplitByNothing(), {"Date"}),
+					Typed = Table.TransformColumnTypes(ToTable, {{"Date", type date}}),
+					AddYear = Table.AddColumn(Typed, "Year", each Date.Year([Date]), Int64.Type),
+					AddMonth = Table.AddColumn(AddYear, "Month", each Date.Month([Date]), Int64.Type),
+					AddMonthName = Table.AddColumn(AddMonth, "Month Name", each Date.ToText([Date], "MMM yyyy"), type text),
+					AddPeriodEnd = Table.AddColumn(AddMonthName, "Period End", each if Date.Day([Date]) <= 15 then #date(Date.Year([Date]), Date.Month([Date]), 15) else Date.EndOfMonth([Date]), type date),
+					AddPeriod = Table.AddColumn(AddPeriodEnd, "Period", each Date.ToText([Period End], "dd/MM/yyyy"), type text)
+				in
+					AddPeriod

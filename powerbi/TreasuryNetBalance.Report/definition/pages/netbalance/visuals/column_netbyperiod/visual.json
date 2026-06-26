@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "column_netbyperiod",
+  "position": { "x": 16, "y": 120, "z": 0, "width": 620, "height": 270, "tabOrder": 4 },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Date" } },
+                  "Property": "Period End"
+                }
+              },
+              "queryRef": "Date.Period End",
+              "nativeQueryRef": "Period End"
+            }
+          ]
+        },
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Transaction Currency"
+                }
+              },
+              "queryRef": "Summarized_Union.Transaction Currency",
+              "nativeQueryRef": "Transaction Currency"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Net CHF"
+                }
+              },
+              "queryRef": "Summarized_Union.Net CHF",
+              "nativeQueryRef": "Net CHF"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        { "properties": { "text": { "expr": { "Literal": { "Value": "'Net Balance (CHF) by Period & Transaction Currency'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
+      ]
+    }
+  }
+}

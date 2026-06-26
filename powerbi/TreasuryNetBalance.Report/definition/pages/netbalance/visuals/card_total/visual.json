@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "card_total",
+  "position": { "x": 16, "y": 16, "z": 0, "width": 300, "height": 90, "tabOrder": 0 },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Net CHF"
+                }
+              },
+              "queryRef": "Summarized_Union.Net CHF",
+              "nativeQueryRef": "Net CHF"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "labels": [
+        { "properties": { "labelDisplayUnits": { "expr": { "Literal": { "Value": "0D" } } } } }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        { "properties": { "text": { "expr": { "Literal": { "Value": "'Total Net (CHF)'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
+      ]
+    }
+  }
+}

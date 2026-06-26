@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "line_cumulative",
+  "position": { "x": 648, "y": 120, "z": 0, "width": 296, "height": 270, "tabOrder": 5 },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Date" } },
+                  "Property": "Period End"
+                }
+              },
+              "queryRef": "Date.Period End",
+              "nativeQueryRef": "Period End"
+            }
+          ]
+        },
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Transaction Currency"
+                }
+              },
+              "queryRef": "Summarized_Union.Transaction Currency",
+              "nativeQueryRef": "Transaction Currency"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Cumulative Net CHF"
+                }
+              },
+              "queryRef": "Summarized_Union.Cumulative Net CHF",
+              "nativeQueryRef": "Cumulative Net CHF"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        { "properties": { "text": { "expr": { "Literal": { "Value": "'Cumulative Net Position (CHF)'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
+      ]
+    }
+  }
+}

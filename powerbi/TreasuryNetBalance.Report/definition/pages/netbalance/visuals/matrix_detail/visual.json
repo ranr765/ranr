@@ -1,0 +1,69 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "matrix_detail",
+  "position": { "x": 16, "y": 404, "z": 0, "width": 1248, "height": 300, "tabOrder": 6 },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Transaction Currency"
+                }
+              },
+              "queryRef": "Summarized_Union.Transaction Currency",
+              "nativeQueryRef": "Transaction Currency"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Countervalue Currency"
+                }
+              },
+              "queryRef": "Summarized_Union.Countervalue Currency",
+              "nativeQueryRef": "Countervalue Currency"
+            }
+          ]
+        },
+        "Columns": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Date" } },
+                  "Property": "Period"
+                }
+              },
+              "queryRef": "Date.Period",
+              "nativeQueryRef": "Period"
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Net Amount"
+                }
+              },
+              "queryRef": "Summarized_Union.Net Amount",
+              "nativeQueryRef": "Net Amount"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        { "properties": { "text": { "expr": { "Literal": { "Value": "'Detail: Net Amount by Transaction / Countervalue Currency & Period'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
+      ]
+    }
+  }
+}

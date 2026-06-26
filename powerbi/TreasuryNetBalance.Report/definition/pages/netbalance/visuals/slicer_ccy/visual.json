@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "slicer_ccy",
+  "position": { "x": 958, "y": 16, "z": 0, "width": 306, "height": 374, "tabOrder": 3 },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Summarized_Union" } },
+                  "Property": "Transaction Currency"
+                }
+              },
+              "queryRef": "Summarized_Union.Transaction Currency",
+              "nativeQueryRef": "Transaction Currency"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        { "properties": { "text": { "expr": { "Literal": { "Value": "'Transaction Currency'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } }
+      ]
+    }
+  }
+}

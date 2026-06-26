@@ -1,0 +1,13 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+
+	annotation PBI_QueryOrder = ["Summarized_Union","Date"]
+
+ref table Summarized_Union
+ref table 'Date'
+
+relationship Date_to_Fact_NetPaymentDueDate
+	fromColumn: Summarized_Union.'Net Payment due date'
+	toColumn: 'Date'.Date

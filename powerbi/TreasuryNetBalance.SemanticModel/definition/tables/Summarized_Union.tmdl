@@ -1,0 +1,144 @@
+table Summarized_Union
+
+	/// Net of the signed amount in each currency's own terms.
+	/// Use ONLY on per-currency visuals (do not sum across currencies).
+	measure 'Net Amount' = SUM ( 'Summarized_Union'[Countervalue Amount] )
+		formatString: #,0
+
+	/// Net converted to CHF — safe to total/compare ACROSS currencies.
+	measure 'Net CHF' = SUM ( 'Summarized_Union'[CHF_NEW] )
+		formatString: #,0
+
+	measure 'Net Exposure CHF' = ABS ( [Net CHF] )
+		formatString: #,0
+
+	/// Running cash position across the period axis.
+	measure 'Cumulative Net CHF' =
+			CALCULATE (
+				[Net CHF],
+				FILTER (
+					ALLSELECTED ( 'Date'[Period End] ),
+					'Date'[Period End] <= MAX ( 'Date'[Period End] )
+				)
+			)
+		formatString: #,0
+
+	measure 'Currencies in Deficit' =
+			COUNTROWS (
+				FILTER (
+					VALUES ( 'Summarized_Union'[Transaction Currency] ),
+					[Net CHF] < 0
+				)
+			)
+		formatString: 0
+
+	measure 'Largest Short Currency' =
+			VAR ByCcy =
+				ADDCOLUMNS (
+					VALUES ( 'Summarized_Union'[Transaction Currency] ),
+					"@Net", [Net CHF]
+				)
+			VAR Shorts =
+				FILTER ( ByCcy, [@Net] < 0 )
+			RETURN
+				MAXX ( TOPN ( 1, Shorts, [@Net], ASC ), 'Summarized_Union'[Transaction Currency] )
+
+	column 'Transaction Currency'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Transaction Currency
+
+	column 'Countervalue Currency'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Countervalue Currency
+
+	column 'Net Payment due date'
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: Net Payment due date
+
+	column 'Countervalue Amount'
+		dataType: double
+		summarizeBy: sum
+		formatString: #,0
+		sourceColumn: Countervalue Amount
+
+	column CHF_NEW
+		dataType: double
+		summarizeBy: sum
+		formatString: #,0
+		sourceColumn: CHF_NEW
+
+	column DC
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: DC
+
+	column Company
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Company
+
+	column 'Counterparty Type'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Counterparty Type
+
+	column 'Transaction Amount'
+		dataType: double
+		summarizeBy: sum
+		formatString: #,0
+		sourceColumn: Transaction Amount
+
+	partition Summarized_Union = m
+		mode: import
+		source =
+				let
+					Source = #table(
+						type table [
+							#"Transaction Currency" = text,
+							#"Countervalue Currency" = text,
+							#"Net Payment due date" = date,
+							#"Countervalue Amount" = number,
+							#"CHF_NEW" = number,
+							#"DC" = Int64.Type,
+							#"Company" = text,
+							#"Counterparty Type" = text,
+							#"Transaction Amount" = number
+						],
+						{
+							{"CHF", "EUR", #date(2026, 6, 29), 337141, 337141, 1, "Company A", "Bank", 337141},
+							{"CHF", "EUR", #date(2026, 7, 12), -2022392, -2022392, -1, "Company A", "Bank", -2022392},
+							{"EUR", "CHF", #date(2026, 6, 29), 356977, 356977, 1, "Company A", "Corporate", 356977},
+							{"EUR", "CHF", #date(2026, 7, 12), 379640, 379640, 1, "Company A", "Corporate", 379640},
+							{"EUR", "JPY", #date(2026, 6, 29), -2347343, -2347343, -1, "Company B", "Bank", -2347343},
+							{"EUR", "JPY", #date(2026, 7, 12), 1267898, 1267898, 1, "Company B", "Bank", 1267898},
+							{"EUR", "NOK", #date(2026, 6, 29), -190298, -190298, -1, "Company B", "Corporate", -190298},
+							{"EUR", "NOK", #date(2026, 7, 12), 1269182, 1269182, 1, "Company B", "Corporate", 1269182},
+							{"GBP", "EUR", #date(2026, 6, 29), 23466, 23466, 1, "Company A", "Bank", 23466},
+							{"GBP", "EUR", #date(2026, 7, 12), 303983, 303983, 1, "Company A", "Bank", 303983},
+							{"MXN", "EUR", #date(2026, 6, 29), 41096164, 41096164, 1, "Company B", "Corporate", 41096164},
+							{"USD", "AED", #date(2026, 6, 29), 593078, 593078, 1, "Company A", "Bank", 593078},
+							{"USD", "AED", #date(2026, 7, 12), 1276485, 1276485, 1, "Company A", "Bank", 1276485},
+							{"USD", "AUD", #date(2026, 6, 29), -286731, -286731, -1, "Company B", "Bank", -286731},
+							{"USD", "AUD", #date(2026, 7, 12), -1226240, -1226240, -1, "Company B", "Bank", -1226240},
+							{"USD", "CAD", #date(2026, 6, 29), -210450, -210450, -1, "Company A", "Corporate", -210450},
+							{"USD", "CAD", #date(2026, 7, 12), 3856415, 3856415, 1, "Company A", "Corporate", 3856415},
+							{"USD", "EUR", #date(2026, 6, 29), -13262462, -13262462, -1, "Company B", "Bank", -13262462},
+							{"USD", "EUR", #date(2026, 7, 12), -15254877, -15254877, -1, "Company B", "Bank", -15254877},
+							{"USD", "EUR", #date(2026, 7, 20), -8500000, -8500000, -1, "Company B", "Bank", -8500000},
+							{"USD", "JPY", #date(2026, 6, 29), -4519787, -4519787, -1, "Company A", "Corporate", -4519787},
+							{"USD", "JPY", #date(2026, 7, 12), -2135391, -2135391, -1, "Company A", "Corporate", -2135391},
+							{"USD", "MXN", #date(2026, 6, 29), 148554, 148554, 1, "Company A", "Bank", 148554},
+							{"USD", "MXN", #date(2026, 7, 12), 2488384, 2488384, 1, "Company A", "Bank", 2488384},
+							{"USD", "NOK", #date(2026, 7, 12), -1854536, -1854536, -1, "Company B", "Corporate", -1854536},
+							{"USD", "QAR", #date(2026, 6, 29), 5406609, 5406609, 1, "Company B", "Bank", 5406609},
+							{"USD", "QAR", #date(2026, 7, 12), -152870, -152870, -1, "Company B", "Bank", -152870},
+							{"USD", "SGD", #date(2026, 6, 29), 280507, 280507, 1, "Company A", "Corporate", 280507},
+							{"USD", "SGD", #date(2026, 7, 12), 9238905, 9238905, 1, "Company A", "Corporate", 9238905}
+						}
+					)
+				in
+					Source
