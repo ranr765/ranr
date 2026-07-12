@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Kerala Trip Companion</title>
+<style>
+  :root{
+    --paper:#F7F5EC; --card:#FFFFFF; --ink:#232E28; --muted:#68766D; --line:#E3E0D2;
+    --green:#1D5C43; --green-ink:#FFFFFF; --green-soft:#E4EEE7; --gold:#A87B1E; --gold-soft:#F4EAD3;
+    --clay:#B14E2C; --clay-soft:#F6E5DC; --done:#2E7D4F; --shadow:0 1px 3px rgba(35,46,40,.08);
+    --mast:#173F30; --mast-ink:#F2EFE3; --mast-gold:#D8B25E;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#111813; --card:#1A241D; --ink:#E7EAE1; --muted:#93A197; --line:#2B372F;
+      --green:#63BB90; --green-ink:#0F1F17; --green-soft:#1E3126; --gold:#D3AC58; --gold-soft:#2F2715;
+      --clay:#E08A66; --clay-soft:#37211A; --done:#6FC89C; --shadow:0 1px 3px rgba(0,0,0,.4);
+      --mast:#0D1F17; --mast-ink:#E7EAE1; --mast-gold:#D3AC58;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#111813; --card:#1A241D; --ink:#E7EAE1; --muted:#93A197; --line:#2B372F;
+    --green:#63BB90; --green-ink:#0F1F17; --green-soft:#1E3126; --gold:#D3AC58; --gold-soft:#2F2715;
+    --clay:#E08A66; --clay-soft:#37211A; --done:#6FC89C; --shadow:0 1px 3px rgba(0,0,0,.4);
+    --mast:#0D1F17; --mast-ink:#E7EAE1; --mast-gold:#D3AC58;
+  }
+  :root[data-theme="light"]{
+    --paper:#F7F5EC; --card:#FFFFFF; --ink:#232E28; --muted:#68766D; --line:#E3E0D2;
+    --green:#1D5C43; --green-ink:#FFFFFF; --green-soft:#E4EEE7; --gold:#A87B1E; --gold-soft:#F4EAD3;
+    --clay:#B14E2C; --clay-soft:#F6E5DC; --done:#2E7D4F; --shadow:0 1px 3px rgba(35,46,40,.08);
+    --mast:#173F30; --mast-ink:#F2EFE3; --mast-gold:#D8B25E;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:76px;
+  }
+  .serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:2px solid var(--gold); outline-offset:2px; border-radius:4px;
+  }
+  input,textarea,select{
+    font:inherit;color:var(--ink);background:var(--card);
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+  }
+  input::placeholder,textarea::placeholder{color:var(--muted)}
+
+  /* ---------- masthead ---------- */
+  .mast{background:var(--mast);color:var(--mast-ink);border-bottom:3px solid var(--mast-gold)}
+  .mast-inner{max-width:680px;margin:0 auto;padding:20px 18px 16px}
+  .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mast-gold);margin:0 0 4px}
+  .mast h1{font-size:26px;line-height:1.15;margin:0;font-weight:600;text-wrap:balance}
+  .mast h1 .serif{font-style:italic;font-weight:500}
+  .mast-meta{margin-top:8px;font-size:13.5px;color:var(--mast-ink);opacity:.85;font-variant-numeric:tabular-nums}
+  .mast-meta b{color:var(--mast-gold);font-weight:600}
+
+  /* ---------- layout ---------- */
+  main{max-width:680px;margin:0 auto;padding:16px 14px 30px}
+  .view{display:none}
+  .view.active{display:block}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:14px 15px;margin-bottom:14px;
+  }
+  .card h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+  .card h2 .count{color:var(--gold);font-variant-numeric:tabular-nums}
+  .empty{color:var(--muted);font-size:14px;margin:2px 0}
+
+  /* ---------- capture ---------- */
+  .capture textarea{width:100%;min-height:74px;resize:vertical}
+  .capture-row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+  .mic{
+    display:flex;align-items:center;gap:7px;
+    border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:var(--card);
+    font-size:14px;
+  }
+  .mic .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+  .mic.listening{border-color:var(--clay);color:var(--clay)}
+  .mic.listening .dot{background:var(--clay);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.25}}
+  @media (prefers-reduced-motion: reduce){.mic.listening .dot{animation:none}}
+  .primary{
+    background:var(--green);color:var(--green-ink);border-radius:999px;
+    padding:9px 20px;font-weight:600;font-size:15px;
+  }
+  .primary:disabled{opacity:.45;cursor:default}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .chip{
+    border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--muted);
+    background:var(--card);
+  }
+  .chip.sel{background:var(--gold-soft);border-color:var(--gold);color:var(--ink);font-weight:600}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+  select.lang{padding:7px 8px;font-size:13px;border-radius:999px}
+
+  /* ---------- items ---------- */
+  .item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+  .item:first-of-type{border-top:none}
+  .item.done .txt{color:var(--muted);text-decoration:line-through}
+  .tick{
+    width:22px;height:22px;flex:none;margin-top:1px;
+    border:2px solid var(--muted);border-radius:7px;background:var(--card);
+    display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:transparent;
+  }
+  .item.done .tick{background:var(--done);border-color:var(--done);color:#fff}
+  .txt{flex:1;min-width:0;overflow-wrap:anywhere}
+  .sub{display:block;font-size:12px;color:var(--muted);margin-top:1px;font-variant-numeric:tabular-nums}
+  .tag{
+    display:inline-block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--green-soft);color:var(--green);border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:1px;
+  }
+  .tag.clay{background:var(--clay-soft);color:var(--clay)}
+  .tag.gold{background:var(--gold-soft);color:var(--gold)}
+  .iconbtn{color:var(--muted);font-size:13px;padding:3px 7px;border-radius:6px;flex:none}
+  .iconbtn:hover{color:var(--clay)}
+  .act{color:var(--green);font-size:13px;font-weight:600;padding:3px 8px;flex:none}
+
+  .addrow{display:flex;gap:8px;margin-top:11px}
+  .addrow input[type=text]{flex:1;min-width:0}
+  .addrow .primary{padding:8px 16px}
+
+  .brief-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .stat{
+    flex:1;min-width:96px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;box-shadow:var(--shadow);
+  }
+  .stat .n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat .l{font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+  .stat.warn .n{color:var(--clay)}
+  .stat.ok .n{color:var(--done)}
+  .stat.gold .n{color:var(--gold)}
+
+  /* ---------- log ---------- */
+  .dayhead{
+    display:flex;align-items:baseline;gap:10px;margin:20px 2px 8px;
+  }
+  .dayhead .d{font-size:17px;font-weight:700}
+  .dayhead .n{font-size:12.5px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+  .note-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;margin-top:3px;width:44px}
+
+  /* ---------- places ---------- */
+  .place .region{font-size:12px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+  .place .pname{font-size:17px;font-weight:700;margin:1px 0 3px}
+  .place p{margin:4px 0 8px;font-size:14.5px;color:var(--ink)}
+  .place .mynote{font-size:14px;background:var(--gold-soft);border-radius:8px;padding:7px 10px;margin:6px 0}
+  .status{
+    border-radius:999px;padding:4px 13px;font-size:13px;font-weight:600;border:1px solid var(--line);color:var(--muted);
+  }
+  .status.planned{background:var(--gold-soft);color:var(--gold);border-color:var(--gold)}
+  .status.visited{background:var(--green-soft);color:var(--green);border-color:var(--green)}
+  .place-actions{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .tipcard{background:var(--green-soft);border-color:transparent}
+  .tipcard li{margin:5px 0;font-size:14px}
+  .tipcard ul{margin:4px 0 2px;padding-left:19px}
+
+  /* ---------- brief ---------- */
+  .brieftext{
+    white-space:pre-wrap;font-size:14px;background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;padding:12px;overflow-x:auto;font-variant-numeric:tabular-nums;
+  }
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .ghost{border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;background:var(--card)}
+  .datejump{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+
+  /* ---------- tabs ---------- */
+  .tabs{
+    position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+    display:flex;justify-content:center;z-index:10;
+  }
+  .tabs-inner{display:flex;max-width:680px;width:100%}
+  .tab{
+    flex:1;padding:11px 2px 13px;text-align:center;font-size:11.5px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted);border-top:3px solid transparent;font-weight:600;
+  }
+  .tab.active{color:var(--green);border-top-color:var(--gold)}
+  .toast{
+    position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 18px;font-size:14px;
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:20;max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1}
+  @media (prefers-reduced-motion: reduce){.toast{transition:none}}
+  .settings-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px}
+  .settings-row label{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-inner">
+    <p class="kicker">Switzerland → Kerala · Monsoon trip</p>
+    <h1>Trip log <span class="serif">&amp;</span> day planner</h1>
+    <div class="mast-meta" id="mastMeta"></div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ TODAY ============ -->
+  <section class="view active" id="view-today">
+    <div class="card capture">
+      <h2>Capture anything — type or speak</h2>
+      <textarea id="capText" placeholder="e.g. “Buy cardamom and banana chips to take back to Switzerland”, “Call Ajith about Sunday lunch”, “Visited Fort Kochi, amazing seafood at…”"></textarea>
+      <div class="chips" id="capChips"></div>
+      <div class="capture-row">
+        <button class="mic" id="micBtn" type="button"><span class="dot"></span><span id="micLabel">Speak</span></button>
+        <select class="lang" id="micLang" aria-label="Voice language">
+          <option value="en-IN">English (India)</option>
+          <option value="ml-IN">Malayalam</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="de-CH">Deutsch (CH)</option>
+        </select>
+        <span style="flex:1"></span>
+        <button class="primary" id="capSave" type="button" disabled>Save</button>
+      </div>
+      <p class="hint" id="capHint">It auto-sorts what you say into journal, tasks, shopping, take-home or people — tap a chip to override.</p>
+    </div>
+
+    <div class="brief-strip" id="todayStats"></div>
+
+    <div class="card" id="carryCard">
+      <h2>Carried over — not finished yet <span class="count" id="carryCount"></span></h2>
+      <div id="carryList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Plan for today</h2>
+      <div id="todayTasks"></div>
+      <div class="addrow">
+        <input type="text" id="newTask" placeholder="Add a task or plan…">
+        <input type="date" id="newTaskDate" aria-label="Task date">
+        <button class="primary" id="addTaskBtn" type="button">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Today’s journal</h2>
+      <div id="todayNotes"></div>
+    </div>
+  </section>
+
+  <!-- ============ LOG ============ -->
+  <section class="view" id="view-log">
+    <div class="card">
+      <h2>Full trip log</h2>
+      <p class="hint" style="margin-top:0">Every note, plan and finished item, day by day — newest first.</p>
+    </div>
+    <div id="logDays"></div>
+  </section>
+
+  <!-- ============ LISTS ============ -->
+  <section class="view" id="view-lists">
+    <div class="card">
+      <h2>Take back to Switzerland <span class="count" id="cTakeBack"></span></h2>
+      <div id="listTakeBack"></div>
+      <div class="addrow"><input type="text" id="inTakeBack" placeholder="Spices, snacks, gifts, documents…"><button class="primary" data-addlist="takeBack" type="button">Add</button></div>
+    </div>
+    <div class="card">
+      <h2>Buy / do while in Kerala <span class="count" id="cErrands"></span></h2>
+      <div id="listErrands"></div>
+      <div class="addrow"><input type="text" id="inErrands" placeholder="Errands and shopping here…"><button class="primary" data-addlist="errands" type="button">Add</button></div>
+    </div>
+    <div class="card">
+      <h2>Once back in Switzerland <span class="count" id="cBackHome"></span></h2>
+      <div id="listBackHome"></div>
+      <div class="addrow"><input type="text" id="inBackHome" placeholder="Follow-ups after you return…"><button class="primary" data-addlist="backHome" type="button">Add</button></div>
+    </div>
+  </section>
+
+  <!-- ============ PEOPLE ============ -->
+  <section class="view" id="view-people">
+    <div class="card">
+      <h2>People to meet &amp; contact <span class="count" id="cPeople"></span></h2>
+      <p class="hint" style="margin-top:0">Tap the status to move someone from <b>to contact</b> → <b>planned</b> → <b>met</b>.</p>
+      <div id="peopleList"></div>
+      <div class="addrow">
+        <input type="text" id="inPersonName" placeholder="Name">
+        <input type="text" id="inPersonNote" placeholder="Note (where, when, about what)">
+        <button class="primary" id="addPersonBtn" type="button">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PLACES ============ -->
+  <section class="view" id="view-places">
+    <div class="card tipcard">
+      <h2>Monsoon-season notes · July &amp; August</h2>
+      <ul>
+        <li><b>Sea caution:</b> at Varkala &amp; Kovalam the sea is rough in monsoon — go for the cliffs, cafés and sunsets, not swimming.</li>
+        <li><b>Best season for Ayurveda:</b> Karkidakam (mid-July–mid-August) is traditionally the ideal month for treatments.</li>
+        <li><b>Hills:</b> Munnar &amp; Wayanad are at their greenest; check road conditions after heavy rain, carry leech socks for trails.</li>
+        <li><b>Waterfalls</b> (Athirappilly especially) are at full thunder right now.</li>
+        <li><b>Backwaters:</b> monsoon means fewer crowds and better houseboat rates. Nehru Trophy boat race is the 2nd Saturday of August.</li>
+        <li>Pack a compact umbrella, quick-dry clothes and mosquito repellent.</li>
+      </ul>
+    </div>
+    <div id="placesList"></div>
+    <div class="card">
+      <h2>Add your own place</h2>
+      <div class="addrow">
+        <input type="text" id="inPlaceName" placeholder="Place name">
+        <input type="text" id="inPlaceRegion" placeholder="District / area">
+        <button class="primary" id="addPlaceBtn" type="button">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BRIEF ============ -->
+  <section class="view" id="view-brief">
+    <div class="card">
+      <h2>Daily briefing</h2>
+      <div class="datejump">
+        <label for="briefDate" class="hint" style="margin:0">Day:</label>
+        <input type="date" id="briefDate">
+      </div>
+      <div class="toolbar">
+        <button class="ghost" id="copyBrief" type="button">Copy briefing</button>
+        <button class="ghost" id="exportJson" type="button">Backup (JSON)</button>
+        <button class="ghost" id="importJson" type="button">Restore</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+      </div>
+      <div class="brieftext" id="briefText"></div>
+    </div>
+    <div class="card">
+      <h2>Trip settings</h2>
+      <div class="settings-row">
+        <label for="setStart">Arrive</label><input type="date" id="setStart">
+        <label for="setEnd">Fly back</label><input type="date" id="setEnd">
+      </div>
+      <p class="hint">Data lives only in this browser — use Backup before switching devices, Restore to load it elsewhere.</p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="tabs-inner">
+    <button class="tab active" data-view="today" type="button">Today</button>
+    <button class="tab" data-view="log" type="button">Log</button>
+    <button class="tab" data-view="lists" type="button">Lists</button>
+    <button class="tab" data-view="people" type="button">People</button>
+    <button class="tab" data-view="places" type="button">Places</button>
+    <button class="tab" data-view="brief" type="button">Brief</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ================= state ================= */
+const KEY = 'keralaTrip.v1';
+const SEED_PLACES = [
+  {name:'Munnar', region:'Idukki', insight:'Tea hills wrapped in monsoon mist — the greenest you will ever see them. Eravikulam and Top Station views depend on the clouds; keep the plan flexible and check road conditions after heavy rain.'},
+  {name:'Alleppey (Alappuzha)', region:'Backwaters', insight:'Houseboat country. In monsoon the paddies are flooded emerald, rates drop and the canals are quiet. Book an overnight boat a day or two ahead rather than months.'},
+  {name:'Fort Kochi & Mattancherry', region:'Ernakulam', insight:'Chinese fishing nets, colonial lanes, café culture. The best rain-day option: Kerala Folklore Museum, Mattancherry Palace and the spice markets are all indoors.'},
+  {name:'Kumarakom', region:'Kottayam', insight:'The calmer alternative to Alleppey — Vembanad lake resorts, bird sanctuary, toddy shops with karimeen pollichathu.'},
+  {name:'Thekkady / Periyar', region:'Idukki', insight:'Lake boat safari and spice plantations. Wildlife is more active in the rain and the forest smells incredible; carry leech socks for guided walks.'},
+  {name:'Athirappilly Falls', region:'Thrissur', insight:'Kerala’s biggest falls, at absolute full thunder in July–August. Go early to beat day-trip crowds; combine with Vazhachal.'},
+  {name:'Varkala', region:'Thiruvananthapuram', insight:'Red cliffs over the sea, helipad sunsets, cliff-edge cafés. The sea itself is rough now — treat it as a view-and-food stop, not a swim stop.'},
+  {name:'Kovalam', region:'Thiruvananthapuram', insight:'Lighthouse beach and Ayurveda resorts. Monsoon (Karkidakam) is the classic season for a proper Ayurvedic treatment package.'},
+  {name:'Wayanad', region:'Wayanad', insight:'Edakkal caves, Banasura dam, Chembra hills — lush and quiet in the rains. Trails can be leechy and slippery; hotels drop prices in monsoon.'},
+  {name:'Ponmudi', region:'Thiruvananthapuram', insight:'A misty hairpin hill drive an hour from Trivandrum — a great half-day escape if you are based in the south.'},
+  {name:'Jatayu Earth’s Center', region:'Kollam', insight:'The world’s largest bird sculpture with a cable-car ride up — dramatic in monsoon clouds. Easy stop between Varkala and the backwaters.'},
+  {name:'Ashtamudi Lake', region:'Kollam', insight:'The quieter southern backwaters. The public Kollam–Alleppey boat is the budget way to see 8 hours of canal life.'}
+];
+const CATS = [
+  ['note','Journal'],['task','Task'],['contact','Call / contact'],
+  ['errand','Buy here'],['takeback','Take to CH'],['backhome','Back in CH'],
+  ['person','Person'],['place','Place idea']
+];
+
+let state = load();
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.version === 1) return s;
+  }catch(e){}
+  return {
+    version:1, tripStart:'2026-07-13', tripEnd:'2026-08-05',
+    notes:[], tasks:[], people:[],
+    lists:{ takeBack:[], errands:[], backHome:[] },
+    places: SEED_PLACES.map((p,i)=>({id:'seed'+i, ...p, status:'idea', note:'', custom:false}))
+  };
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ================= dates ================= */
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayISO = ()=> iso(new Date());
+const fromISO = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const DAYMS = 86400000;
+const fmtDay = s => fromISO(s).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+function tripDayNum(dateStr){
+  return Math.round((fromISO(dateStr)-fromISO(state.tripStart))/DAYMS)+1;
+}
+function tripLen(){ return Math.round((fromISO(state.tripEnd)-fromISO(state.tripStart))/DAYMS)+1; }
+function daysLeft(){ return Math.round((fromISO(state.tripEnd)-fromISO(todayISO()))/DAYMS); }
+
+/* ================= smart categorizer ================= */
+function detectCat(text){
+  const t = ' '+text.toLowerCase()+' ';
+  if (/(take|bring|carry)\s+(back|home|to switzerland)|for switzerland|back to switzerland|to ch\b/.test(t)) return 'takeback';
+  if (/\b(when|once|after)\s+(i.?m\s+)?(back|home|return)|back in switzerland/.test(t)) return 'backhome';
+  if (/\b(call|phone|ring|whatsapp|message|text|email|contact)\b/.test(t)) return 'contact';
+  if (/\b(buy|purchase|pick\s?up|order|shop for|get from)\b/.test(t)) return 'errand';
+  if (/\b(meet|meeting|catch up|lunch with|dinner with|visit (aunt|uncle|amma|achan|chettan|chechi))\b/.test(t)) return 'person';
+  if (/\b(visit|go to|goto|drive to|trip to|travel to|day trip|explore)\b/.test(t)) return 'place';
+  if (/\b(todo|to do|need to|must|have to|don.?t forget|remember to|book|renew|fix|arrange|finish)\b/.test(t)) return 'task';
+  return 'note';
+}
+let capCat = 'note';
+function renderCapChips(){
+  const box = document.getElementById('capChips');
+  box.innerHTML = CATS.map(([k,label]) =>
+    `<button type="button" class="chip${k===capCat?' sel':''}" data-cat="${k}">${label}</button>`).join('');
+}
+
+/* ================= capture save ================= */
+function saveCapture(){
+  const ta = document.getElementById('capText');
+  const text = ta.value.trim();
+  if (!text) return;
+  const day = todayISO();
+  const time = new Date().toTimeString().slice(0,5);
+  let msg = 'Saved to journal';
+  switch(capCat){
+    case 'note':
+      state.notes.push({id:uid(), date:day, time, text}); break;
+    case 'task': case 'contact': case 'place':
+      state.tasks.push({id:uid(), text, date:day, cat:capCat, done:false, doneDate:null});
+      msg = capCat==='contact' ? 'Added as a contact task' : 'Added to today’s plan'; break;
+    case 'errand':
+      state.lists.errands.push({id:uid(), text, done:false}); msg='Added to Kerala shopping list'; break;
+    case 'takeback':
+      state.lists.takeBack.push({id:uid(), text, done:false}); msg='Added to take-back list'; break;
+    case 'backhome':
+      state.lists.backHome.push({id:uid(), text, done:false}); msg='Noted for after your return'; break;
+    case 'person':
+      state.people.push({id:uid(), name:text, note:'', status:'contact'}); msg='Added to people'; break;
+  }
+  ta.value=''; capCat='note';
+  save(); renderAll(); toast(msg);
+}
+
+/* ================= voice ================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+function toggleMic(){
+  const btn = document.getElementById('micBtn'), label = document.getElementById('micLabel');
+  if (!SR){ toast('Voice input needs Chrome or Safari'); return; }
+  if (listening){ rec.stop(); return; }
+  rec = new SR();
+  rec.lang = document.getElementById('micLang').value;
+  rec.interimResults = true; rec.continuous = true;
+  const ta = document.getElementById('capText');
+  const base = ta.value ? ta.value.replace(/\s+$/,'')+' ' : '';
+  rec.onresult = e => {
+    let fin='', interim='';
+    for (const r of e.results) (r.isFinal ? fin+=r[0].transcript+' ' : interim+=r[0].transcript);
+    ta.value = base + fin + interim;
+    onCapInput();
+  };
+  rec.onend = ()=>{ listening=false; btn.classList.remove('listening'); label.textContent='Speak'; onCapInput(); };
+  rec.onerror = ev => { if (ev.error==='not-allowed') toast('Microphone permission needed'); };
+  rec.start(); listening=true; btn.classList.add('listening'); label.textContent='Listening…';
+}
+
+/* ================= rendering ================= */
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const catTag = c => {
+  const m = {contact:['Call','clay'], place:['Place','gold'], task:['Task','']};
+  if (!m[c]) return '';
+  const [l,cls]=m[c]; return `<span class="tag ${cls}">${l}</span>`;
+};
+
+function renderMast(){
+  const el = document.getElementById('mastMeta');
+  const t = todayISO(), n = tripDayNum(t), len = tripLen();
+  let s;
+  if (n < 1) s = `Trip starts ${fmtDay(state.tripStart)} — <b>${1-n} day${1-n>1?'s':''} to go</b>`;
+  else if (n > len) s = `Trip ended ${fmtDay(state.tripEnd)} — hope it was wonderful`;
+  else s = `<b>Day ${n} of ${len}</b> · ${fmtDay(t)} · fly back ${fmtDay(state.tripEnd)} (${daysLeft()} days left)`;
+  el.innerHTML = s;
+}
+
+function taskRow(t, opts={}){
+  const carried = !t.done && t.date < todayISO();
+  const age = carried ? Math.round((fromISO(todayISO())-fromISO(t.date))/DAYMS) : 0;
+  return `<div class="item ${t.done?'done':''}">
+    <button class="tick" data-toggle-task="${t.id}" type="button" aria-label="Toggle done">✓</button>
+    <span class="txt">${esc(t.text)}${catTag(t.cat)}
+      <span class="sub">${carried?`from ${fmtDay(t.date)} · ${age}d old`:(t.done&&t.doneDate?`done ${fmtDay(t.doneDate)}`:fmtDay(t.date))}</span>
+    </span>
+    ${opts.carry?`<button class="act" data-bump-task="${t.id}" type="button">Do today</button>`:''}
+    <button class="iconbtn" data-del-task="${t.id}" type="button" aria-label="Delete">✕</button>
+  </div>`;
+}
+
+function renderToday(){
+  const t = todayISO();
+  const carried = state.tasks.filter(x=>!x.done && x.date<t).sort((a,b)=>a.date<b.date?-1:1);
+  const todays  = state.tasks.filter(x=>x.date===t || (x.done && x.doneDate===t && x.date<t));
+  const y = iso(new Date(fromISO(t)-DAYMS+DAYMS/2));
+  const yDone = state.tasks.filter(x=>x.done && x.doneDate===y).length;
+  const notesToday = state.notes.filter(n=>n.date===t);
+  const toMeet = state.people.filter(p=>p.status!=='met').length;
+  const takeOpen = state.lists.takeBack.filter(i=>!i.done).length;
+
+  document.getElementById('todayStats').innerHTML = `
+    <div class="stat ${carried.length?'warn':'ok'}"><div class="n">${carried.length}</div><div class="l">Carried over</div></div>
+    <div class="stat ok"><div class="n">${yDone}</div><div class="l">Done yesterday</div></div>
+    <div class="stat gold"><div class="n">${toMeet}</div><div class="l">People to meet</div></div>
+    <div class="stat"><div class="n">${takeOpen}</div><div class="l">Still to pick up</div></div>`;
+
+  document.getElementById('carryCount').textContent = carried.length?`· ${carried.length}`:'';
+  document.getElementById('carryList').innerHTML =
+    carried.length ? carried.map(x=>taskRow(x,{carry:true})).join('') : '<p class="empty">Nothing pending from earlier days — clean slate.</p>';
+  document.getElementById('todayTasks').innerHTML =
+    todays.length ? todays.map(x=>taskRow(x)).join('') : '<p class="empty">No plans yet for today. Add one below or dictate it above.</p>';
+  document.getElementById('todayNotes').innerHTML =
+    notesToday.length ? notesToday.map(n=>`
+      <div class="item"><span class="note-time">${n.time}</span><span class="txt">${esc(n.text)}</span>
+      <button class="iconbtn" data-del-note="${n.id}" type="button" aria-label="Delete">✕</button></div>`).join('')
+    : '<p class="empty">No entries yet today.</p>';
+  document.getElementById('newTaskDate').value = t;
+}
+
+function renderLog(){
+  const days = {};
+  state.notes.forEach(n => (days[n.date] ??= {notes:[],tasks:[]}).notes.push(n));
+  state.tasks.forEach(x => {
+    (days[x.date] ??= {notes:[],tasks:[]}).tasks.push(x);
+    if (x.done && x.doneDate && x.doneDate!==x.date) (days[x.doneDate] ??= {notes:[],tasks:[]});
+  });
+  const keys = Object.keys(days).sort().reverse();
+  document.getElementById('logDays').innerHTML = keys.length ? keys.map(d=>{
+    const n = tripDayNum(d), len = tripLen();
+    const dayLabel = (n>=1&&n<=len)?`Day ${n} of ${len}`:'Outside trip';
+    const doneHere = state.tasks.filter(x=>x.done&&x.doneDate===d);
+    return `<div class="dayhead"><span class="d serif">${fmtDay(d)}</span><span class="n">${dayLabel}</span></div>
+      <div class="card">
+        ${days[d].notes.map(x=>`<div class="item"><span class="note-time">${x.time}</span><span class="txt">${esc(x.text)}</span></div>`).join('')}
+        ${days[d].tasks.filter(x=>!x.done).map(x=>taskRow(x)).join('')}
+        ${doneHere.map(x=>taskRow(x)).join('')}
+        ${(!days[d].notes.length && !days[d].tasks.length && !doneHere.length)?'<p class="empty">Quiet day.</p>':''}
+      </div>`;
+  }).join('') : '<div class="card"><p class="empty">The log fills up as you capture things.</p></div>';
+}
+
+function listRow(listKey, item){
+  return `<div class="item ${item.done?'done':''}">
+    <button class="tick" data-toggle-list="${listKey}:${item.id}" type="button" aria-label="Toggle">✓</button>
+    <span class="txt">${esc(item.text)}</span>
+    <button class="iconbtn" data-del-list="${listKey}:${item.id}" type="button" aria-label="Delete">✕</button>
+  </div>`;
+}
+function renderLists(){
+  const map = {takeBack:['listTakeBack','cTakeBack'], errands:['listErrands','cErrands'], backHome:['listBackHome','cBackHome']};
+  for (const k in map){
+    const items = state.lists[k];
+    const open = items.filter(i=>!i.done).length;
+    document.getElementById(map[k][1]).textContent = items.length?`· ${open} open`:'';
+    document.getElementById(map[k][0]).innerHTML =
+      items.length ? items.map(i=>listRow(k,i)).join('') : '<p class="empty">Empty so far.</p>';
+  }
+}
+
+const P_STATUS = {contact:['To contact',''], planned:['Planned','planned'], met:['Met ✓','visited']};
+function renderPeople(){
+  const ppl = [...state.people].sort((a,b)=> (a.status==='met')-(b.status==='met'));
+  document.getElementById('cPeople').textContent =
+    state.people.length?`· ${state.people.filter(p=>p.status!=='met').length} pending`:'';
+  document.getElementById('peopleList').innerHTML = ppl.length ? ppl.map(p=>`
+    <div class="item ${p.status==='met'?'done':''}">
+      <span class="txt"><b>${esc(p.name)}</b>${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
+      <button class="status ${P_STATUS[p.status][1]}" data-cycle-person="${p.id}" type="button">${P_STATUS[p.status][0]}</button>
+      <button class="iconbtn" data-del-person="${p.id}" type="button" aria-label="Delete">✕</button>
+    </div>`).join('') : '<p class="empty">Add the friends and relatives you want to see.</p>';
+}
+
+const PL_STATUS = {idea:['Idea',''], planned:['Planned','planned'], visited:['Visited ✓','visited']};
+function renderPlaces(){
+  const order = {planned:0, idea:1, visited:2};
+  const pls = [...state.places].sort((a,b)=>order[a.status]-order[b.status]);
+  document.getElementById('placesList').innerHTML = pls.map(p=>`
+    <div class="card place">
+      <div class="region">${esc(p.region)}</div>
+      <div class="pname serif">${esc(p.name)}</div>
+      ${p.insight?`<p>${esc(p.insight)}</p>`:''}
+      ${p.note?`<div class="mynote">${esc(p.note)}</div>`:''}
+      <div class="place-actions">
+        <button class="status ${PL_STATUS[p.status][1]}" data-cycle-place="${p.id}" type="button">${PL_STATUS[p.status][0]}</button>
+        <button class="act" data-note-place="${p.id}" type="button">${p.note?'Edit note':'+ Note'}</button>
+        ${p.custom?`<button class="iconbtn" data-del-place="${p.id}" type="button" aria-label="Delete">✕</button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+/* ================= briefing ================= */
+function buildBrief(day){
+  const len = tripLen(), n = tripDayNum(day);
+  const L = [];
+  L.push(`KERALA TRIP — BRIEFING FOR ${fmtDay(day).toUpperCase()}`);
+  L.push(n>=1&&n<=len ? `Day ${n} of ${len} · ${Math.max(0,Math.round((fromISO(state.tripEnd)-fromISO(day))/DAYMS))} days until the flight back` : `(outside trip dates)`);
+  L.push('');
+  const carried = state.tasks.filter(x=>!x.done && x.date<day);
+  L.push(`— CARRIED OVER (${carried.length}) —`);
+  carried.length ? carried.forEach(x=>L.push(`  • ${x.text}  (since ${fmtDay(x.date)})`)) : L.push('  Nothing pending. Clean slate.');
+  L.push('');
+  const planned = state.tasks.filter(x=>x.date===day && !x.done);
+  L.push(`— PLANNED THIS DAY (${planned.length}) —`);
+  planned.length ? planned.forEach(x=>L.push(`  • ${x.text}`)) : L.push('  Nothing planned yet.');
+  L.push('');
+  const finished = state.tasks.filter(x=>x.done && x.doneDate===day);
+  L.push(`— FINISHED THIS DAY (${finished.length}) —`);
+  finished.length ? finished.forEach(x=>L.push(`  ✓ ${x.text}`)) : L.push('  —');
+  L.push('');
+  const notes = state.notes.filter(x=>x.date===day);
+  if (notes.length){ L.push(`— JOURNAL (${notes.length}) —`); notes.forEach(x=>L.push(`  ${x.time}  ${x.text}`)); L.push(''); }
+  const toMeet = state.people.filter(p=>p.status!=='met');
+  L.push(`— STILL TO MEET / CONTACT (${toMeet.length}) —`);
+  toMeet.length ? toMeet.forEach(p=>L.push(`  • ${p.name}${p.note?' — '+p.note:''}`)) : L.push('  Everyone met!');
+  L.push('');
+  const take = state.lists.takeBack.filter(i=>!i.done);
+  L.push(`— STILL TO PICK UP FOR SWITZERLAND (${take.length}) —`);
+  take.length ? take.forEach(i=>L.push(`  • ${i.text}`)) : L.push('  All packed.');
+  L.push('');
+  const back = state.lists.backHome.filter(i=>!i.done);
+  if (back.length){ L.push(`— ONCE BACK IN SWITZERLAND (${back.length}) —`); back.forEach(i=>L.push(`  • ${i.text}`)); L.push(''); }
+  const plannedPlaces = state.places.filter(p=>p.status==='planned');
+  if (plannedPlaces.length){ L.push(`— PLACES ON THE SHORTLIST —`); plannedPlaces.forEach(p=>L.push(`  • ${p.name} (${p.region})`)); }
+  return L.join('\n');
+}
+function renderBrief(){
+  const d = document.getElementById('briefDate');
+  if (!d.value) d.value = todayISO();
+  document.getElementById('briefText').textContent = buildBrief(d.value);
+  document.getElementById('setStart').value = state.tripStart;
+  document.getElementById('setEnd').value = state.tripEnd;
+}
+
+function renderAll(){ renderMast(); renderToday(); renderLog(); renderLists(); renderPeople(); renderPlaces(); renderBrief(); renderCapChips(); }
+
+/* ================= toast ================= */
+let toastT;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ================= events ================= */
+function onCapInput(){
+  const v = document.getElementById('capText').value;
+  document.getElementById('capSave').disabled = !v.trim();
+  capCat = v.trim() ? detectCat(v) : 'note';
+  renderCapChips();
+}
+document.getElementById('capText').addEventListener('input', onCapInput);
+document.getElementById('capSave').addEventListener('click', saveCapture);
+document.getElementById('micBtn').addEventListener('click', toggleMic);
+
+document.getElementById('addTaskBtn').addEventListener('click', ()=>{
+  const inp = document.getElementById('newTask');
+  const text = inp.value.trim(); if (!text) return;
+  const date = document.getElementById('newTaskDate').value || todayISO();
+  state.tasks.push({id:uid(), text, date, cat:detectCat(text)==='contact'?'contact':'task', done:false, doneDate:null});
+  inp.value=''; save(); renderAll();
+});
+document.getElementById('newTask').addEventListener('keydown', e=>{ if (e.key==='Enter') document.getElementById('addTaskBtn').click(); });
+
+document.getElementById('addPersonBtn').addEventListener('click', ()=>{
+  const n = document.getElementById('inPersonName'), o = document.getElementById('inPersonNote');
+  if (!n.value.trim()) return;
+  state.people.push({id:uid(), name:n.value.trim(), note:o.value.trim(), status:'contact'});
+  n.value=''; o.value=''; save(); renderAll();
+});
+document.getElementById('addPlaceBtn').addEventListener('click', ()=>{
+  const n = document.getElementById('inPlaceName'), r = document.getElementById('inPlaceRegion');
+  if (!n.value.trim()) return;
+  state.places.push({id:uid(), name:n.value.trim(), region:r.value.trim()||'Kerala', insight:'', status:'idea', note:'', custom:true});
+  n.value=''; r.value=''; save(); renderAll();
+});
+
+document.getElementById('briefDate').addEventListener('change', renderBrief);
+document.getElementById('copyBrief').addEventListener('click', async ()=>{
+  const txt = document.getElementById('briefText').textContent;
+  try{ await navigator.clipboard.writeText(txt); toast('Briefing copied — paste it anywhere'); }
+  catch(e){ toast('Copy blocked — select the text manually'); }
+});
+document.getElementById('exportJson').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'kerala-trip-backup.json'; a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById('importJson').addEventListener('click', ()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', e=>{
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{
+      const s = JSON.parse(r.result);
+      if (s.version!==1) throw 0;
+      state = s; save(); renderAll(); toast('Backup restored');
+    }catch(err){ toast('That file is not a valid backup'); } };
+  r.readAsText(f);
+});
+document.getElementById('setStart').addEventListener('change', e=>{ state.tripStart=e.target.value; save(); renderAll(); });
+document.getElementById('setEnd').addEventListener('change', e=>{ state.tripEnd=e.target.value; save(); renderAll(); });
+
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+b.dataset.view));
+  window.scrollTo({top:0});
+}));
+
+['inTakeBack','inErrands','inBackHome'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{
+    if (e.key==='Enter') e.target.parentElement.querySelector('button').click();
+  });
+});
+
+document.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const D = b.dataset;
+  if (D.cat !== undefined){ capCat = D.cat; renderCapChips(); return; }
+  if (D.toggleTask){
+    const t = state.tasks.find(x=>x.id===D.toggleTask); if (!t) return;
+    t.done = !t.done; t.doneDate = t.done ? todayISO() : null;
+    save(); renderAll(); if (t.done) toast('Nice — done ✓'); return;
+  }
+  if (D.bumpTask){
+    const t = state.tasks.find(x=>x.id===D.bumpTask); if (!t) return;
+    t.date = todayISO(); save(); renderAll(); toast('Moved to today'); return;
+  }
+  if (D.delTask){ state.tasks = state.tasks.filter(x=>x.id!==D.delTask); save(); renderAll(); return; }
+  if (D.delNote){ state.notes = state.notes.filter(x=>x.id!==D.delNote); save(); renderAll(); return; }
+  if (D.addlist){
+    const key = D.addlist;
+    const inp = document.getElementById('in'+key[0].toUpperCase()+key.slice(1));
+    if (!inp.value.trim()) return;
+    state.lists[key].push({id:uid(), text:inp.value.trim(), done:false});
+    inp.value=''; save(); renderAll(); return;
+  }
+  if (D.toggleList){
+    const [k,id] = D.toggleList.split(':');
+    const it = state.lists[k].find(x=>x.id===id); if (it){ it.done=!it.done; save(); renderAll(); } return;
+  }
+  if (D.delList){
+    const [k,id] = D.delList.split(':');
+    state.lists[k] = state.lists[k].filter(x=>x.id!==id); save(); renderAll(); return;
+  }
+  if (D.cyclePerson){
+    const p = state.people.find(x=>x.id===D.cyclePerson); if (!p) return;
+    p.status = p.status==='contact'?'planned':p.status==='planned'?'met':'contact';
+    save(); renderAll(); return;
+  }
+  if (D.delPerson){ state.people = state.people.filter(x=>x.id!==D.delPerson); save(); renderAll(); return; }
+  if (D.cyclePlace){
+    const p = state.places.find(x=>x.id===D.cyclePlace); if (!p) return;
+    p.status = p.status==='idea'?'planned':p.status==='planned'?'visited':'idea';
+    save(); renderAll(); return;
+  }
+  if (D.notePlace){
+    const p = state.places.find(x=>x.id===D.notePlace); if (!p) return;
+    const v = prompt('Your note for '+p.name, p.note||'');
+    if (v!==null){ p.note = v.trim(); save(); renderAll(); } return;
+  }
+  if (D.delPlace){ state.places = state.places.filter(x=>x.id!==D.delPlace); save(); renderAll(); return; }
+});
+
+renderAll();
+</script>
+
+</body>
+</html>
