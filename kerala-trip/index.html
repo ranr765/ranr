@@ -167,6 +167,32 @@
   .ghost{border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;background:var(--card)}
   .datejump{display:flex;gap:8px;align-items:center;margin-bottom:12px}
 
+  /* ---------- calendar ---------- */
+  .cal-month{margin-bottom:16px}
+  .cal-title{font-size:15px;font-weight:700;margin:2px 2px 7px}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;padding:2px 0}
+  .cal-day{
+    aspect-ratio:1;border:1px solid var(--line);border-radius:9px;background:var(--card);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted);padding:0;
+  }
+  .cal-day.blank{border:none;background:none}
+  .cal-day.intrip{color:var(--ink);font-weight:600}
+  .cal-day.out{opacity:.4;border-style:dashed;font-weight:400}
+  .cal-day.today{border-color:var(--gold);border-width:2px}
+  .cal-day.sel{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+  .cal-day .dots{display:flex;gap:3px;height:5px}
+  .cal-day .cdot{width:5px;height:5px;border-radius:50%}
+  .cdot.p{background:var(--gold)} .cdot.t{background:var(--green)} .cdot.d{background:var(--muted)}
+  .cal-day.sel .cdot{background:var(--green-ink)}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:0 2px 10px;flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend .cdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .calbtn{color:var(--gold);font-size:12px;font-weight:700;padding:3px 6px;flex:none;letter-spacing:.03em}
+  .datefield{font-size:13px;padding:6px 8px;border-radius:999px}
+  .planned-for{font-size:12.5px;color:var(--gold);font-weight:600}
+
   /* ---------- tabs ---------- */
   .tabs{
     position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
@@ -243,6 +269,34 @@
     </div>
   </section>
 
+  <!-- ============ CALENDAR ============ -->
+  <section class="view" id="view-cal">
+    <div class="card">
+      <h2>Trip calendar</h2>
+      <div class="legend">
+        <span><span class="cdot p"></span>Sightseeing</span>
+        <span><span class="cdot t"></span>Plans &amp; tasks</span>
+        <span><span class="cdot d"></span>Done</span>
+      </div>
+      <div id="calMonths"></div>
+    </div>
+    <div class="card" id="dayDetailCard">
+      <h2 id="dayDetailTitle">Selected day</h2>
+      <div id="dayDetail"></div>
+      <div class="addrow">
+        <input type="text" id="dayPlanText" placeholder="Add a plan for this day…">
+        <button class="primary" id="dayPlanAdd" type="button">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Send to Apple / Google Calendar</h2>
+      <div class="toolbar" style="margin-bottom:6px">
+        <button class="ghost" id="icsAll" type="button">Download full trip (.ics)</button>
+      </div>
+      <p class="hint" style="margin-top:2px">The .ics file opens straight into <b>Apple Calendar</b> on iPhone/Mac (tap it), and imports into <b>Google Calendar</b> via Settings → Import &amp; export. Every item in the day view above also has its own <b>iCal</b> / <b>GCal</b> one-tap buttons.</p>
+    </div>
+  </section>
+
   <!-- ============ LOG ============ -->
   <section class="view" id="view-log">
     <div class="card">
@@ -254,6 +308,18 @@
 
   <!-- ============ LISTS ============ -->
   <section class="view" id="view-lists">
+    <div class="card">
+      <h2>Family sharing — you, wife &amp; kid</h2>
+      <p class="hint" style="margin-top:0">Everyone opens this same app link on their own phone. To sync up: tap <b>Copy share pack</b>, send it on WhatsApp, and the others paste it below and tap <b>Merge</b>. Lists, people and places combine — the newest change to each item wins. Your journal and personal day plans stay private. Tip: on shared lists, tick things off instead of deleting them, so a merge doesn’t bring them back.</p>
+      <div class="toolbar" style="margin-bottom:8px">
+        <button class="ghost" id="copyShare" type="button">Copy share pack</button>
+        <button class="ghost" id="copyListText" type="button">Copy lists as plain text</button>
+      </div>
+      <div class="addrow">
+        <input type="text" id="pasteShare" placeholder="Paste a share pack from family…">
+        <button class="primary" id="mergeShare" type="button">Merge</button>
+      </div>
+    </div>
     <div class="card">
       <h2>Take back to Switzerland <span class="count" id="cTakeBack"></span></h2>
       <div id="listTakeBack"></div>
@@ -339,6 +405,7 @@
 <nav class="tabs" aria-label="Sections">
   <div class="tabs-inner">
     <button class="tab active" data-view="today" type="button">Today</button>
+    <button class="tab" data-view="cal" type="button">Plan</button>
     <button class="tab" data-view="log" type="button">Log</button>
     <button class="tab" data-view="lists" type="button">Lists</button>
     <button class="tab" data-view="people" type="button">People</button>
@@ -374,20 +441,30 @@ const CATS = [
 ];
 
 let state = load();
+function migrate(s){
+  if (s.version === 1){
+    for (const k in s.lists) s.lists[k].forEach(i=>{ i.updated ??= 0; });
+    s.people.forEach(p=>{ p.updated ??= 0; });
+    s.places.forEach(p=>{ p.updated ??= 0; p.date ??= null; });
+    s.version = 2;
+  }
+  return s;
+}
 function load(){
   try{
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s && s.version === 1) return s;
+    if (s && (s.version === 1 || s.version === 2)) return migrate(s);
   }catch(e){}
   return {
-    version:1, tripStart:'2026-07-13', tripEnd:'2026-08-05',
+    version:2, tripStart:'2026-07-13', tripEnd:'2026-08-05',
     notes:[], tasks:[], people:[],
     lists:{ takeBack:[], errands:[], backHome:[] },
-    places: SEED_PLACES.map((p,i)=>({id:'seed'+i, ...p, status:'idea', note:'', custom:false}))
+    places: SEED_PLACES.map((p,i)=>({id:'seed'+i, ...p, status:'idea', note:'', date:null, custom:false, updated:0}))
   };
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const now = ()=> Date.now();
 
 /* ================= dates ================= */
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -435,13 +512,13 @@ function saveCapture(){
       state.tasks.push({id:uid(), text, date:day, cat:capCat, done:false, doneDate:null});
       msg = capCat==='contact' ? 'Added as a contact task' : 'Added to today’s plan'; break;
     case 'errand':
-      state.lists.errands.push({id:uid(), text, done:false}); msg='Added to Kerala shopping list'; break;
+      state.lists.errands.push({id:uid(), text, done:false, updated:now()}); msg='Added to Kerala shopping list'; break;
     case 'takeback':
-      state.lists.takeBack.push({id:uid(), text, done:false}); msg='Added to take-back list'; break;
+      state.lists.takeBack.push({id:uid(), text, done:false, updated:now()}); msg='Added to take-back list'; break;
     case 'backhome':
-      state.lists.backHome.push({id:uid(), text, done:false}); msg='Noted for after your return'; break;
+      state.lists.backHome.push({id:uid(), text, done:false, updated:now()}); msg='Noted for after your return'; break;
     case 'person':
-      state.people.push({id:uid(), name:text, note:'', status:'contact'}); msg='Added to people'; break;
+      state.people.push({id:uid(), name:text, note:'', status:'contact', updated:now()}); msg='Added to people'; break;
   }
   ta.value=''; capCat='note';
   save(); renderAll(); toast(msg);
@@ -593,12 +670,184 @@ function renderPlaces(){
       <div class="pname serif">${esc(p.name)}</div>
       ${p.insight?`<p>${esc(p.insight)}</p>`:''}
       ${p.note?`<div class="mynote">${esc(p.note)}</div>`:''}
+      ${p.date?`<div class="planned-for">On the calendar for ${fmtDay(p.date)}</div>`:''}
       <div class="place-actions">
         <button class="status ${PL_STATUS[p.status][1]}" data-cycle-place="${p.id}" type="button">${PL_STATUS[p.status][0]}</button>
         <button class="act" data-note-place="${p.id}" type="button">${p.note?'Edit note':'+ Note'}</button>
+        <input type="date" class="datefield" data-place-date="${p.id}" value="${p.date||''}" aria-label="Visit date for ${esc(p.name)}">
         ${p.custom?`<button class="iconbtn" data-del-place="${p.id}" type="button" aria-label="Delete">✕</button>`:''}
       </div>
     </div>`).join('');
+}
+
+/* ================= calendar ================= */
+let selDay = null;
+function clampToTrip(d){
+  if (d < state.tripStart) return state.tripStart;
+  if (d > state.tripEnd) return state.tripEnd;
+  return d;
+}
+function calItems(d){
+  return {
+    places: state.places.filter(p=>p.date===d),
+    tasks: state.tasks.filter(t=>t.date===d)
+  };
+}
+function renderCal(){
+  if (!selDay) selDay = clampToTrip(todayISO());
+  const box = document.getElementById('calMonths');
+  const start = fromISO(state.tripStart), end = fromISO(state.tripEnd);
+  const t = todayISO();
+  let html = '';
+  let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const stop = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cur <= stop){
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const dim = new Date(y, m+1, 0).getDate();
+    const offset = (new Date(y, m, 1).getDay() + 6) % 7; /* Monday-first */
+    html += `<div class="cal-month"><div class="cal-title serif">${cur.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div><div class="cal-grid">`;
+    html += ['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+    html += '<div class="cal-day blank"></div>'.repeat(offset);
+    for (let d=1; d<=dim; d++){
+      const dISO = iso(new Date(y,m,d));
+      const inTrip = dISO >= state.tripStart && dISO <= state.tripEnd;
+      const it = calItems(dISO);
+      const openT = it.tasks.filter(x=>!x.done).length;
+      const doneT = it.tasks.filter(x=>x.done).length;
+      const dots =
+        (it.places.length?'<span class="cdot p"></span>':'') +
+        (openT?'<span class="cdot t"></span>':'') +
+        (doneT?'<span class="cdot d"></span>':'');
+      html += `<button type="button" class="cal-day ${inTrip?'intrip':'out'}${dISO===t?' today':''}${dISO===selDay?' sel':''}" data-cal="${dISO}" aria-label="${fmtDay(dISO)}"><span>${d}</span><span class="dots">${dots}</span></button>`;
+    }
+    html += '</div></div>';
+    cur = new Date(y, m+1, 1);
+  }
+  box.innerHTML = html;
+  renderDayDetail();
+}
+function renderDayDetail(){
+  const n = tripDayNum(selDay), len = tripLen();
+  document.getElementById('dayDetailTitle').innerHTML =
+    `${fmtDay(selDay)} ${n>=1&&n<=len?`<span class="count">· day ${n} of ${len}</span>`:''}`;
+  const it = calItems(selDay);
+  const rows = [];
+  it.places.forEach(p=>rows.push(`
+    <div class="item">
+      <span class="txt"><b>${esc(p.name)}</b><span class="tag gold">Sightseeing</span><span class="sub">${esc(p.region)}</span></span>
+      <button class="calbtn" data-ics-one="place:${p.id}" type="button">iCal</button>
+      <button class="calbtn" data-gcal-one="place:${p.id}" type="button">GCal</button>
+      <button class="iconbtn" data-unsched-place="${p.id}" type="button" aria-label="Remove from calendar">✕</button>
+    </div>`));
+  it.tasks.forEach(x=>rows.push(`
+    <div class="item ${x.done?'done':''}">
+      <button class="tick" data-toggle-task="${x.id}" type="button" aria-label="Toggle done">✓</button>
+      <span class="txt">${esc(x.text)}${catTag(x.cat)}</span>
+      <button class="calbtn" data-ics-one="task:${x.id}" type="button">iCal</button>
+      <button class="calbtn" data-gcal-one="task:${x.id}" type="button">GCal</button>
+      <button class="iconbtn" data-del-task="${x.id}" type="button" aria-label="Delete">✕</button>
+    </div>`));
+  document.getElementById('dayDetail').innerHTML =
+    rows.length ? rows.join('') : '<p class="empty">Nothing on this day yet — add a plan below, or set a “visit on” date on any place in the Places tab.</p>';
+}
+
+/* ================= ics / gcal export ================= */
+function icsDate(dISO){ return dISO.replace(/-/g,''); }
+function nextDay(dISO){ return iso(new Date(fromISO(dISO).getTime()+DAYMS)); }
+function icsFile(events){
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kerala Trip Companion//EN','CALSCALE:GREGORIAN'];
+  for (const e of events){
+    lines.push('BEGIN:VEVENT',
+      `UID:${e.uid}@kerala-trip`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${icsDate(e.start)}`,
+      `DTEND;VALUE=DATE:${icsDate(e.end||nextDay(e.start))}`,
+      `SUMMARY:${e.title.replace(/([,;\\])/g,'\\$1')}`,
+      `DESCRIPTION:${(e.desc||'').replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n')}`,
+      'END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text],{type:mime}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function eventFromRef(ref){
+  const [kind,id] = ref.split(':');
+  if (kind==='place'){
+    const p = state.places.find(x=>x.id===id); if (!p || !p.date) return null;
+    return {uid:p.id, start:p.date, title:`${p.name} — sightseeing`, desc:(p.insight||'')+(p.note?'\nNote: '+p.note:'')};
+  }
+  const x = state.tasks.find(x=>x.id===id); if (!x) return null;
+  return {uid:x.id, start:x.date, title:x.text, desc:'Kerala trip'};
+}
+function gcalOpen(e){
+  const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(e.title)
+    + '&dates=' + icsDate(e.start) + '/' + icsDate(e.end||nextDay(e.start))
+    + '&details=' + encodeURIComponent(e.desc||'Kerala trip');
+  window.open(url, '_blank', 'noopener');
+}
+function exportTripICS(){
+  const events = [{uid:'trip', start:state.tripStart, end:nextDay(state.tripEnd),
+    title:'Kerala trip 🌴', desc:'Switzerland → Kerala'}];
+  state.places.filter(p=>p.date).forEach(p=>events.push(eventFromRef('place:'+p.id)));
+  state.tasks.forEach(x=>events.push(eventFromRef('task:'+x.id)));
+  download('kerala-trip.ics', icsFile(events.filter(Boolean)), 'text/calendar');
+  toast('Open the .ics file to add everything to your calendar');
+}
+
+/* ================= family share ================= */
+function b64encode(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+function b64decode(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function makeSharePack(){
+  return 'KTP2.' + b64encode(JSON.stringify({
+    kind:'ktp', v:2, lists:state.lists, people:state.people, places:state.places
+  }));
+}
+function mergeById(mine, theirs){
+  let changed = 0;
+  const byId = new Map(mine.map(i=>[i.id,i]));
+  for (const t of theirs||[]){
+    if (!t || !t.id) continue;
+    const m = byId.get(t.id);
+    if (!m){ mine.push(t); changed++; }
+    else if ((t.updated||0) > (m.updated||0)){ Object.assign(m, t); changed++; }
+  }
+  return changed;
+}
+function mergeSharePack(code){
+  let pack;
+  try{
+    pack = JSON.parse(b64decode(code.trim().replace(/^KTP2\./,'')));
+    if (pack.kind!=='ktp') throw 0;
+  }catch(e){ toast('That doesn’t look like a share pack'); return; }
+  let changed = 0;
+  for (const k of ['takeBack','errands','backHome']) changed += mergeById(state.lists[k], pack.lists?.[k]);
+  changed += mergeById(state.people, pack.people);
+  changed += mergeById(state.places, pack.places);
+  save(); renderAll();
+  toast(changed ? `Merged — ${changed} item${changed>1?'s':''} updated` : 'Already in sync — nothing new');
+}
+function listsAsText(){
+  const sec = (title, items) => items.length
+    ? `*${title}*\n` + items.map(i=>`${i.done?'✅':'⬜'} ${i.text}`).join('\n') + '\n\n' : '';
+  return ('🌴 Kerala trip lists — ' + fmtDay(todayISO()) + '\n\n'
+    + sec('Take back to Switzerland', state.lists.takeBack)
+    + sec('Buy / do in Kerala', state.lists.errands)
+    + sec('Once back in Switzerland', state.lists.backHome)).trim();
 }
 
 /* ================= briefing ================= */
@@ -644,7 +893,7 @@ function renderBrief(){
   document.getElementById('setEnd').value = state.tripEnd;
 }
 
-function renderAll(){ renderMast(); renderToday(); renderLog(); renderLists(); renderPeople(); renderPlaces(); renderBrief(); renderCapChips(); }
+function renderAll(){ renderMast(); renderToday(); renderCal(); renderLog(); renderLists(); renderPeople(); renderPlaces(); renderBrief(); renderCapChips(); }
 
 /* ================= toast ================= */
 let toastT;
@@ -677,14 +926,49 @@ document.getElementById('newTask').addEventListener('keydown', e=>{ if (e.key===
 document.getElementById('addPersonBtn').addEventListener('click', ()=>{
   const n = document.getElementById('inPersonName'), o = document.getElementById('inPersonNote');
   if (!n.value.trim()) return;
-  state.people.push({id:uid(), name:n.value.trim(), note:o.value.trim(), status:'contact'});
+  state.people.push({id:uid(), name:n.value.trim(), note:o.value.trim(), status:'contact', updated:now()});
   n.value=''; o.value=''; save(); renderAll();
 });
 document.getElementById('addPlaceBtn').addEventListener('click', ()=>{
   const n = document.getElementById('inPlaceName'), r = document.getElementById('inPlaceRegion');
   if (!n.value.trim()) return;
-  state.places.push({id:uid(), name:n.value.trim(), region:r.value.trim()||'Kerala', insight:'', status:'idea', note:'', custom:true});
+  state.places.push({id:uid(), name:n.value.trim(), region:r.value.trim()||'Kerala', insight:'', status:'idea', note:'', date:null, custom:true, updated:now()});
   n.value=''; r.value=''; save(); renderAll();
+});
+
+document.getElementById('dayPlanAdd').addEventListener('click', ()=>{
+  const inp = document.getElementById('dayPlanText');
+  const text = inp.value.trim(); if (!text) return;
+  const c = detectCat(text);
+  state.tasks.push({id:uid(), text, date:selDay, cat:(c==='contact'||c==='place')?c:'task', done:false, doneDate:null});
+  inp.value=''; save(); renderAll();
+});
+document.getElementById('dayPlanText').addEventListener('keydown', e=>{ if (e.key==='Enter') document.getElementById('dayPlanAdd').click(); });
+document.getElementById('icsAll').addEventListener('click', exportTripICS);
+
+document.getElementById('copyShare').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(makeSharePack()); toast('Share pack copied — send it on WhatsApp'); }
+  catch(e){ prompt('Copy this share pack:', makeSharePack()); }
+});
+document.getElementById('copyListText').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(listsAsText()); toast('Lists copied as text'); }
+  catch(e){ prompt('Copy this:', listsAsText()); }
+});
+document.getElementById('mergeShare').addEventListener('click', ()=>{
+  const inp = document.getElementById('pasteShare');
+  if (!inp.value.trim()) return;
+  mergeSharePack(inp.value); inp.value='';
+});
+
+document.addEventListener('change', e=>{
+  const inp = e.target.closest('input[data-place-date]');
+  if (!inp) return;
+  const p = state.places.find(x=>x.id===inp.dataset.placeDate); if (!p) return;
+  p.date = inp.value || null;
+  if (p.date && p.status==='idea') p.status='planned';
+  p.updated = now();
+  save(); renderAll();
+  if (p.date) toast(`${p.name} planned for ${fmtDay(p.date)}`);
 });
 
 document.getElementById('briefDate').addEventListener('change', renderBrief);
@@ -705,8 +989,8 @@ document.getElementById('importFile').addEventListener('change', e=>{
   const r = new FileReader();
   r.onload = ()=>{ try{
       const s = JSON.parse(r.result);
-      if (s.version!==1) throw 0;
-      state = s; save(); renderAll(); toast('Backup restored');
+      if (s.version!==1 && s.version!==2) throw 0;
+      state = migrate(s); save(); renderAll(); toast('Backup restored');
     }catch(err){ toast('That file is not a valid backup'); } };
   r.readAsText(f);
 });
@@ -729,6 +1013,17 @@ document.addEventListener('click', e=>{
   const b = e.target.closest('button'); if (!b) return;
   const D = b.dataset;
   if (D.cat !== undefined){ capCat = D.cat; renderCapChips(); return; }
+  if (D.cal){ selDay = D.cal; renderCal(); return; }
+  if (D.icsOne){
+    const ev = eventFromRef(D.icsOne);
+    if (ev){ download(ev.title.replace(/[^\w]+/g,'-').slice(0,40)+'.ics', icsFile([ev]), 'text/calendar'); }
+    return;
+  }
+  if (D.gcalOne){ const ev = eventFromRef(D.gcalOne); if (ev) gcalOpen(ev); return; }
+  if (D.unschedPlace){
+    const p = state.places.find(x=>x.id===D.unschedPlace);
+    if (p){ p.date=null; p.updated=now(); save(); renderAll(); } return;
+  }
   if (D.toggleTask){
     const t = state.tasks.find(x=>x.id===D.toggleTask); if (!t) return;
     t.done = !t.done; t.doneDate = t.done ? todayISO() : null;
@@ -744,12 +1039,12 @@ document.addEventListener('click', e=>{
     const key = D.addlist;
     const inp = document.getElementById('in'+key[0].toUpperCase()+key.slice(1));
     if (!inp.value.trim()) return;
-    state.lists[key].push({id:uid(), text:inp.value.trim(), done:false});
+    state.lists[key].push({id:uid(), text:inp.value.trim(), done:false, updated:now()});
     inp.value=''; save(); renderAll(); return;
   }
   if (D.toggleList){
     const [k,id] = D.toggleList.split(':');
-    const it = state.lists[k].find(x=>x.id===id); if (it){ it.done=!it.done; save(); renderAll(); } return;
+    const it = state.lists[k].find(x=>x.id===id); if (it){ it.done=!it.done; it.updated=now(); save(); renderAll(); } return;
   }
   if (D.delList){
     const [k,id] = D.delList.split(':');
@@ -758,18 +1053,20 @@ document.addEventListener('click', e=>{
   if (D.cyclePerson){
     const p = state.people.find(x=>x.id===D.cyclePerson); if (!p) return;
     p.status = p.status==='contact'?'planned':p.status==='planned'?'met':'contact';
+    p.updated = now();
     save(); renderAll(); return;
   }
   if (D.delPerson){ state.people = state.people.filter(x=>x.id!==D.delPerson); save(); renderAll(); return; }
   if (D.cyclePlace){
     const p = state.places.find(x=>x.id===D.cyclePlace); if (!p) return;
     p.status = p.status==='idea'?'planned':p.status==='planned'?'visited':'idea';
+    p.updated = now();
     save(); renderAll(); return;
   }
   if (D.notePlace){
     const p = state.places.find(x=>x.id===D.notePlace); if (!p) return;
     const v = prompt('Your note for '+p.name, p.note||'');
-    if (v!==null){ p.note = v.trim(); save(); renderAll(); } return;
+    if (v!==null){ p.note = v.trim(); p.updated = now(); save(); renderAll(); } return;
   }
   if (D.delPlace){ state.places = state.places.filter(x=>x.id!==D.delPlace); save(); renderAll(); return; }
 });
