@@ -187,7 +187,7 @@ function saleForm() {
     `
     <label>Date <input type="date" name="sale_date" value="${todayStr()}" required /></label>
     ${partyField('Shop / Customer', 'customer', state.customers, 'Add new shop')}
-    ${itemPickerHtml()}
+    ${itemPickerHtml('sale')}
     <label>Items sold <input name="items" placeholder="e.g. Spice LD Cover 1 kg x 10" /></label>
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Received now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if full amount received" /></label>
@@ -220,7 +220,7 @@ function saleForm() {
   );
   wirePartyField('customer');
   wirePaidChips();
-  wireItemPicker(true);
+  wireItemPicker('sale');
 }
 
 function purchaseForm() {
@@ -229,7 +229,7 @@ function purchaseForm() {
     `
     <label>Date <input type="date" name="purchase_date" value="${todayStr()}" required /></label>
     ${partyField('Supplier', 'supplier', state.suppliers, 'Add new supplier')}
-    ${itemPickerHtml()}
+    ${itemPickerHtml('purchase')}
     <label>Items bought <input name="items" placeholder="e.g. Spice LD Cover 5 kg x 20" /></label>
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Paid now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if fully paid" /></label>
@@ -262,15 +262,16 @@ function purchaseForm() {
   );
   wirePartyField('supplier');
   wirePaidChips();
-  wireItemPicker(false);
+  wireItemPicker('purchase');
 }
 
 /* item picker inside sale/purchase forms: appends to the items text,
    and (for sales) adds qty × default price to the total when a price is set */
-function itemPickerHtml() {
+function itemPickerHtml(mode) {
   if (!state.products.length) return '';
+  const priceOf = (p) => (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
   const opts = state.products
-    .map((p) => `<option value="${p.id}">${esc(p.name)} ${esc(p.size)}${p.sale_price > 0 ? ' — ₹' + p.sale_price : ''}</option>`)
+    .map((p) => `<option value="${p.id}">${esc(p.name)} ${esc(p.size)}${priceOf(p) > 0 ? ' — ₹' + priceOf(p) : ''}</option>`)
     .join('');
   return `
     <div class="item-picker">
@@ -280,7 +281,7 @@ function itemPickerHtml() {
     </div>`;
 }
 
-function wireItemPicker(applyPrice) {
+function wireItemPicker(mode) {
   const addBtn = $('#modal-root [data-pick-add]');
   if (!addBtn) return;
   addBtn.onclick = () => {
@@ -292,9 +293,10 @@ function wireItemPicker(applyPrice) {
     const itemsInput = $('#modal-root input[name="items"]');
     const entry = `${p.name} ${p.size} x ${qty}`;
     itemsInput.value = itemsInput.value ? itemsInput.value + ', ' + entry : entry;
-    if (applyPrice && p.sale_price > 0) {
+    const rate = (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
+    if (rate > 0) {
       const totalInput = $('#modal-root input[name="total_amount"]');
-      totalInput.value = String(Math.round(((parseFloat(totalInput.value) || 0) + p.sale_price * qty) * 100) / 100);
+      totalInput.value = String(Math.round(((parseFloat(totalInput.value) || 0) + rate * qty) * 100) / 100);
     }
     sel.value = '';
     qtyInput.value = '1';
@@ -1074,12 +1076,14 @@ function productForm(product) {
     `
     <label>Item name <input name="name" required value="${esc(product ? product.name : '')}" placeholder="e.g. Spice LD Cover" /></label>
     <label>Size <input name="size" value="${esc(product ? product.size : '')}" placeholder="e.g. 1 kg, 10x12, Triple Zero" /></label>
-    <label>Default selling price (₹, optional) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>`,
+    <label>Selling price (₹, editable on each sale) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>
+    <label>Purchase price (₹, editable on each purchase) <input type="number" name="purchase_price" min="0" step="0.01" inputmode="decimal" value="${product && product.purchase_price > 0 ? product.purchase_price : ''}" placeholder="Auto-fills purchase amount when picked" /></label>`,
     async (fd, close) => {
       const body = JSON.stringify({
         name: fd.get('name'),
         size: fd.get('size'),
         sale_price: fd.get('sale_price') || 0,
+        purchase_price: fd.get('purchase_price') || 0,
       });
       if (product) await api(`/api/products/${product.id}`, { method: 'PUT', body });
       else await api('/api/products', { method: 'POST', body });
@@ -1109,7 +1113,7 @@ function importProductsForm() {
     'Import items',
     `
     <div class="hint" style="margin-bottom:0">One item per line, comma separated:<br/>
-    <b>Name, Size, Price</b> — only the name is required.<br/>
+    <b>Name, Size, Selling price, Purchase price</b> — only the name is required.<br/>
     Example:<br/><code>Spice LD Cover, 1 kg, 120</code></div>
     <label>Item list <textarea name="list" rows="8" placeholder="Spice LD Cover, 1 kg, 120&#10;Gulf LD Cover, 10x12"></textarea></label>`,
     async (fd, close) => {
@@ -1118,11 +1122,11 @@ function importProductsForm() {
       let ok = 0;
       let failed = 0;
       for (const line of lines) {
-        const [name, size, price] = line.split(',').map((t) => (t || '').trim());
+        const [name, size, price, pprice] = line.split(',').map((t) => (t || '').trim());
         try {
           await api('/api/products', {
             method: 'POST',
-            body: JSON.stringify({ name, size, sale_price: price || 0 }),
+            body: JSON.stringify({ name, size, sale_price: price || 0, purchase_price: pprice || 0 }),
           });
           ok++;
         } catch {

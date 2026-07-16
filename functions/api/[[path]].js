@@ -672,10 +672,9 @@ export async function onRequest(context) {
         const b = await readBody()
         const name = str(b.name)
         if (!name) return json({ error: 'Item name is required' }, 400)
-        const price = Math.max(num(b.sale_price), 0)
         const r = await db
-          .prepare('INSERT INTO products (name, size, sale_price) VALUES (?, ?, ?)')
-          .bind(name, str(b.size), price)
+          .prepare('INSERT INTO products (name, size, sale_price, purchase_price) VALUES (?, ?, ?, ?)')
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0))
           .run()
         return json({ id: r.meta.last_row_id }, 201)
       }
@@ -684,8 +683,8 @@ export async function onRequest(context) {
         const name = str(b.name)
         if (!name) return json({ error: 'Item name is required' }, 400)
         await db
-          .prepare('UPDATE products SET name = ?, size = ?, sale_price = ? WHERE id = ?')
-          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), id)
+          .prepare('UPDATE products SET name = ?, size = ?, sale_price = ?, purchase_price = ? WHERE id = ?')
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), id)
           .run()
         return json({ ok: true })
       }
