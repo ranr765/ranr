@@ -188,7 +188,7 @@ function saleForm() {
     <label>Date <input type="date" name="sale_date" value="${todayStr()}" required /></label>
     ${partyField('Shop / Customer', 'customer', state.customers, 'Add new shop')}
     ${itemPickerHtml('sale')}
-    <label>Items sold <input name="items" placeholder="e.g. Spice LD Cover 1 kg x 10" /></label>
+    <input type="hidden" name="items" />
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Received now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if full amount received" /></label>
     <div class="paid-quick">
@@ -230,7 +230,7 @@ function purchaseForm() {
     <label>Date <input type="date" name="purchase_date" value="${todayStr()}" required /></label>
     ${partyField('Supplier', 'supplier', state.suppliers, 'Add new supplier')}
     ${itemPickerHtml('purchase')}
-    <label>Items bought <input name="items" placeholder="e.g. Spice LD Cover 5 kg x 20" /></label>
+    <input type="hidden" name="items" />
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Paid now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if fully paid" /></label>
     <div class="paid-quick">
@@ -265,41 +265,104 @@ function purchaseForm() {
   wireItemPicker('purchase');
 }
 
-/* item picker inside sale/purchase forms: appends to the items text,
-   and (for sales) adds qty × default price to the total when a price is set */
+/* line-item builder: same shop buys many products — each becomes a visible
+   line (item, qty, rate, amount) with a running total. Rates default from the
+   catalog (sale or purchase rate by form) and stay editable per deal. */
 function itemPickerHtml(mode) {
-  if (!state.products.length) return '';
   const priceOf = (p) => (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
   const opts = state.products
-    .map((p) => `<option value="${p.id}">${esc(p.name)} ${esc(p.size)}${priceOf(p) > 0 ? ' — ₹' + priceOf(p) : ''}</option>`)
+    .map((p) => `<option value="${p.id}" data-rate="${priceOf(p)}">${esc(p.name)} ${esc(p.size)}</option>`)
     .join('');
   return `
-    <div class="item-picker">
-      <select data-pick-product><option value="">— pick item —</option>${opts}</select>
-      <input type="number" data-pick-qty value="1" min="0.25" step="0.25" inputmode="decimal" title="Quantity" />
-      <button type="button" class="btn-small" data-pick-add>＋</button>
+    <div class="li-box">
+      <div class="li-title">Items</div>
+      <div class="li-list" data-li-list></div>
+      <select data-li-product>
+        <option value="">— choose item to add —</option>
+        <option value="__custom__">✏️ Type item name…</option>
+        ${opts}
+      </select>
+      <input data-li-custom class="hidden" placeholder="Item name" />
+      <div class="li-row2">
+        <label class="li-mini">Qty
+          <input type="number" data-li-qty value="1" min="0" step="0.25" inputmode="decimal" />
+        </label>
+        <label class="li-mini">Rate (₹)
+          <input type="number" data-li-rate min="0" step="0.01" inputmode="decimal" placeholder="0" />
+        </label>
+        <button type="button" class="li-add-btn" data-li-add>＋ Add</button>
+      </div>
     </div>`;
 }
 
 function wireItemPicker(mode) {
-  const addBtn = $('#modal-root [data-pick-add]');
-  if (!addBtn) return;
-  addBtn.onclick = () => {
-    const sel = $('#modal-root [data-pick-product]');
-    const qtyInput = $('#modal-root [data-pick-qty]');
-    const p = state.products.find((x) => String(x.id) === sel.value);
-    if (!p) return;
-    const qty = Math.max(parseFloat(qtyInput.value) || 1, 0);
-    const itemsInput = $('#modal-root input[name="items"]');
-    const entry = `${p.name} ${p.size} x ${qty}`;
-    itemsInput.value = itemsInput.value ? itemsInput.value + ', ' + entry : entry;
-    const rate = (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
-    if (rate > 0) {
-      const totalInput = $('#modal-root input[name="total_amount"]');
-      totalInput.value = String(Math.round(((parseFloat(totalInput.value) || 0) + rate * qty) * 100) / 100);
+  const root = $('#modal-root');
+  const sel = $('[data-li-product]', root);
+  if (!sel) return;
+  const customInput = $('[data-li-custom]', root);
+  const qtyInput = $('[data-li-qty]', root);
+  const rateInput = $('[data-li-rate]', root);
+  const listEl = $('[data-li-list]', root);
+  const itemsField = $('input[name="items"]', root);
+  const totalField = $('input[name="total_amount"]', root);
+  const lines = [];
+
+  const sync = () => {
+    listEl.innerHTML = lines
+      .map(
+        (l, i) => `
+        <div class="li-item">
+          <div class="li-item-main">
+            <b>${esc(l.label)}</b>
+            <span>${l.qty} × ${fmtMoney(l.rate)}</span>
+          </div>
+          <div class="li-item-amt">${fmtMoney(l.qty * l.rate)}</div>
+          <button type="button" class="li-del" data-li-del="${i}" title="Remove">&times;</button>
+        </div>`
+      )
+      .join('');
+    itemsField.value = lines.map((l) => `${l.label} x ${l.qty} @ ₹${l.rate}`).join(', ');
+    totalField.value = lines.length
+      ? String(Math.round(lines.reduce((a, l) => a + l.qty * l.rate, 0) * 100) / 100)
+      : totalField.value;
+    $$('[data-li-del]', root).forEach((b) => {
+      b.onclick = () => {
+        lines.splice(Number(b.dataset.liDel), 1);
+        sync();
+      };
+    });
+  };
+
+  sel.onchange = () => {
+    const isCustom = sel.value === '__custom__';
+    customInput.classList.toggle('hidden', !isCustom);
+    if (isCustom) {
+      rateInput.value = '';
+      customInput.focus();
+      return;
     }
+    const p = state.products.find((x) => String(x.id) === sel.value);
+    rateInput.value = p ? String((mode === 'purchase' ? p.purchase_price : p.sale_price) || '') : '';
+  };
+
+  $('[data-li-add]', root).onclick = () => {
+    let label = '';
+    if (sel.value === '__custom__') label = customInput.value.trim();
+    else {
+      const p = state.products.find((x) => String(x.id) === sel.value);
+      if (p) label = `${p.name} ${p.size}`.trim();
+    }
+    if (!label) return toast('Choose an item first', false);
+    const qty = parseFloat(qtyInput.value);
+    if (!(qty > 0)) return toast('Enter the quantity', false);
+    const rate = Math.max(parseFloat(rateInput.value) || 0, 0);
+    lines.push({ label, qty, rate });
     sel.value = '';
+    customInput.value = '';
+    customInput.classList.add('hidden');
     qtyInput.value = '1';
+    rateInput.value = '';
+    sync();
   };
 }
 
