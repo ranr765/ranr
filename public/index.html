@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#b91c1c" />
+  <title>Simple Serve — Business Book</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">SS</span>
+      <div>
+        <div class="brand-name">Simple Serve</div>
+        <div class="brand-sub">Business Book &middot; Urakam, Thrissur</div>
+      </div>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <nav class="bottomnav">
+    <button data-tab="home" class="nav-btn active"><span class="nav-ico">&#127968;</span>Home</button>
+    <button data-tab="entries" class="nav-btn"><span class="nav-ico">&#128203;</span>Entries</button>
+    <button data-tab="parties" class="nav-btn"><span class="nav-ico">&#127978;</span>Shops</button>
+    <button data-tab="report" class="nav-btn"><span class="nav-ico">&#128200;</span>Report</button>
+  </nav>
+
+  <div id="modal-root"></div>
+  <div id="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,26 +1,15 @@
 {
-  "name": "webapp",
+  "name": "simple-serve-erp",
   "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "dev:sandbox": "wrangler pages dev dist --d1=webapp-production --local --ip 0.0.0.0 --port 3000",
-    "build": "vite build",
-    "preview": "wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name webapp",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 migrations apply webapp-production --local",
-    "db:migrate:prod": "wrangler d1 migrations apply webapp-production",
-    "db:console:local": "wrangler d1 execute webapp-production --local",
-    "clean-port": "fuser -k 3000/tcp 2>/dev/null || true"
-  },
-  "dependencies": {
-    "hono": "^4.10.4"
+    "dev": "wrangler pages dev public --d1=DB=simple-serve-production --local --port 3000",
+    "deploy": "wrangler pages deploy public --project-name simple-serve",
+    "db:create": "wrangler d1 create simple-serve-production",
+    "db:migrate:local": "wrangler d1 migrations apply simple-serve-production --local",
+    "db:migrate:prod": "wrangler d1 migrations apply simple-serve-production --remote"
   },
   "devDependencies": {
-    "@hono/vite-build": "^1.2.0",
-    "@hono/vite-dev-server": "^0.18.2",
-    "vite": "^6.3.5",
     "wrangler": "^4.4.0"
   }
 }
