@@ -632,6 +632,34 @@ export async function onRequest(context) {
       }
     }
 
+    // settings: /api/settings (payment QR, UPI id, ...)
+    if (resource === 'settings') {
+      if (method === 'GET' && !id) {
+        const { results } = await db.prepare('SELECT key, value FROM settings').all()
+        const out = {}
+        for (const r of results) out[r.key] = r.value
+        return json(out)
+      }
+      if (method === 'PUT' && !id) {
+        const b = await readBody()
+        const ALLOWED = ['payment_qr', 'upi_id', 'invoice_note']
+        const entries = Object.entries(b).filter(([k]) => ALLOWED.includes(k))
+        if (!entries.length) return json({ error: 'Nothing to save' }, 400)
+        for (const [k, v] of entries) {
+          const value = typeof v === 'string' ? v : ''
+          if (value.length > 400000) return json({ error: 'Image is too large — use a smaller one' }, 400)
+          await db
+            .prepare(
+              `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+               ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+            )
+            .bind(k, value)
+            .run()
+        }
+        return json({ ok: true })
+      }
+    }
+
     // item catalog: /api/products
     if (resource === 'products') {
       if (method === 'GET' && !id) {

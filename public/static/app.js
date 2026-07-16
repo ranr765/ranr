@@ -715,10 +715,21 @@ async function statementModal(customerId) {
     <div class="pl-line"><span>Overdue</span><b class="bad">${fmtMoney(st.totals.overdue)}</b></div>
     <div class="pl-line"><span>Not yet due</span><b>${fmtMoney(st.totals.notYetDue)}</b></div>
     <div class="pl-line pl-total"><span>Total to pay</span><b>${fmtMoney(st.totals.due)}</b></div>
-    <button type="button" class="btn-primary btn-wa" id="stmt-wa">&#128172; Share on WhatsApp${phone ? '' : ' (no phone saved — pick contact)'}</button>
+    <button type="button" class="btn-primary btn-wa" id="stmt-img">&#129534; Invoice image → WhatsApp</button>
+    <button type="button" class="btn-small" id="stmt-wa">&#128172; Send as text${phone ? '' : ' (no phone saved — pick contact)'}</button>
     <button type="button" class="btn-small" id="stmt-copy">Copy text</button>`
   );
   const text = statementText(st);
+  $('#stmt-img').onclick = async () => {
+    const btn = $('#stmt-img');
+    btn.disabled = true;
+    try {
+      await shareInvoiceImage(st);
+    } catch (e) {
+      toast(e.message, false);
+    }
+    btn.disabled = false;
+  };
   $('#stmt-wa').onclick = () => {
     const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
     window.open(`${base}?text=${encodeURIComponent(text)}`, '_blank');
@@ -731,6 +742,278 @@ async function statementModal(customerId) {
       toast('Could not copy on this browser', false);
     }
   };
+}
+
+/* ---------- payment settings (QR + UPI id for invoices) ---------- */
+
+function readImageAsDataUrl(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the image'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('That file is not an image'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function paymentSettingsForm() {
+  const settings = await api('/api/settings');
+  openModal(
+    'Payment QR & UPI',
+    `
+    <div class="hint" style="margin-bottom:0">These appear on every invoice image so the shop can
+    scan and pay you directly. Upload the QR from your PhonePe / Google Pay app
+    (open the app → your QR → take a screenshot).</div>
+    <div id="qr-preview" class="qr-preview">${settings.payment_qr ? `<img src="${settings.payment_qr}" alt="Payment QR" />` : '<span class="muted">No QR uploaded yet</span>'}</div>
+    <label>Upload payment QR image <input type="file" name="qr_file" accept="image/*" /></label>
+    <label>UPI ID (optional) <input name="upi_id" value="${esc(settings.upi_id || '')}" autocapitalize="none" placeholder="e.g. 9447282655@ybl" /></label>`,
+    async (fd, close) => {
+      const payload = { upi_id: fd.get('upi_id') || '' };
+      const file = fd.get('qr_file');
+      if (file && file.size) payload.payment_qr = await readImageAsDataUrl(file, 500);
+      await api('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
+      close();
+      toast('Payment details saved ✓');
+    }
+  );
+  const fileInput = $('#modal-root input[name="qr_file"]');
+  fileInput.onchange = async () => {
+    if (!fileInput.files[0]) return;
+    try {
+      const url = await readImageAsDataUrl(fileInput.files[0], 500);
+      $('#qr-preview').innerHTML = `<img src="${url}" alt="Payment QR" />`;
+    } catch (e) {
+      toast(e.message, false);
+    }
+  };
+}
+
+/* ---------- invoice image (share on WhatsApp) ---------- */
+
+function wrapText(ctx, text, maxWidth) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function buildInvoiceCanvas(st, settings) {
+  const W = 900;
+  const M = 46; // margin
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  const money = (n) => '₹' + Math.abs(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+  // measure body height first
+  ctx.font = '26px system-ui, sans-serif';
+  let rowsHeight = 0;
+  const rowLines = st.open.map((b) => {
+    const lines = wrapText(ctx, b.items || 'Goods', W - M * 2 - 330);
+    const h = Math.max(40, lines.length * 32 + 26);
+    rowsHeight += h;
+    return { b, lines, h };
+  });
+
+  const qrImg = settings.payment_qr ? await loadImage(settings.payment_qr) : null;
+  const qrBlock = qrImg || settings.upi_id ? (qrImg ? 320 : 90) : 0;
+  const H = 300 + rowsHeight + 240 + qrBlock + 110;
+  c.width = W;
+  c.height = H;
+
+  // page
+  ctx.fillStyle = '#faf9f7';
+  ctx.fillRect(0, 0, W, H);
+
+  // header band
+  const grad = ctx.createLinearGradient(0, 0, W, 130);
+  grad.addColorStop(0, '#b91c1c');
+  grad.addColorStop(1, '#7f1d1d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 130);
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(M + 34, 65, 34, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#7f1d1d';
+  ctx.font = 'bold 30px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SS', M + 34, 76);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 40px system-ui, sans-serif';
+  ctx.fillText('Simple Serve', M + 90, 62);
+  ctx.font = '22px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.9)';
+  ctx.fillText('Packing Materials & Disposable Items · Urakam, Thrissur', M + 90, 96);
+
+  // title + date + customer
+  let y = 190;
+  ctx.fillStyle = '#1c1917';
+  ctx.font = 'bold 32px system-ui, sans-serif';
+  ctx.fillText('BILL SUMMARY', M, y);
+  ctx.font = '24px system-ui, sans-serif';
+  ctx.fillStyle = '#78716c';
+  ctx.textAlign = 'right';
+  ctx.fillText('Date: ' + fmtDate(st.date), W - M, y);
+  ctx.textAlign = 'left';
+  y += 44;
+  ctx.fillStyle = '#1c1917';
+  ctx.font = 'bold 27px system-ui, sans-serif';
+  ctx.fillText('To: ' + st.customer.name + (st.customer.place ? ', ' + st.customer.place : ''), M, y);
+  y += 40;
+
+  // table head
+  ctx.fillStyle = '#e7e5e4';
+  ctx.fillRect(M, y, W - M * 2, 46);
+  ctx.fillStyle = '#44403c';
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.fillText('BILL DATE', M + 14, y + 31);
+  ctx.fillText('ITEMS', M + 170, y + 31);
+  ctx.fillText('PAY BY', W - M - 300, y + 31);
+  ctx.textAlign = 'right';
+  ctx.fillText('AMOUNT', W - M - 14, y + 31);
+  ctx.textAlign = 'left';
+  y += 46;
+
+  // rows
+  for (const { b, lines, h } of rowLines) {
+    ctx.strokeStyle = '#e7e5e4';
+    ctx.beginPath();
+    ctx.moveTo(M, y + h);
+    ctx.lineTo(W - M, y + h);
+    ctx.stroke();
+    ctx.fillStyle = '#1c1917';
+    ctx.font = '24px system-ui, sans-serif';
+    ctx.fillText(fmtDate(b.date), M + 14, y + 34);
+    lines.forEach((ln, i) => ctx.fillText(ln, M + 170, y + 34 + i * 32));
+    ctx.fillStyle = b.overdue ? '#b91c1c' : '#44403c';
+    ctx.fillText(fmtDate(b.due_date), W - M - 300, y + 34);
+    if (b.overdue) {
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.fillText('OVERDUE', W - M - 300, y + 60);
+    }
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    ctx.fillStyle = '#1c1917';
+    ctx.textAlign = 'right';
+    ctx.fillText(money(b.balance), W - M - 14, y + 34);
+    ctx.textAlign = 'left';
+    y += h;
+  }
+
+  // totals
+  y += 30;
+  ctx.font = '25px system-ui, sans-serif';
+  const totalLine = (label, val, bold, color) => {
+    ctx.fillStyle = color || '#44403c';
+    ctx.font = (bold ? 'bold 30px' : '25px') + ' system-ui, sans-serif';
+    ctx.fillText(label, M, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(money(val), W - M, y);
+    ctx.textAlign = 'left';
+    y += bold ? 50 : 40;
+  };
+  if (st.totals.overdue > 0) totalLine('Overdue', st.totals.overdue, false, '#b91c1c');
+  if (st.totals.notYetDue > 0) totalLine('Not yet due', st.totals.notYetDue);
+  ctx.strokeStyle = '#1c1917';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(M, y - 26);
+  ctx.lineTo(W - M, y - 26);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  y += 14;
+  totalLine('TOTAL TO PAY', st.totals.due, true, '#b91c1c');
+
+  // payment block
+  if (qrImg || settings.upi_id) {
+    y += 6;
+    ctx.fillStyle = '#ffffff';
+    const blockH = qrImg ? 300 : 74;
+    ctx.fillRect(M, y, W - M * 2, blockH);
+    ctx.strokeStyle = '#e7e5e4';
+    ctx.strokeRect(M, y, W - M * 2, blockH);
+    if (qrImg) {
+      const qs = 250;
+      ctx.drawImage(qrImg, M + 24, y + 25, qs, qs);
+      ctx.fillStyle = '#1c1917';
+      ctx.font = 'bold 28px system-ui, sans-serif';
+      ctx.fillText('Scan & Pay', M + qs + 60, y + 110);
+      ctx.font = '24px system-ui, sans-serif';
+      ctx.fillStyle = '#44403c';
+      ctx.fillText('PhonePe · Google Pay · any UPI app', M + qs + 60, y + 150);
+      if (settings.upi_id) {
+        ctx.font = 'bold 24px system-ui, sans-serif';
+        ctx.fillText('UPI: ' + settings.upi_id, M + qs + 60, y + 195);
+      }
+    } else {
+      ctx.fillStyle = '#1c1917';
+      ctx.font = 'bold 26px system-ui, sans-serif';
+      ctx.fillText('Pay via UPI: ' + settings.upi_id, M + 24, y + 46);
+    }
+    y += blockH + 20;
+  }
+
+  // footer
+  ctx.fillStyle = '#78716c';
+  ctx.font = '22px system-ui, sans-serif';
+  ctx.fillText(`Payment terms: within ${st.customer.credit_days} days of each bill date.`, M, y + 26);
+  ctx.fillText('Thank you for your business! — Simple Serve', M, y + 60);
+
+  return c;
+}
+
+async function shareInvoiceImage(st) {
+  const settings = await api('/api/settings');
+  const canvas = await buildInvoiceCanvas(st, settings);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) return toast('Could not create the image', false);
+  const fileName = `bill-${st.customer.name.replace(/[^\w]+/g, '-')}-${st.date}.png`;
+  const file = new File([blob], fileName, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Simple Serve — Bill Summary' });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user closed the share sheet
+    }
+  }
+  // fallback: download, user attaches it in WhatsApp
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Invoice image downloaded — attach it in WhatsApp');
 }
 
 /* ---------- bulk import of shops ---------- */
@@ -1045,6 +1328,7 @@ function accountModal() {
     'Account',
     `
     <div class="account-info">Logged in as <b>${esc(state.user.name || state.user.username)}</b> (${esc(state.user.username)})</div>
+    <button type="button" class="btn-small" id="payment-settings-btn">&#128179; Payment QR &amp; UPI (shown on invoices)</button>
     <label>Current password <input type="password" name="current" autocomplete="current-password" /></label>
     <label>New password <input type="password" name="next" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
     <label>Repeat new password <input type="password" name="next2" autocomplete="new-password" /></label>`,
@@ -1074,6 +1358,10 @@ function accountModal() {
     showAuthScreen(false);
   };
   save.after(logout);
+  $('#payment-settings-btn').onclick = () => {
+    $('#modal-root').innerHTML = '';
+    paymentSettingsForm().catch((e) => toast(e.message, false));
+  };
 }
 
 /* ---------- boot ---------- */

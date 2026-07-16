@@ -268,6 +268,17 @@ main {
 .item-picker input { width: 74px; flex-shrink: 0; }
 .item-picker .btn-small { flex-shrink: 0; padding: 10px 14px; font-size: 15px; }
 
+.qr-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  min-height: 90px;
+}
+.qr-preview img { max-width: 180px; max-height: 180px; border-radius: 6px; }
+
 .item-group { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .item-group:last-child { border-bottom: none; }
 .item-group-name { font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
