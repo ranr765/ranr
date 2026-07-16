@@ -23,6 +23,12 @@ mistakes.
 
 **Shops tab** — customers and suppliers with live credit balances: how much each shop
 still owes you, and what you owe each supplier. Collect / pay straight from the list.
+- **🧾 Bill statement per shop** — pending bills with pay-by dates (from the shop's
+  credit-days terms), split into overdue vs not-yet-due, and a one-tap
+  **Share on WhatsApp** button that opens the shop's chat with the summary filled in
+  (or Copy text). Collections are applied to the oldest bills first.
+- **⇪ Import** — paste a list of shops (`Name, Place, Phone, Credit days` — one per
+  line) to add them in bulk when you get the address list.
 
 **Login** — the app is fully protected by a username + password:
 - On the very first visit the app shows a one-time **setup screen** to create the
@@ -66,22 +72,42 @@ npm run db:migrate:local     # create the local SQLite DB
 npm run dev                  # serves on http://localhost:3000
 ```
 
-## Deploy (Cloudflare Pages)
+## Go live (one-time, ~10 minutes, no coding)
 
-1. `npx wrangler login`
-2. Create the database and put its id into `wrangler.jsonc`:
-   ```bash
-   npm run db:create
-   # copy the printed database_id into wrangler.jsonc
-   ```
-3. Apply migrations and deploy:
-   ```bash
-   npm run db:migrate:prod
-   npm run deploy
-   ```
-4. Open the `*.pages.dev` URL — the first visit shows the one-time setup screen
-   where the owner picks a username and password. Then share the URL: on the
-   phone, use the browser's **"Add to Home screen"** so it opens like an app.
+The repo ships with a GitHub Action that does the whole deployment — database,
+migrations, hosting — automatically. You only connect the accounts once:
+
+1. **Create a free Cloudflare account** at [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
+   (email + password, no card needed — the free tier covers this app).
+2. **Copy your Account ID** — shown in the right sidebar of the Cloudflare
+   dashboard home (or under Workers & Pages → Overview).
+3. **Create an API token** — dashboard → My Profile → API Tokens →
+   *Create Token* → *Create Custom Token* with permissions:
+   - Account → **Cloudflare Pages** → Edit
+   - Account → **D1** → Edit
+4. **Add both to GitHub** — this repo → Settings → Secrets and variables →
+   Actions → *New repository secret*:
+   - `CLOUDFLARE_API_TOKEN` = the token
+   - `CLOUDFLARE_ACCOUNT_ID` = the account id
+5. **Run it** — repo → Actions tab → *Deploy to Cloudflare Pages* →
+   *Run workflow*. (After that it also redeploys automatically on every push
+   to `main`.)
+
+The workflow prints the live URL at the end — `https://simple-serve.pages.dev`.
+Send that link to the owner: **the first person to open it claims the account**
+(sets username + password), so open it yourself first or send it straight to him.
+On the phone, use the browser's **"Add to Home screen"** so it opens like an app.
+Data is stored centrally in Cloudflare D1 — the same numbers appear on every
+phone and laptop.
+
+### Deploy from your own machine instead (optional)
+
+```bash
+npm install && npx wrangler login
+npm run db:create          # copy the printed database_id into wrangler.jsonc
+npm run db:migrate:prod
+npm run deploy
+```
 
 ## Data model
 

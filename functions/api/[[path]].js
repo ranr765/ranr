@@ -250,11 +250,96 @@ async function listParties(db, table) {
 async function createParty(db, table, b) {
   const name = str(b.name)
   if (!name) return json({ error: 'Name is required' }, 400)
-  const r = await db
-    .prepare(`INSERT INTO ${table} (name, place, phone) VALUES (?, ?, ?)`)
-    .bind(name, str(b.place), str(b.phone))
-    .run()
+  let r
+  if (table === 'customers') {
+    const n = parseFloat(b.credit_days)
+    const days = Number.isFinite(n) ? Math.min(365, Math.max(0, Math.round(n))) : 15
+    r = await db
+      .prepare(`INSERT INTO customers (name, place, phone, credit_days) VALUES (?, ?, ?, ?)`)
+      .bind(name, str(b.place), str(b.phone), days)
+      .run()
+  } else {
+    r = await db
+      .prepare(`INSERT INTO ${table} (name, place, phone) VALUES (?, ?, ?)`)
+      .bind(name, str(b.place), str(b.phone))
+      .run()
+  }
   return json({ id: r.meta.last_row_id, name }, 201)
+}
+
+// ---------- shop statement (for invoice / WhatsApp share) ----------
+
+const addDays = (dateStr, days) => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return dt.toISOString().slice(0, 10)
+}
+
+/**
+ * Outstanding bills for one shop, with collections applied to the oldest
+ * bills first (FIFO), and each bill's pay-by date from the shop's credit_days.
+ */
+async function customerStatement(db, customerId, today) {
+  if (!isDate(today)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+  const customer = await db
+    .prepare('SELECT * FROM customers WHERE id = ?')
+    .bind(customerId)
+    .first()
+  if (!customer) return json({ error: 'Shop not found' }, 404)
+
+  const [salesRes, collectedRow] = await Promise.all([
+    db
+      .prepare('SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date, id')
+      .bind(customerId)
+      .all(),
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(amount),0) AS v FROM payments WHERE type = 'in' AND party_id = ?`
+      )
+      .bind(customerId)
+      .first(),
+  ])
+
+  let pool = num(collectedRow.v)
+  const creditDays = num(customer.credit_days) || 15
+  const open = []
+  for (const s of salesRes.results) {
+    let bal = num(s.total_amount) - num(s.paid_amount)
+    if (bal <= 0.005) continue
+    const applied = Math.min(pool, bal)
+    pool -= applied
+    bal = round2(bal - applied)
+    if (bal <= 0.005) continue
+    const dueDate = addDays(s.sale_date, creditDays)
+    open.push({
+      id: s.id,
+      date: s.sale_date,
+      items: s.items,
+      total: num(s.total_amount),
+      balance: bal,
+      due_date: dueDate,
+      overdue: dueDate < today,
+    })
+  }
+
+  const sum = (rows) => round2(rows.reduce((a, r) => a + r.balance, 0))
+  const overdueRows = open.filter((o) => o.overdue)
+  return json({
+    date: today,
+    customer: {
+      id: customer.id,
+      name: customer.name,
+      place: customer.place,
+      phone: customer.phone,
+      credit_days: creditDays,
+    },
+    open,
+    totals: {
+      due: sum(open),
+      overdue: sum(overdueRows),
+      notYetDue: round2(sum(open) - sum(overdueRows)),
+    },
+  })
 }
 
 async function listEntries(db, kind, month) {
@@ -546,6 +631,9 @@ export async function onRequest(context) {
         if (resource === 'payments') return await createPayment(db, b)
       }
     }
+
+    if (resource === 'statement' && id && method === 'GET')
+      return await customerStatement(db, id, url.searchParams.get('date') || '')
 
     if (resource === 'balances' && method === 'GET') return await balances(db)
     if (resource === 'report' && method === 'GET')

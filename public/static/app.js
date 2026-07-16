@@ -454,6 +454,9 @@ async function viewParties() {
       <div class="row-amount ${p.balance > 0.005 ? (kind === 'customer' ? 'good' : 'bad') : 'muted'}">
         ${p.balance > 0.005 ? fmtMoney(p.balance) : '✓ Clear'}
       </div>
+      ${kind === 'customer' && p.balance > 0.005
+        ? `<button class="row-stmt" data-id="${p.id}" title="Bill statement">&#129534;</button>`
+        : ''}
       ${p.balance > 0.005
         ? `<button class="row-collect" data-kind="${kind}" data-id="${p.id}">${kind === 'customer' ? 'Collect' : 'Pay'}</button>`
         : `<button class="row-del party-del" data-kind="${kind}" data-id="${p.id}" title="Delete">&#128465;</button>`}
@@ -463,9 +466,12 @@ async function viewParties() {
   <section class="card">
     <div class="card-head-row">
       <h3>Shops (customers)</h3>
-      <button class="btn-small" id="add-customer">＋ Add</button>
+      <div class="head-actions">
+        <button class="btn-small" id="import-customers">&#8686; Import</button>
+        <button class="btn-small" id="add-customer">＋ Add</button>
+      </div>
     </div>
-    <div class="hint">Amount shown = money the shop still owes you</div>
+    <div class="hint">Amount shown = money the shop still owes you &middot; &#129534; = bill statement for WhatsApp</div>
     <div class="rows">${customers.map((p) => partyRow(p, 'customer')).join('') || '<div class="empty">No shops added yet</div>'}</div>
   </section>
   <section class="card">
@@ -555,6 +561,135 @@ async function exportCsv() {
   toast('CSV downloaded ✓');
 }
 
+/* ---------- statement / invoice (WhatsApp share) ---------- */
+
+function infoModal(title, bodyHtml) {
+  const root = $('#modal-root');
+  root.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>${esc(title)}</h2>
+          <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">${bodyHtml}</div>
+      </div>
+    </div>`;
+  const close = () => (root.innerHTML = '');
+  $('.modal-close', root).onclick = close;
+  $('.modal-overlay', root).onclick = (e) => {
+    if (e.target.classList.contains('modal-overlay')) close();
+  };
+  return { close };
+}
+
+function statementText(st) {
+  const c = st.customer;
+  const lines = [];
+  lines.push('*Simple Serve* — Bill Summary');
+  lines.push(`${c.name}${c.place ? ', ' + c.place : ''}`);
+  lines.push(`Date: ${fmtDate(st.date)}`);
+  lines.push('');
+  lines.push('Pending bills:');
+  st.open.forEach((b, i) => {
+    lines.push(
+      `${i + 1}) ${fmtDate(b.date)} ${b.items ? b.items + ' ' : ''}— ${fmtMoney(b.balance)}` +
+      ` (pay by ${fmtDate(b.due_date)})${b.overdue ? ' ⚠️ OVERDUE' : ''}`
+    );
+  });
+  lines.push('');
+  if (st.totals.overdue > 0) lines.push(`Overdue: ${fmtMoney(st.totals.overdue)}`);
+  if (st.totals.notYetDue > 0) lines.push(`Not yet due: ${fmtMoney(st.totals.notYetDue)}`);
+  lines.push(`*Total to pay: ${fmtMoney(st.totals.due)}*`);
+  lines.push('');
+  lines.push(`Payment terms: within ${c.credit_days} days of each bill.`);
+  lines.push('Simple Serve, Urakam, Thrissur');
+  return lines.join('\n');
+}
+
+function waPhone(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (digits.length === 10) return '91' + digits;
+  return digits;
+}
+
+async function statementModal(customerId) {
+  const st = await api(`/api/statement/${customerId}?date=${todayStr()}`);
+  const c = st.customer;
+  if (!st.open.length) {
+    infoModal(`Statement — ${c.name}`, '<div class="empty">No pending bills. All clear ✓</div>');
+    return;
+  }
+  const billRows = st.open.map((b) => `
+    <div class="row">
+      <div class="row-main">
+        <div class="row-title">${fmtDate(b.date)}${b.items ? ' · ' + esc(b.items) : ''}</div>
+        <div class="row-sub">Pay by ${fmtDate(b.due_date)}</div>
+        ${b.overdue ? '<div class="row-pending">⚠️ Overdue</div>' : ''}
+      </div>
+      <div class="row-amount">${fmtMoney(b.balance)}</div>
+    </div>`).join('');
+
+  const phone = waPhone(c.phone);
+  infoModal(
+    `Statement — ${c.name}`,
+    `
+    <div class="rows">${billRows}</div>
+    <div class="pl-line"><span>Overdue</span><b class="bad">${fmtMoney(st.totals.overdue)}</b></div>
+    <div class="pl-line"><span>Not yet due</span><b>${fmtMoney(st.totals.notYetDue)}</b></div>
+    <div class="pl-line pl-total"><span>Total to pay</span><b>${fmtMoney(st.totals.due)}</b></div>
+    <button type="button" class="btn-primary btn-wa" id="stmt-wa">&#128172; Share on WhatsApp${phone ? '' : ' (no phone saved — pick contact)'}</button>
+    <button type="button" class="btn-small" id="stmt-copy">Copy text</button>`
+  );
+  const text = statementText(st);
+  $('#stmt-wa').onclick = () => {
+    const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
+    window.open(`${base}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+  $('#stmt-copy').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copied ✓');
+    } catch {
+      toast('Could not copy on this browser', false);
+    }
+  };
+}
+
+/* ---------- bulk import of shops ---------- */
+
+function importCustomersForm() {
+  openModal(
+    'Import shops',
+    `
+    <div class="hint" style="margin-bottom:0">One shop per line, comma separated:<br/>
+    <b>Name, Place, Phone, Credit days</b> — only the name is required.<br/>
+    Example:<br/><code>Krishna Bakery, Urakam, 9876543210, 15</code></div>
+    <label>Shop list <textarea name="list" rows="8" placeholder="Krishna Bakery, Urakam, 9876543210, 15&#10;Hotel Aramana, Ollur"></textarea></label>`,
+    async (fd, close) => {
+      const lines = String(fd.get('list') || '').split('\n').map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) throw new Error('Paste at least one line');
+      let ok = 0;
+      const failed = [];
+      for (const line of lines) {
+        const [name, place, phone, days] = line.split(',').map((t) => (t || '').trim());
+        try {
+          await api('/api/customers', {
+            method: 'POST',
+            body: JSON.stringify({ name, place, phone, credit_days: days }),
+          });
+          ok++;
+        } catch {
+          failed.push(line);
+        }
+      }
+      close();
+      toast(failed.length ? `${ok} added, ${failed.length} failed` : `${ok} shops added ✓`, !failed.length);
+      render();
+    }
+  );
+}
+
 /* ---------- wiring ---------- */
 
 function addPartyForm(kind) {
@@ -564,7 +699,8 @@ function addPartyForm(kind) {
     `
     <label>Name <input name="name" required placeholder="Name" /></label>
     <label>Place <input name="place" placeholder="e.g. Urakam, Ollur" /></label>
-    <label>Phone <input name="phone" inputmode="tel" placeholder="Optional" /></label>`,
+    <label>Phone <input name="phone" inputmode="tel" placeholder="Needed for WhatsApp bills" /></label>
+    ${isCust ? '<label>Credit days (pay within) <input type="number" name="credit_days" min="0" max="365" value="15" inputmode="numeric" /></label>' : ''}`,
     async (fd, close) => {
       await api(isCust ? '/api/customers' : '/api/suppliers', {
         method: 'POST',
@@ -572,6 +708,7 @@ function addPartyForm(kind) {
           name: fd.get('name'),
           place: fd.get('place'),
           phone: fd.get('phone'),
+          credit_days: fd.get('credit_days'),
         }),
       });
       close();
@@ -622,6 +759,10 @@ function wireView() {
   if (state.tab === 'parties') {
     $('#add-customer').onclick = () => addPartyForm('customer');
     $('#add-supplier').onclick = () => addPartyForm('supplier');
+    $('#import-customers').onclick = importCustomersForm;
+    $$('.row-stmt', view).forEach((b) => {
+      b.onclick = () => statementModal(b.dataset.id).catch((e) => toast(e.message, false));
+    });
     $$('.row-collect', view).forEach((b) => {
       b.onclick = () => {
         const kind = b.dataset.kind;

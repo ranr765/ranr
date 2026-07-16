@@ -1,0 +1,48 @@
+name: Deploy to Cloudflare Pages
+
+# Runs on every push to main, or manually from the Actions tab ("Run workflow").
+# One-time setup (see README "Go live" section):
+#   1. Create a free Cloudflare account
+#   2. Add two repository secrets:
+#      CLOUDFLARE_API_TOKEN  — API token with Cloudflare Pages + D1 edit permissions
+#      CLOUDFLARE_ACCOUNT_ID — shown on the Cloudflare dashboard's overview page
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create D1 database (first run only)
+        run: npx wrangler@4 d1 create simple-serve-production || echo "database already exists"
+
+      - name: Point wrangler.jsonc at the real database id
+        run: |
+          DB_ID=$(npx wrangler@4 d1 list --json | node -e "
+            let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const db=JSON.parse(s).find(d=>d.name==='simple-serve-production');
+              if(!db){console.error('database not found');process.exit(1);}
+              console.log(db.uuid);
+            })")
+          sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
+          echo "using database id $DB_ID"
+
+      - name: Apply database migrations
+        run: npx wrangler@4 d1 migrations apply simple-serve-production --remote
+
+      - name: Create Pages project (first run only)
+        run: npx wrangler@4 pages project create simple-serve --production-branch=main || echo "project already exists"
+
+      - name: Deploy
+        run: npx wrangler@4 pages deploy public --project-name simple-serve --branch=main

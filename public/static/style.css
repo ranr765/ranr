@@ -243,6 +243,33 @@ main {
   cursor: pointer;
 }
 
+.row-stmt {
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.head-actions { display: flex; gap: 6px; }
+
+.btn-primary.btn-wa { background: linear-gradient(135deg, #25d366, #128c7e); }
+
+.modal-body textarea {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--ink);
+  background: #fff;
+  width: 100%;
+  resize: vertical;
+}
+.modal-body textarea:focus { outline: none; border-color: var(--red); }
+.modal-body code { font-size: 12px; background: var(--bg); padding: 2px 5px; border-radius: 4px; }
+
 .btn-small {
   border: 1.5px solid var(--line);
   background: #fff;
