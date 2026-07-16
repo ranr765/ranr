@@ -43,6 +43,12 @@ function fmtDate(s) {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
+function fmtDateFull(s) {
+  if (!s) return '';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -664,14 +670,14 @@ function statementText(st) {
   const c = st.customer;
   const lines = [];
   lines.push('*Simple Serve* — Bill Summary');
-  lines.push(`${c.name}${c.place ? ', ' + c.place : ''}`);
-  lines.push(`Date: ${fmtDate(st.date)}`);
+  lines.push(`Bill for: *${c.name}${c.place ? ', ' + c.place : ''}*`);
+  lines.push(`Statement date: ${fmtDateFull(st.date)}`);
   lines.push('');
   lines.push('Pending bills:');
   st.open.forEach((b, i) => {
     lines.push(
-      `${i + 1}) ${fmtDate(b.date)} ${b.items ? b.items + ' ' : ''}— ${fmtMoney(b.balance)}` +
-      ` (pay by ${fmtDate(b.due_date)})${b.overdue ? ' ⚠️ OVERDUE' : ''}`
+      `${i + 1}) Bought on ${fmtDateFull(b.date)}: ${b.items || 'Goods'} — ${fmtMoney(b.balance)}` +
+      ` (pay by ${fmtDateFull(b.due_date)})${b.overdue ? ' ⚠️ OVERDUE' : ''}`
     );
   });
   lines.push('');
@@ -700,8 +706,9 @@ async function statementModal(customerId) {
   const billRows = st.open.map((b) => `
     <div class="row">
       <div class="row-main">
-        <div class="row-title">${fmtDate(b.date)}${b.items ? ' · ' + esc(b.items) : ''}</div>
-        <div class="row-sub">Pay by ${fmtDate(b.due_date)}</div>
+        <div class="row-title">Bought on ${fmtDateFull(b.date)}</div>
+        <div class="row-sub">${esc(b.items || 'Goods')}</div>
+        <div class="row-sub">Pay by ${fmtDateFull(b.due_date)}</div>
         ${b.overdue ? '<div class="row-pending">⚠️ Overdue</div>' : ''}
       </div>
       <div class="row-amount">${fmtMoney(b.balance)}</div>
@@ -836,9 +843,11 @@ async function buildInvoiceCanvas(st, settings) {
 
   // measure body height first
   ctx.font = '26px system-ui, sans-serif';
+  const ITEMS_X = M + 205;
+  const ITEMS_W = (W - M - 310) - ITEMS_X;
   let rowsHeight = 0;
   const rowLines = st.open.map((b) => {
-    const lines = wrapText(ctx, b.items || 'Goods', W - M * 2 - 330);
+    const lines = wrapText(ctx, b.items || 'Goods', ITEMS_W);
     const h = Math.max(40, lines.length * 32 + 26);
     rowsHeight += h;
     return { b, lines, h };
@@ -884,12 +893,12 @@ async function buildInvoiceCanvas(st, settings) {
   ctx.font = '24px system-ui, sans-serif';
   ctx.fillStyle = '#78716c';
   ctx.textAlign = 'right';
-  ctx.fillText('Date: ' + fmtDate(st.date), W - M, y);
+  ctx.fillText('Date: ' + fmtDateFull(st.date), W - M, y);
   ctx.textAlign = 'left';
   y += 44;
   ctx.fillStyle = '#1c1917';
   ctx.font = 'bold 27px system-ui, sans-serif';
-  ctx.fillText('To: ' + st.customer.name + (st.customer.place ? ', ' + st.customer.place : ''), M, y);
+  ctx.fillText('Bill for: ' + st.customer.name + (st.customer.place ? ', ' + st.customer.place : ''), M, y);
   y += 40;
 
   // table head
@@ -897,8 +906,8 @@ async function buildInvoiceCanvas(st, settings) {
   ctx.fillRect(M, y, W - M * 2, 46);
   ctx.fillStyle = '#44403c';
   ctx.font = 'bold 22px system-ui, sans-serif';
-  ctx.fillText('BILL DATE', M + 14, y + 31);
-  ctx.fillText('ITEMS', M + 170, y + 31);
+  ctx.fillText('BOUGHT ON', M + 14, y + 31);
+  ctx.fillText('ITEMS', ITEMS_X, y + 31);
   ctx.fillText('PAY BY', W - M - 300, y + 31);
   ctx.textAlign = 'right';
   ctx.fillText('AMOUNT', W - M - 14, y + 31);
@@ -914,8 +923,8 @@ async function buildInvoiceCanvas(st, settings) {
     ctx.stroke();
     ctx.fillStyle = '#1c1917';
     ctx.font = '24px system-ui, sans-serif';
-    ctx.fillText(fmtDate(b.date), M + 14, y + 34);
-    lines.forEach((ln, i) => ctx.fillText(ln, M + 170, y + 34 + i * 32));
+    ctx.fillText(fmtDateFull(b.date), M + 14, y + 34);
+    lines.forEach((ln, i) => ctx.fillText(ln, ITEMS_X, y + 34 + i * 32));
     ctx.fillStyle = b.overdue ? '#b91c1c' : '#44403c';
     ctx.fillText(fmtDate(b.due_date), W - M - 300, y + 34);
     if (b.overdue) {
