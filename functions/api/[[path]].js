@@ -24,6 +24,209 @@ const isMonth = (s) => /^\d{4}-\d{2}$/.test(s)
 
 const round2 = (n) => Math.round(n * 100) / 100
 
+// ---------- auth ----------
+
+const SESSION_COOKIE = 'ss_session'
+const SESSION_DAYS = 90
+const PBKDF2_ITERATIONS = 100000
+
+const enc = new TextEncoder()
+
+const toHex = (buf) =>
+  [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+const randHex = (bytes) => {
+  const a = new Uint8Array(bytes)
+  crypto.getRandomValues(a)
+  return toHex(a)
+}
+
+async function hashPassword(password, saltHex) {
+  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)))
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveBits',
+  ])
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    key,
+    256
+  )
+  return toHex(bits)
+}
+
+// constant-time string comparison
+const safeEqual = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false
+  let r = 0
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return r === 0
+}
+
+const getSessionToken = (request) => {
+  const cookie = request.headers.get('Cookie') || ''
+  const m = cookie.match(/(?:^|;\s*)ss_session=([a-f0-9]+)/)
+  return m ? m[1] : ''
+}
+
+const sessionCookie = (token, url, maxAge) => {
+  const secure = url.protocol === 'https:' ? '; Secure' : ''
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`
+}
+
+const isoNow = () => new Date().toISOString()
+
+const isoInDays = (days) => new Date(Date.now() + days * 86400000).toISOString()
+
+async function currentUserFor(db, request) {
+  const token = getSessionToken(request)
+  if (!token) return null
+  const row = await db
+    .prepare(
+      `SELECT u.id, u.username, u.name, s.expires_at FROM sessions s
+       JOIN users u ON u.id = s.user_id WHERE s.token = ?`
+    )
+    .bind(token)
+    .first()
+  if (!row) return null
+  if (row.expires_at <= isoNow()) {
+    await db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run()
+    return null
+  }
+  return { id: row.id, username: row.username, name: row.name, token }
+}
+
+async function userCount(db) {
+  const r = await db.prepare('SELECT COUNT(*) AS n FROM users').first()
+  return num(r.n)
+}
+
+async function createUser(db, { name, username, password }) {
+  const salt = randHex(16)
+  const hash = await hashPassword(password, salt)
+  const r = await db
+    .prepare('INSERT INTO users (username, name, password_hash, salt) VALUES (?, ?, ?, ?)')
+    .bind(username, name, hash, salt)
+    .run()
+  return r.meta.last_row_id
+}
+
+async function startSession(db, userId, url) {
+  const token = randHex(32)
+  await db
+    .prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)')
+    .bind(token, userId, isoInDays(SESSION_DAYS))
+    .run()
+  // opportunistic cleanup of expired sessions
+  await db.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(isoNow()).run()
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': sessionCookie(token, url, SESSION_DAYS * 86400),
+    },
+  }
+}
+
+const validCredentials = (username, password) => {
+  if (!/^[a-z0-9._@-]{3,40}$/.test(username))
+    return 'Username: 3–40 letters/numbers (no spaces)'
+  if (typeof password !== 'string' || password.length < 6)
+    return 'Password must be at least 6 characters'
+  return null
+}
+
+async function handleAuth(db, request, url, action) {
+  const method = request.method
+
+  if (action === 'status' && method === 'GET') {
+    const [count, user] = await Promise.all([userCount(db), currentUserFor(db, request)])
+    return json({
+      setupRequired: count === 0,
+      user: user ? { id: user.id, username: user.username, name: user.name } : null,
+    })
+  }
+
+  const readBody = async () => {
+    try {
+      return await request.json()
+    } catch {
+      return {}
+    }
+  }
+
+  if (action === 'setup' && method === 'POST') {
+    if ((await userCount(db)) > 0) return json({ error: 'Setup is already done. Please log in.' }, 403)
+    const b = await readBody()
+    const username = str(b.username).toLowerCase()
+    const password = typeof b.password === 'string' ? b.password : ''
+    const bad = validCredentials(username, password)
+    if (bad) return json({ error: bad }, 400)
+    const userId = await createUser(db, { name: str(b.name) || username, username, password })
+    const init = await startSession(db, userId, url)
+    return new Response(
+      JSON.stringify({ user: { id: userId, username, name: str(b.name) || username } }),
+      { status: 201, ...init }
+    )
+  }
+
+  if (action === 'login' && method === 'POST') {
+    const b = await readBody()
+    const username = str(b.username).toLowerCase()
+    const password = typeof b.password === 'string' ? b.password : ''
+    const user = await db
+      .prepare('SELECT * FROM users WHERE username = ?')
+      .bind(username)
+      .first()
+    // always run the hash so response time doesn't reveal whether the user exists
+    const hash = await hashPassword(password, user ? user.salt : randHex(16))
+    if (!user || !safeEqual(hash, user.password_hash))
+      return json({ error: 'Wrong username or password' }, 401)
+    const init = await startSession(db, user.id, url)
+    return new Response(
+      JSON.stringify({ user: { id: user.id, username: user.username, name: user.name } }),
+      { status: 200, ...init }
+    )
+  }
+
+  if (action === 'logout' && method === 'POST') {
+    const token = getSessionToken(request)
+    if (token) await db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run()
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Set-Cookie': sessionCookie('', url, 0),
+      },
+    })
+  }
+
+  if (action === 'password' && method === 'POST') {
+    const user = await currentUserFor(db, request)
+    if (!user) return json({ error: 'Unauthorized' }, 401)
+    const b = await readBody()
+    const current = typeof b.current === 'string' ? b.current : ''
+    const next = typeof b.next === 'string' ? b.next : ''
+    if (next.length < 6) return json({ error: 'New password must be at least 6 characters' }, 400)
+    const row = await db.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first()
+    const currentHash = await hashPassword(current, row.salt)
+    if (!safeEqual(currentHash, row.password_hash))
+      return json({ error: 'Current password is wrong' }, 401)
+    const salt = randHex(16)
+    const hash = await hashPassword(next, salt)
+    await db
+      .prepare('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?')
+      .bind(hash, salt, user.id)
+      .run()
+    // invalidate every other session for this user
+    await db
+      .prepare('DELETE FROM sessions WHERE user_id = ? AND token != ?')
+      .bind(user.id, user.token)
+      .run()
+    return json({ ok: true })
+  }
+
+  return json({ error: 'Not found' }, 404)
+}
+
 // ---------- generic list/create/delete configs ----------
 
 const PARTY_TABLES = { customers: 'customers', suppliers: 'suppliers' }
@@ -306,6 +509,13 @@ export async function onRequest(context) {
   }
 
   try {
+    // auth endpoints (login/setup/status are reachable without a session)
+    if (resource === 'auth') return await handleAuth(db, request, url, id)
+
+    // everything else requires a valid session
+    const user = await currentUserFor(db, request)
+    if (!user) return json({ error: 'Unauthorized' }, 401)
+
     // parties: /api/customers, /api/suppliers
     if (PARTY_TABLES[resource]) {
       const table = PARTY_TABLES[resource]

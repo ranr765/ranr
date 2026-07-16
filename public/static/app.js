@@ -21,6 +21,7 @@ const state = {
   reportMonth: todayStr().slice(0, 7),
   customers: [],
   suppliers: [],
+  user: null,
 };
 
 function todayStr() {
@@ -53,6 +54,11 @@ async function api(path, opts = {}) {
     ...opts,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !path.startsWith('/api/auth/')) {
+    state.user = null;
+    showAuthScreen(false);
+    throw new Error(data.error || 'Please log in');
+  }
   if (!res.ok) throw new Error(data.error || 'Something went wrong');
   return data;
 }
@@ -661,8 +667,124 @@ async function render() {
   }
 }
 
+/* ---------- auth screens ---------- */
+
+function setAuthedChrome(authed) {
+  document.body.classList.toggle('noauth', !authed);
+  $('#account-btn').classList.toggle('hidden', !authed);
+}
+
+function showAuthScreen(setupRequired) {
+  setAuthedChrome(false);
+  const view = $('#view');
+  if (setupRequired) {
+    view.innerHTML = `
+    <section class="card auth-card">
+      <h2>Welcome! 🎉</h2>
+      <p class="hint">First time here — create the owner account. Remember this username
+      and password: they protect all your business data.</p>
+      <form id="auth-form">
+        <label>Your name <input name="name" placeholder="e.g. Rajesh" /></label>
+        <label>Username <input name="username" required autocapitalize="none" autocomplete="username" placeholder="e.g. rajesh" /></label>
+        <label>Password <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
+        <label>Repeat password <input type="password" name="password2" required autocomplete="new-password" /></label>
+        <button type="submit" class="btn-primary">Create account</button>
+      </form>
+    </section>`;
+  } else {
+    view.innerHTML = `
+    <section class="card auth-card">
+      <h2>Login</h2>
+      <form id="auth-form">
+        <label>Username <input name="username" required autocapitalize="none" autocomplete="username" /></label>
+        <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+    </section>`;
+  }
+  $('#auth-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = $('button[type="submit"]', e.target);
+    btn.disabled = true;
+    try {
+      if (setupRequired) {
+        if (fd.get('password') !== fd.get('password2'))
+          throw new Error('Passwords do not match');
+        const r = await api('/api/auth/setup', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: fd.get('name'),
+            username: fd.get('username'),
+            password: fd.get('password'),
+          }),
+        });
+        state.user = r.user;
+      } else {
+        const r = await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: fd.get('username'),
+            password: fd.get('password'),
+          }),
+        });
+        state.user = r.user;
+      }
+      setAuthedChrome(true);
+      toast(`Welcome, ${state.user.name || state.user.username}!`);
+      state.tab = 'home';
+      $$('.nav-btn').forEach((x) => x.classList.toggle('active', x.dataset.tab === 'home'));
+      render();
+    } catch (err) {
+      toast(err.message, false);
+      btn.disabled = false;
+    }
+  };
+  const first = $('#auth-form input');
+  if (first) first.focus();
+}
+
+function accountModal() {
+  openModal(
+    'Account',
+    `
+    <div class="account-info">Logged in as <b>${esc(state.user.name || state.user.username)}</b> (${esc(state.user.username)})</div>
+    <label>Current password <input type="password" name="current" autocomplete="current-password" /></label>
+    <label>New password <input type="password" name="next" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
+    <label>Repeat new password <input type="password" name="next2" autocomplete="new-password" /></label>`,
+    async (fd, close) => {
+      if (!fd.get('current') && !fd.get('next')) return close();
+      if (fd.get('next') !== fd.get('next2')) throw new Error('New passwords do not match');
+      await api('/api/auth/password', {
+        method: 'POST',
+        body: JSON.stringify({ current: fd.get('current'), next: fd.get('next') }),
+      });
+      close();
+      toast('Password changed ✓');
+    }
+  );
+  // rename Save button and add logout
+  const save = $('#modal-root .btn-save');
+  save.textContent = 'Change password';
+  const logout = document.createElement('button');
+  logout.type = 'button';
+  logout.className = 'btn-logout';
+  logout.textContent = 'Logout';
+  logout.onclick = async () => {
+    await api('/api/auth/logout', { method: 'POST' });
+    $('#modal-root').innerHTML = '';
+    state.user = null;
+    toast('Logged out');
+    showAuthScreen(false);
+  };
+  save.after(logout);
+}
+
+/* ---------- boot ---------- */
+
 $$('.nav-btn').forEach((b) => {
   b.onclick = () => {
+    if (!state.user) return;
     $$('.nav-btn').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
     state.tab = b.dataset.tab;
@@ -670,5 +792,22 @@ $$('.nav-btn').forEach((b) => {
   };
 });
 
+$('#account-btn').onclick = accountModal;
+
+async function boot() {
+  try {
+    const s = await api('/api/auth/status');
+    if (s.user) {
+      state.user = s.user;
+      setAuthedChrome(true);
+      render();
+    } else {
+      showAuthScreen(s.setupRequired);
+    }
+  } catch (err) {
+    $('#view').innerHTML = `<div class="empty">⚠️ ${esc(err.message)}<br/><button class="btn-small" onclick="location.reload()">Retry</button></div>`;
+  }
+}
+
 window.render = render;
-render();
+boot();

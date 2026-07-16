@@ -24,6 +24,16 @@ mistakes.
 **Shops tab** — customers and suppliers with live credit balances: how much each shop
 still owes you, and what you owe each supplier. Collect / pay straight from the list.
 
+**Login** — the app is fully protected by a username + password:
+- On the very first visit the app shows a one-time **setup screen** to create the
+  owner account (no default passwords anywhere).
+- Sessions last 90 days per device (stored as HttpOnly secure cookies), so the
+  phone stays logged in for daily use.
+- The 👤 button in the header opens the account menu: **change password** (which
+  logs out every other device) and **logout**.
+- Every API route rejects requests without a valid session. Passwords are stored
+  as salted PBKDF2-SHA256 hashes (100k iterations), never in plain text.
+
 **Report tab** — monthly Profit & Loss:
 
 ```
@@ -69,12 +79,9 @@ npm run dev                  # serves on http://localhost:3000
    npm run db:migrate:prod
    npm run deploy
    ```
-4. Share the `*.pages.dev` URL. On the phone, open it in the browser and use
-   **"Add to Home screen"** so it opens like an app.
-
-> Note: there is no login yet — anyone with the URL can see and edit the data.
-> Keep the URL private, or add Cloudflare Access / a simple PIN in front of it
-> if that becomes a concern.
+4. Open the `*.pages.dev` URL — the first visit shows the one-time setup screen
+   where the owner picks a username and password. Then share the URL: on the
+   phone, use the browser's **"Add to Home screen"** so it opens like an app.
 
 ## Data model
 
@@ -84,6 +91,7 @@ npm run dev                  # serves on http://localhost:3000
 | `sales` / `purchases` | each with `total_amount` and `paid_amount` — the difference is credit |
 | `expenses` | category + amount |
 | `payments` | later settlements: `in` = collected from a shop, `out` = paid to a supplier |
+| `users` / `sessions` | login accounts (salted PBKDF2 hashes) and device sessions |
 
 Balance of a shop = its sales total − paid at sale time − later collections.
 Monthly profit = sales − purchases − expenses (cash-book style).
