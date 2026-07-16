@@ -42,6 +42,12 @@ jobs:
             echo "Then update the secret: repo Settings → Secrets and variables → Actions → CLOUDFLARE_ACCOUNT_ID (pencil icon)."
             exit 1
           fi
+          if ! printf '%s' "$TOKEN" | grep -qE '^[A-Za-z0-9_-]{40,}$'; then
+            echo "::error::CLOUDFLARE_API_TOKEN does not look like a Cloudflare API token (expected 40+ characters: letters, digits, - or _)."
+            echo "The real token is shown only once when created. To get a fresh copy: dash.cloudflare.com → profile icon → My Profile → API Tokens → next to 'simple-serve-deploy' open the ... menu → Roll → copy the NEW token shown."
+            echo "Then update the secret: repo Settings → Secrets and variables → Actions → CLOUDFLARE_API_TOKEN (pencil icon)."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
 
