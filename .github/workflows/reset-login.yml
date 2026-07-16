@@ -1,1 +1,44 @@
-« FULL FILE CONTENT OMITTED FROM SAMPLE »
+name: Reset app login
+
+# Clears ONLY the users and sessions tables, so the app shows the
+# first-run setup screen again. Sales, purchases, expenses, customers,
+# suppliers and products are untouched.
+# Trigger: change the .ops/reset-login file on main (or run manually).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.ops/reset-login'
+  workflow_dispatch:
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  reset-login:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Point wrangler.jsonc at the real database id
+        run: |
+          DB_ID=$(npx wrangler@4 d1 list --json | node -e "
+            let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const db=JSON.parse(s).find(d=>d.name==='simple-serve-production');
+              if(!db){console.error('database not found');process.exit(1);}
+              console.log(db.uuid);
+            })")
+          sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
+          echo "using database id $DB_ID"
+
+      - name: Clear login (users and sessions only)
+        run: npx wrangler@4 d1 execute simple-serve-production --remote --command "DELETE FROM sessions; DELETE FROM users;"
+
+      - name: Done
+        run: echo "Login cleared. Open the app to create a fresh owner account. Business data is untouched."
