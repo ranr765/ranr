@@ -632,6 +632,41 @@ export async function onRequest(context) {
       }
     }
 
+    // item catalog: /api/products
+    if (resource === 'products') {
+      if (method === 'GET' && !id) {
+        const { results } = await db
+          .prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id')
+          .all()
+        return json(results)
+      }
+      if (method === 'POST' && !id) {
+        const b = await readBody()
+        const name = str(b.name)
+        if (!name) return json({ error: 'Item name is required' }, 400)
+        const price = Math.max(num(b.sale_price), 0)
+        const r = await db
+          .prepare('INSERT INTO products (name, size, sale_price) VALUES (?, ?, ?)')
+          .bind(name, str(b.size), price)
+          .run()
+        return json({ id: r.meta.last_row_id }, 201)
+      }
+      if (method === 'PUT' && id) {
+        const b = await readBody()
+        const name = str(b.name)
+        if (!name) return json({ error: 'Item name is required' }, 400)
+        await db
+          .prepare('UPDATE products SET name = ?, size = ?, sale_price = ? WHERE id = ?')
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), id)
+          .run()
+        return json({ ok: true })
+      }
+      if (method === 'DELETE' && id) {
+        await db.prepare('DELETE FROM products WHERE id = ?').bind(id).run()
+        return json({ ok: true })
+      }
+    }
+
     if (resource === 'statement' && id && method === 'GET')
       return await customerStatement(db, id, url.searchParams.get('date') || '')
 
