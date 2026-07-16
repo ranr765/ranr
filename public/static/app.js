@@ -972,8 +972,15 @@ async function buildInvoiceCanvas(st, settings) {
       ctx.fillStyle = '#44403c';
       ctx.fillText('PhonePe · Google Pay · any UPI app', M + qs + 60, y + 150);
       if (settings.upi_id) {
-        ctx.font = 'bold 24px system-ui, sans-serif';
-        ctx.fillText('UPI: ' + settings.upi_id, M + qs + 60, y + 195);
+        const upiText = 'UPI: ' + settings.upi_id;
+        const maxW = W - M - (M + qs + 60) - 16;
+        let size = 24;
+        ctx.font = `bold ${size}px system-ui, sans-serif`;
+        while (size > 14 && ctx.measureText(upiText).width > maxW) {
+          size -= 1;
+          ctx.font = `bold ${size}px system-ui, sans-serif`;
+        }
+        ctx.fillText(upiText, M + qs + 60, y + 195);
       }
     } else {
       ctx.fillStyle = '#1c1917';
