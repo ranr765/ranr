@@ -475,6 +475,46 @@ async function balances(db) {
   })
 }
 
+async function trendReport(db, endMonth) {
+  if (!isMonth(endMonth)) return json({ error: 'month=YYYY-MM is required' }, 400)
+  const [y, m] = endMonth.split('-').map(Number)
+  const months = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(Date.UTC(y, m - 1 - i, 1))
+    months.push(d.toISOString().slice(0, 7))
+  }
+  const start = months[0] + '-01'
+  const sumByMonth = async (table, dateCol, amountCol) => {
+    const { results } = await db
+      .prepare(
+        `SELECT substr(${dateCol},1,7) AS m, COALESCE(SUM(${amountCol}),0) AS v
+         FROM ${table} WHERE ${dateCol} >= ? GROUP BY m`
+      )
+      .bind(start)
+      .all()
+    const map = {}
+    for (const r of results) map[r.m] = num(r.v)
+    return map
+  }
+  const [s, p, e] = await Promise.all([
+    sumByMonth('sales', 'sale_date', 'total_amount'),
+    sumByMonth('purchases', 'purchase_date', 'total_amount'),
+    sumByMonth('expenses', 'expense_date', 'amount'),
+  ])
+  return json(
+    months.map((mo) => {
+      const sales = s[mo] || 0, purchases = p[mo] || 0, expenses = e[mo] || 0
+      return {
+        month: mo,
+        sales,
+        purchases,
+        expenses,
+        profit: Math.round((sales - purchases - expenses) * 100) / 100,
+      }
+    })
+  )
+}
+
 async function report(db, month) {
   if (!isMonth(month)) return json({ error: 'month=YYYY-MM is required' }, 400)
 
@@ -698,6 +738,8 @@ export async function onRequest(context) {
       return await customerStatement(db, id, url.searchParams.get('date') || '')
 
     if (resource === 'balances' && method === 'GET') return await balances(db)
+    if (resource === 'report' && id === 'trend' && method === 'GET')
+      return await trendReport(db, url.searchParams.get('month') || '')
     if (resource === 'report' && method === 'GET')
       return await report(db, url.searchParams.get('month') || '')
     if (resource === 'today' && method === 'GET')

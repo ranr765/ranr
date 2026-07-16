@@ -380,6 +380,20 @@ function paymentForm(type, party) {
 
 /* ---------- views ---------- */
 
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+const AVATAR_COLORS = ['#b91c1c', '#0e7490', '#15803d', '#6d28d9', '#946300', '#be185d'];
+function avatarHtml(name) {
+  let h = 0;
+  for (const ch of String(name || '?')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const color = AVATAR_COLORS[h % AVATAR_COLORS.length];
+  const letter = String(name || '?').trim().charAt(0).toUpperCase() || '?';
+  return `<span class="avatar" style="background:${color}">${esc(letter)}</span>`;
+}
+
 async function viewHome() {
   const today = todayStr();
   const month = today.slice(0, 7);
@@ -388,7 +402,30 @@ async function viewHome() {
     api(`/api/report?month=${month}`),
   ]);
 
+  const recv = report.outstanding.receivable;
+  const pay = report.outstanding.payable;
+  const insight =
+    recv > 0.005
+      ? `Shops owe you ${fmtMoney(recv)} — open a shop's 🧾 to send a reminder`
+      : 'No pending collections — all clear ✓';
+
   return `
+  <section class="hero">
+    <div class="hero-hi">${greeting()}, ${esc(state.user.name || state.user.username)} 👋</div>
+    <div class="hero-sub">${insight}</div>
+  </section>
+  <section class="twin">
+    <div class="twin-card twin-in">
+      <div class="twin-label">To collect</div>
+      <div class="twin-val">${fmtMoney(recv)}</div>
+      <div class="twin-sub">pending from shops</div>
+    </div>
+    <div class="twin-card twin-out">
+      <div class="twin-label">To pay</div>
+      <div class="twin-val">${fmtMoney(pay)}</div>
+      <div class="twin-sub">due to suppliers</div>
+    </div>
+  </section>
   <section class="quick-actions">
     <button class="qa qa-sale" id="qa-sale"><span class="qa-ico">&#128176;</span>Sale</button>
     <button class="qa qa-purchase" id="qa-purchase"><span class="qa-ico">&#128666;</span>Purchase</button>
@@ -415,8 +452,6 @@ async function viewHome() {
     <div class="pl-line"><span>Purchases</span><b>&minus; ${fmtMoney(report.purchases.total)}</b></div>
     <div class="pl-line"><span>Expenses</span><b class="bad">&minus; ${fmtMoney(report.expenses.total)}</b></div>
     <div class="pl-line pl-total"><span>Profit</span><b class="${report.profit >= 0 ? 'good' : 'bad'}">${fmtMoney(report.profit)}</b></div>
-    <div class="pl-line pl-muted"><span>Shops owe you (total)</span><b>${fmtMoney(report.outstanding.receivable)}</b></div>
-    <div class="pl-line pl-muted"><span>You owe suppliers (total)</span><b>${fmtMoney(report.outstanding.payable)}</b></div>
   </section>`;
 }
 
@@ -520,7 +555,8 @@ async function viewParties() {
     .join('');
 
   const partyRow = (p, kind) => `
-    <div class="row">
+    <div class="row" data-name="${esc((p.name + ' ' + (p.place || '')).toLowerCase())}">
+      ${avatarHtml(p.name)}
       <div class="row-main">
         <div class="row-title">${esc(p.name)}</div>
         <div class="row-sub">${esc([p.place, p.phone].filter(Boolean).join(' · '))}</div>
@@ -546,6 +582,7 @@ async function viewParties() {
       </div>
     </div>
     <div class="hint">Amount shown = money the shop still owes you &middot; &#129534; = bill statement for WhatsApp</div>
+    <input class="search-box" id="shop-search" placeholder="🔍 Search shop or place…" />
     <div class="rows">${customers.map((p) => partyRow(p, 'customer')).join('') || '<div class="empty">No shops added yet</div>'}</div>
   </section>
   <section class="card">
@@ -572,11 +609,51 @@ async function viewParties() {
 async function viewReport() {
   const month = state.reportMonth;
   const r = await api(`/api/report?month=${month}`);
+  const trend = await api(`/api/report/trend?month=${month}`);
+  const { customers } = await api('/api/balances');
 
+  const maxExp = Math.max(1, ...(r.expenses.byCategory || []).map((c) => c.total));
   const catRows = (r.expenses.byCategory || [])
     .map(
-      (c) =>
-        `<div class="pl-line pl-muted"><span>&nbsp;&nbsp;${esc(c.category)}</span><b>${fmtMoney(c.total)}</b></div>`
+      (c) => `
+      <div class="chart-row">
+        <span class="chart-label" title="${esc(c.category)}">${esc(c.category)}</span>
+        <div class="mini-track"><div class="mini-bar" style="width:${Math.round((c.total / maxExp) * 100)}%"></div></div>
+        <span class="chart-val">${fmtMoney(c.total)}</span>
+      </div>`
+    )
+    .join('');
+
+  const maxProfit = Math.max(1, ...trend.map((t) => Math.abs(t.profit)));
+  const monthName = (m) => {
+    const [yy, mm] = m.split('-').map(Number);
+    return new Date(yy, mm - 1, 1).toLocaleString('en-IN', { month: 'short' });
+  };
+  const trendRows = trend
+    .map(
+      (t) => `
+      <div class="chart-row">
+        <span class="chart-label">${monthName(t.month)}</span>
+        <div class="mini-track"><div class="mini-bar ${t.profit >= 0 ? 'trend-bar-pos' : 'trend-bar-neg'}" style="width:${Math.round((Math.abs(t.profit) / maxProfit) * 100)}%"></div></div>
+        <span class="chart-val ${t.profit >= 0 ? 'good' : 'bad'}">${fmtMoney(t.profit)}</span>
+      </div>`
+    )
+    .join('');
+
+  const topPending = customers
+    .filter((c) => c.balance > 0.005)
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 5)
+    .map(
+      (c) => `
+      <div class="row">
+        ${avatarHtml(c.name)}
+        <div class="row-main">
+          <div class="row-title">${esc(c.name)}</div>
+          <div class="row-sub">${esc(c.place || '')}</div>
+        </div>
+        <div class="row-amount good">${fmtMoney(c.balance)}</div>
+      </div>`
     )
     .join('');
 
@@ -609,9 +686,15 @@ async function viewReport() {
   </section>
 
   <section class="card">
+    <h3>Profit — last 6 months</h3>
+    ${trendRows}
+  </section>
+
+  <section class="card">
     <h3>Outstanding (overall)</h3>
     <div class="pl-line"><span>Shops owe you</span><b class="good">${fmtMoney(r.outstanding.receivable)}</b></div>
     <div class="pl-line"><span>You owe suppliers</span><b class="bad">${fmtMoney(r.outstanding.payable)}</b></div>
+    ${topPending ? '<div class="hint" style="margin-top:10px">Top pending shops</div>' + topPending : ''}
   </section>
 
   ${bars ? `<section class="card"><h3>Daily sales</h3>${bars}</section>` : ''}`;
@@ -1207,6 +1290,15 @@ function wireView() {
   }
 
   if (state.tab === 'parties') {
+    const search = $('#shop-search');
+    if (search) {
+      search.oninput = () => {
+        const q = search.value.trim().toLowerCase();
+        $$('.rows .row[data-name]', view).forEach((row) => {
+          row.style.display = !q || row.dataset.name.includes(q) ? '' : 'none';
+        });
+      };
+    }
     $('#add-customer').onclick = () => addPartyForm('customer');
     $('#add-supplier').onclick = () => addPartyForm('supplier');
     $('#add-product').onclick = () => productForm(null);
