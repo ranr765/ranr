@@ -21,6 +21,7 @@ const state = {
   reportMonth: todayStr().slice(0, 7),
   customers: [],
   suppliers: [],
+  products: [],
   user: null,
 };
 
@@ -72,12 +73,14 @@ function toast(msg, ok = true) {
 }
 
 async function loadParties() {
-  const [customers, suppliers] = await Promise.all([
+  const [customers, suppliers, products] = await Promise.all([
     api('/api/customers'),
     api('/api/suppliers'),
+    api('/api/products'),
   ]);
   state.customers = customers;
   state.suppliers = suppliers;
+  state.products = products;
 }
 
 /* ---------- modal helpers ---------- */
@@ -178,7 +181,8 @@ function saleForm() {
     `
     <label>Date <input type="date" name="sale_date" value="${todayStr()}" required /></label>
     ${partyField('Shop / Customer', 'customer', state.customers, 'Add new shop')}
-    <label>Items sold <input name="items" placeholder="e.g. Paper cups 200ml x 10 pkt" /></label>
+    ${itemPickerHtml()}
+    <label>Items sold <input name="items" placeholder="e.g. Spice LD Cover 1 kg x 10" /></label>
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Received now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if full amount received" /></label>
     <div class="paid-quick">
@@ -210,6 +214,7 @@ function saleForm() {
   );
   wirePartyField('customer');
   wirePaidChips();
+  wireItemPicker(true);
 }
 
 function purchaseForm() {
@@ -218,7 +223,8 @@ function purchaseForm() {
     `
     <label>Date <input type="date" name="purchase_date" value="${todayStr()}" required /></label>
     ${partyField('Supplier', 'supplier', state.suppliers, 'Add new supplier')}
-    <label>Items bought <input name="items" placeholder="e.g. Packing covers 5kg" /></label>
+    ${itemPickerHtml()}
+    <label>Items bought <input name="items" placeholder="e.g. Spice LD Cover 5 kg x 20" /></label>
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Paid now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if fully paid" /></label>
     <div class="paid-quick">
@@ -250,6 +256,43 @@ function purchaseForm() {
   );
   wirePartyField('supplier');
   wirePaidChips();
+  wireItemPicker(false);
+}
+
+/* item picker inside sale/purchase forms: appends to the items text,
+   and (for sales) adds qty × default price to the total when a price is set */
+function itemPickerHtml() {
+  if (!state.products.length) return '';
+  const opts = state.products
+    .map((p) => `<option value="${p.id}">${esc(p.name)} ${esc(p.size)}${p.sale_price > 0 ? ' — ₹' + p.sale_price : ''}</option>`)
+    .join('');
+  return `
+    <div class="item-picker">
+      <select data-pick-product><option value="">— pick item —</option>${opts}</select>
+      <input type="number" data-pick-qty value="1" min="0.25" step="0.25" inputmode="decimal" title="Quantity" />
+      <button type="button" class="btn-small" data-pick-add>＋</button>
+    </div>`;
+}
+
+function wireItemPicker(applyPrice) {
+  const addBtn = $('#modal-root [data-pick-add]');
+  if (!addBtn) return;
+  addBtn.onclick = () => {
+    const sel = $('#modal-root [data-pick-product]');
+    const qtyInput = $('#modal-root [data-pick-qty]');
+    const p = state.products.find((x) => String(x.id) === sel.value);
+    if (!p) return;
+    const qty = Math.max(parseFloat(qtyInput.value) || 1, 0);
+    const itemsInput = $('#modal-root input[name="items"]');
+    const entry = `${p.name} ${p.size} x ${qty}`;
+    itemsInput.value = itemsInput.value ? itemsInput.value + ', ' + entry : entry;
+    if (applyPrice && p.sale_price > 0) {
+      const totalInput = $('#modal-root input[name="total_amount"]');
+      totalInput.value = String(Math.round(((parseFloat(totalInput.value) || 0) + p.sale_price * qty) * 100) / 100);
+    }
+    sel.value = '';
+    qtyInput.value = '1';
+  };
 }
 
 function wirePaidChips() {
@@ -441,9 +484,32 @@ async function viewEntries() {
 }
 
 async function viewParties() {
-  const { customers, suppliers } = await api('/api/balances');
+  const [{ customers, suppliers }, products] = await Promise.all([
+    api('/api/balances'),
+    api('/api/products'),
+  ]);
   state.customers = customers;
   state.suppliers = suppliers;
+  state.products = products;
+
+  const groups = {};
+  for (const p of products) (groups[p.name] = groups[p.name] || []).push(p);
+  const itemsHtml = Object.entries(groups)
+    .map(
+      ([name, list]) => `
+      <div class="item-group">
+        <div class="item-group-name">${esc(name)}</div>
+        <div class="item-chips">
+          ${list
+            .map(
+              (p) =>
+                `<button class="chip item-chip" data-id="${p.id}">${esc(p.size) || '—'}${p.sale_price > 0 ? ' · ₹' + p.sale_price : ''}</button>`
+            )
+            .join('')}
+        </div>
+      </div>`
+    )
+    .join('');
 
   const partyRow = (p, kind) => `
     <div class="row">
@@ -481,6 +547,17 @@ async function viewParties() {
     </div>
     <div class="hint">Amount shown = money you still owe the supplier</div>
     <div class="rows">${suppliers.map((p) => partyRow(p, 'supplier')).join('') || '<div class="empty">No suppliers added yet</div>'}</div>
+  </section>
+  <section class="card">
+    <div class="card-head-row">
+      <h3>Items (catalog)</h3>
+      <div class="head-actions">
+        <button class="btn-small" id="import-products">&#8686; Import</button>
+        <button class="btn-small" id="add-product">＋ Add</button>
+      </div>
+    </div>
+    <div class="hint">Tap an item to set its price or remove it. Items appear in the Sale / Purchase forms.</div>
+    ${itemsHtml || '<div class="empty">No items yet</div>'}
   </section>`;
 }
 
@@ -690,6 +767,76 @@ function importCustomersForm() {
   );
 }
 
+/* ---------- item catalog management ---------- */
+
+function productForm(product) {
+  openModal(
+    product ? 'Edit item' : 'Add item',
+    `
+    <label>Item name <input name="name" required value="${esc(product ? product.name : '')}" placeholder="e.g. Spice LD Cover" /></label>
+    <label>Size <input name="size" value="${esc(product ? product.size : '')}" placeholder="e.g. 1 kg, 10x12, Triple Zero" /></label>
+    <label>Default selling price (₹, optional) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>`,
+    async (fd, close) => {
+      const body = JSON.stringify({
+        name: fd.get('name'),
+        size: fd.get('size'),
+        sale_price: fd.get('sale_price') || 0,
+      });
+      if (product) await api(`/api/products/${product.id}`, { method: 'PUT', body });
+      else await api('/api/products', { method: 'POST', body });
+      close();
+      toast('Saved ✓');
+      render();
+    }
+  );
+  if (product) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn-logout';
+    del.textContent = 'Remove item';
+    del.onclick = async () => {
+      if (!confirm('Remove this item from the catalog? Old entries are not affected.')) return;
+      await api(`/api/products/${product.id}`, { method: 'DELETE' });
+      $('#modal-root').innerHTML = '';
+      toast('Removed');
+      render();
+    };
+    $('#modal-root .btn-save').after(del);
+  }
+}
+
+function importProductsForm() {
+  openModal(
+    'Import items',
+    `
+    <div class="hint" style="margin-bottom:0">One item per line, comma separated:<br/>
+    <b>Name, Size, Price</b> — only the name is required.<br/>
+    Example:<br/><code>Spice LD Cover, 1 kg, 120</code></div>
+    <label>Item list <textarea name="list" rows="8" placeholder="Spice LD Cover, 1 kg, 120&#10;Gulf LD Cover, 10x12"></textarea></label>`,
+    async (fd, close) => {
+      const lines = String(fd.get('list') || '').split('\n').map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) throw new Error('Paste at least one line');
+      let ok = 0;
+      let failed = 0;
+      for (const line of lines) {
+        const [name, size, price] = line.split(',').map((t) => (t || '').trim());
+        try {
+          await api('/api/products', {
+            method: 'POST',
+            body: JSON.stringify({ name, size, sale_price: price || 0 }),
+          });
+          ok++;
+        } catch {
+          failed++;
+        }
+      }
+      close();
+      toast(failed ? `${ok} added, ${failed} failed` : `${ok} items added ✓`, !failed);
+      render();
+    }
+  );
+}
+
 /* ---------- wiring ---------- */
 
 function addPartyForm(kind) {
@@ -759,6 +906,14 @@ function wireView() {
   if (state.tab === 'parties') {
     $('#add-customer').onclick = () => addPartyForm('customer');
     $('#add-supplier').onclick = () => addPartyForm('supplier');
+    $('#add-product').onclick = () => productForm(null);
+    $('#import-products').onclick = importProductsForm;
+    $$('.item-chip', view).forEach((b) => {
+      b.onclick = () => {
+        const p = state.products.find((x) => String(x.id) === b.dataset.id);
+        if (p) productForm(p);
+      };
+    });
     $('#import-customers').onclick = importCustomersForm;
     $$('.row-stmt', view).forEach((b) => {
       b.onclick = () => statementModal(b.dataset.id).catch((e) => toast(e.message, false));
