@@ -491,10 +491,10 @@ async function viewHome() {
   state.pendingOrders = pendingOrders;
   state.notes = notes;
 
-  const inboxCard = notes.length
-    ? `
+  const inboxCard = `
   <section class="card">
-    <h3>Inbox (${notes.length})</h3>
+    <h3>Inbox${notes.length ? ` (${notes.length})` : ''}</h3>
+    ${notes.length ? '' : '<div class="hint" style="margin-bottom:0">Empty — tap the red ＋ button (bottom right) to jot a quick note. It waits here until you act on it.</div>'}
     <div class="rows">
       ${notes
         .map(
@@ -511,8 +511,7 @@ async function viewHome() {
         )
         .join('')}
     </div>
-  </section>`
-    : '';
+  </section>`;
 
   const ordersCard = pendingOrders.length
     ? `

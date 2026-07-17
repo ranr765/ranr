@@ -75,5 +75,8 @@ jobs:
       - name: Create Pages project (first run only)
         run: npx wrangler@4 pages project create simple-serve --production-branch=main || echo "project already exists"
 
+      - name: Stamp asset versions (cache busting)
+        run: sed -i "s|/static/app.js|/static/app.js?v=${GITHUB_SHA::8}|; s|/static/style.css|/static/style.css?v=${GITHUB_SHA::8}|" public/index.html
+
       - name: Deploy
         run: npx wrangler@4 pages deploy public --project-name simple-serve --branch=main
