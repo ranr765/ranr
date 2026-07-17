@@ -134,21 +134,120 @@ function openModal(title, bodyHtml, onSubmit) {
   return { close };
 }
 
-function partyOptions(list) {
-  return list
-    .map((p) => `<option value="${p.id}">${esc(p.name)}${p.place ? ' — ' + esc(p.place) : ''}</option>`)
-    .join('');
+/* ---------- searchable dropdown (combo) ----------
+   Every dropdown in the app is a search box + filtered list: tap, type a few
+   letters, tap the match. Native <select> is unusable with 170+ items. */
+
+function comboHtml(name, placeholder) {
+  return `
+    <div class="combo" data-combo="${name}">
+      <input type="hidden" name="${name}" />
+      <input type="text" class="combo-input" placeholder="${esc(placeholder)}"
+             autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <div class="combo-list hidden"></div>
+    </div>`;
 }
 
-/* party <select> with a built-in "+ add new" flow */
+/* options: [{value, label, sub?}]; specials pinned at the bottom (e.g. "+ add new").
+   Returns {set, clear} so callers can preselect or reset. */
+function wireCombo(name, options, { specials = [], onPick } = {}) {
+  const box = $(`#modal-root [data-combo="${name}"]`);
+  if (!box) return { set() {}, clear() {} };
+  const hidden = $('input[type="hidden"]', box);
+  const input = $('.combo-input', box);
+  const list = $('.combo-list', box);
+  const all = [...options, ...specials];
+  const labelOf = (v) => {
+    const o = all.find((o) => String(o.value) === String(v));
+    return o ? o.label : '';
+  };
+
+  const show = (q) => {
+    // word-wise match: "spice 1kg" finds "Spice LD Cover 1kg"
+    const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const match = words.length
+      ? options.filter((o) => {
+          const hay = (o.label + ' ' + (o.sub || '')).toLowerCase();
+          const tight = hay.replace(/\s+/g, ''); // "1kg" finds "1 kg"
+          return words.every((w) => hay.includes(w) || tight.includes(w));
+        })
+      : options;
+    list.innerHTML =
+      match
+        .slice(0, 80)
+        .map(
+          (o) => `<button type="button" class="combo-opt" data-v="${esc(String(o.value))}">
+            <span>${esc(o.label)}</span>${o.sub ? `<span class="combo-sub">${esc(o.sub)}</span>` : ''}
+          </button>`
+        )
+        .join('') +
+      (match.length ? '' : '<div class="combo-empty">No match found</div>') +
+      specials
+        .map(
+          (o) => `<button type="button" class="combo-opt combo-special" data-v="${esc(String(o.value))}">
+            <span>${esc(o.label)}</span>
+          </button>`
+        )
+        .join('');
+    list.classList.remove('hidden');
+    $$('.combo-opt', list).forEach((b) => {
+      // pointerdown fires before the input's blur, so the tap always lands
+      b.onpointerdown = (e) => {
+        e.preventDefault();
+        pick(b.dataset.v);
+      };
+    });
+  };
+
+  const pick = (v) => {
+    hidden.value = v;
+    input.value = labelOf(v);
+    list.classList.add('hidden');
+    if (onPick) onPick(v);
+  };
+
+  input.onfocus = () => {
+    input.select();
+    show('');
+  };
+  input.oninput = () => {
+    if (hidden.value) {
+      hidden.value = '';
+      if (onPick) onPick('');
+    }
+    show(input.value);
+  };
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = $('.combo-opt', list);
+      if (first && !list.classList.contains('hidden')) pick(first.dataset.v);
+    } else if (e.key === 'Escape') {
+      list.classList.add('hidden');
+    }
+  };
+  input.onblur = () => {
+    setTimeout(() => {
+      list.classList.add('hidden');
+      input.value = labelOf(hidden.value); // discard typed text that wasn't picked
+    }, 150);
+  };
+
+  return {
+    set: pick,
+    clear() {
+      hidden.value = '';
+      input.value = '';
+      list.classList.add('hidden');
+    },
+  };
+}
+
+/* party picker with a built-in "+ add new" flow */
 function partyField(label, name, list, addLabel) {
   return `
     <label>${label}
-      <select name="${name}">
-        <option value="">— select —</option>
-        ${partyOptions(list)}
-        <option value="__new__">＋ ${addLabel}</option>
-      </select>
+      ${comboHtml(name, 'Search or pick…')}
     </label>
     <div class="new-party hidden">
       <label>Name <input name="${name}_new_name" placeholder="Name" /></label>
@@ -157,11 +256,21 @@ function partyField(label, name, list, addLabel) {
     </div>`;
 }
 
-function wirePartyField(name) {
-  const sel = $(`#modal-root select[name="${name}"]`);
-  sel.onchange = () => {
-    $('#modal-root .new-party').classList.toggle('hidden', sel.value !== '__new__');
-  };
+function partyComboOptions(list) {
+  return list.map((p) => ({ value: p.id, label: p.name, sub: p.place || '' }));
+}
+
+function wirePartyField(name, list, addLabel) {
+  return wireCombo(name, partyComboOptions(list), {
+    specials: [{ value: '__new__', label: `＋ ${addLabel}` }],
+    onPick: (v) => {
+      $('#modal-root .new-party').classList.toggle('hidden', v !== '__new__');
+      if (v === '__new__') {
+        const nameInput = $(`#modal-root input[name="${name}_new_name"]`);
+        if (nameInput) nameInput.focus();
+      }
+    },
+  });
 }
 
 /* Resolves the party select: creates the party first if "+ new" chosen.
@@ -232,12 +341,11 @@ function saleForm(prefill) {
       render();
     }
   );
-  wirePartyField('customer');
+  const customerCombo = wirePartyField('customer', state.customers, 'Add new shop');
   wirePaidChips();
   wireItemPicker('sale', prefill ? parseItemLines(prefill.items) : null);
-  if (prefill && prefill.customer_id) {
-    const sel = $('#modal-root select[name="customer"]');
-    if (sel.querySelector(`option[value="${prefill.customer_id}"]`)) sel.value = String(prefill.customer_id);
+  if (prefill && prefill.customer_id && state.customers.some((c) => c.id === prefill.customer_id)) {
+    customerCombo.set(String(prefill.customer_id));
   }
 }
 
@@ -278,7 +386,7 @@ function purchaseForm() {
       render();
     }
   );
-  wirePartyField('supplier');
+  wirePartyField('supplier', state.suppliers, 'Add new supplier');
   wirePaidChips();
   wireItemPicker('purchase');
 }
@@ -287,19 +395,11 @@ function purchaseForm() {
    line (item, qty, rate, amount) with a running total. Rates default from the
    catalog (sale or purchase rate by form) and stay editable per deal. */
 function itemPickerHtml(mode) {
-  const priceOf = (p) => (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
-  const opts = state.products
-    .map((p) => `<option value="${p.id}" data-rate="${priceOf(p)}">${esc(p.name)} ${esc(p.size)}</option>`)
-    .join('');
   return `
     <div class="li-box">
       <div class="li-title">Items</div>
       <div class="li-list" data-li-list></div>
-      <select data-li-product>
-        <option value="">— choose item to add —</option>
-        <option value="__custom__">✏️ Type item name…</option>
-        ${opts}
-      </select>
+      ${comboHtml('li_product', 'Search item to add…')}
       <input data-li-custom class="hidden" placeholder="Item name" />
       <div class="li-row2">
         <label class="li-mini">Qty
@@ -326,8 +426,8 @@ function parseItemLines(text) {
 
 function wireItemPicker(mode, initialLines) {
   const root = $('#modal-root');
-  const sel = $('[data-li-product]', root);
-  if (!sel) return;
+  if (!$('[data-combo="li_product"]', root)) return;
+  const priceOf = (p) => (mode === 'purchase' ? p.purchase_price : p.sale_price) || 0;
   const customInput = $('[data-li-custom]', root);
   const qtyInput = $('[data-li-qty]', root);
   const rateInput = $('[data-li-rate]', root);
@@ -362,23 +462,36 @@ function wireItemPicker(mode, initialLines) {
     });
   };
 
-  sel.onchange = () => {
-    const isCustom = sel.value === '__custom__';
-    customInput.classList.toggle('hidden', !isCustom);
-    if (isCustom) {
-      rateInput.value = '';
-      customInput.focus();
-      return;
+  const productCombo = wireCombo(
+    'li_product',
+    state.products.map((p) => ({
+      value: p.id,
+      label: `${p.name} ${p.size}`.trim(),
+      sub: priceOf(p) ? fmtMoney(priceOf(p)) : '',
+    })),
+    {
+      specials: [{ value: '__custom__', label: '✏️ Type item name…' }],
+      onPick: (v) => {
+        const isCustom = v === '__custom__';
+        customInput.classList.toggle('hidden', !isCustom);
+        if (isCustom) {
+          rateInput.value = '';
+          customInput.focus();
+          return;
+        }
+        const p = state.products.find((x) => String(x.id) === String(v));
+        rateInput.value = p ? String(priceOf(p) || '') : '';
+      },
     }
-    const p = state.products.find((x) => String(x.id) === sel.value);
-    rateInput.value = p ? String((mode === 'purchase' ? p.purchase_price : p.sale_price) || '') : '';
-  };
+  );
+  const pickedProduct = () => $('[data-combo="li_product"] input[type="hidden"]', root).value;
 
   $('[data-li-add]', root).onclick = () => {
+    const v = pickedProduct();
     let label = '';
-    if (sel.value === '__custom__') label = customInput.value.trim();
+    if (v === '__custom__') label = customInput.value.trim();
     else {
-      const p = state.products.find((x) => String(x.id) === sel.value);
+      const p = state.products.find((x) => String(x.id) === String(v));
       if (p) label = `${p.name} ${p.size}`.trim();
     }
     if (!label) return toast('Choose an item first', false);
@@ -386,7 +499,7 @@ function wireItemPicker(mode, initialLines) {
     if (!(qty > 0)) return toast('Enter the quantity', false);
     const rate = Math.max(parseFloat(rateInput.value) || 0, 0);
     lines.push({ label, qty, rate });
-    sel.value = '';
+    productCombo.clear();
     customInput.value = '';
     customInput.classList.add('hidden');
     qtyInput.value = '1';
@@ -412,13 +525,12 @@ function expenseForm() {
     `
     <label>Date <input type="date" name="expense_date" value="${todayStr()}" required /></label>
     <label>Category
-      <select name="category" required>
-        ${EXPENSE_CATEGORIES.map((c) => `<option>${c}</option>`).join('')}
-      </select>
+      ${comboHtml('category', 'Search or pick a category…')}
     </label>
     <label>Amount (₹) <input type="number" name="amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Notes <input name="notes" placeholder="Optional (e.g. petrol for Ollur route)" /></label>`,
     async (fd, close) => {
+      if (!fd.get('category')) throw new Error('Choose a category');
       await api('/api/expenses', {
         method: 'POST',
         body: JSON.stringify({
@@ -433,6 +545,7 @@ function expenseForm() {
       render();
     }
   );
+  wireCombo('category', EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c })));
 }
 
 function paymentForm(type, party) {
@@ -443,15 +556,14 @@ function paymentForm(type, party) {
     `
     <label>Date <input type="date" name="payment_date" value="${todayStr()}" required /></label>
     <label>${type === 'in' ? 'Shop / Customer' : 'Supplier'}
-      <select name="party_id" required>
-        ${partyOptions(list)}
-      </select>
+      ${comboHtml('party_id', 'Search or pick…')}
     </label>
     <label>Amount (₹) <input type="number" name="amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
     <label>Notes <input name="notes" placeholder="Optional" /></label>`,
     async (fd, close) => {
       const pid = Number(fd.get('party_id'));
       const p = list.find((x) => x.id === pid);
+      if (!pid || !p) throw new Error(type === 'in' ? 'Choose the shop' : 'Choose the supplier');
       await api('/api/payments', {
         method: 'POST',
         body: JSON.stringify({
@@ -468,7 +580,8 @@ function paymentForm(type, party) {
       render();
     }
   );
-  if (party) $('#modal-root select[name="party_id"]').value = String(party.id);
+  const partyCombo = wireCombo('party_id', partyComboOptions(list));
+  if (party) partyCombo.set(String(party.id));
 }
 
 /* ---------- views ---------- */
@@ -1130,7 +1243,7 @@ function orderForm(prefillNote, fromNoteId) {
       render();
     }
   );
-  wirePartyField('customer');
+  const customerCombo = wirePartyField('customer', state.customers, 'Add new shop');
   wireItemPicker('sale');
   if (prefillNote) {
     $('#modal-root input[name="notes"]').value = prefillNote;
@@ -1138,7 +1251,7 @@ function orderForm(prefillNote, fromNoteId) {
     const tagged = [...state.customers]
       .sort((a, b) => b.name.length - a.name.length)
       .find((c) => prefillNote.toLowerCase().includes('@' + c.name.toLowerCase()));
-    if (tagged) $('#modal-root select[name="customer"]').value = String(tagged.id);
+    if (tagged) customerCombo.set(String(tagged.id));
   }
 }
 
