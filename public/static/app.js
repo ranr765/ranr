@@ -482,12 +482,37 @@ function avatarHtml(name) {
 async function viewHome() {
   const today = todayStr();
   const month = today.slice(0, 7);
-  const [t, report, pendingOrders] = await Promise.all([
+  const [t, report, pendingOrders, notes] = await Promise.all([
     api(`/api/today?date=${today}`),
     api(`/api/report?month=${month}`),
     api('/api/orders?status=pending'),
+    api('/api/notes'),
   ]);
   state.pendingOrders = pendingOrders;
+  state.notes = notes;
+
+  const inboxCard = notes.length
+    ? `
+  <section class="card">
+    <h3>Inbox (${notes.length})</h3>
+    <div class="rows">
+      ${notes
+        .map(
+          (n) => `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-title row-wrap" style="font-weight:500">${esc(n.note)}</div>
+            <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))}</div>
+          </div>
+          <button class="row-collect note-order" data-id="${n.id}">→ Order</button>
+          <button class="row-stmt note-done" data-id="${n.id}" title="Done">✓</button>
+          <button class="row-del note-del" data-id="${n.id}" title="Delete">&#128465;</button>
+        </div>`
+        )
+        .join('')}
+    </div>
+  </section>`
+    : '';
 
   const ordersCard = pendingOrders.length
     ? `
@@ -543,10 +568,12 @@ async function viewHome() {
     <button class="qa qa-expense" id="qa-expense"><span class="qa-ico">&#9981;</span>Expense</button>
   </section>
   <section class="quick-actions secondary">
-    <button class="qa-small" id="qa-order">&#128203; New order</button>
-    <button class="qa-small" id="qa-collect">&#129297; Collect payment</button>
-    <button class="qa-small" id="qa-payout">&#128184; Pay supplier</button>
+    <button class="qa-small" id="qa-note">&#128221; Note</button>
+    <button class="qa-small" id="qa-order">&#128203; Order</button>
+    <button class="qa-small" id="qa-collect">&#129297; Collect</button>
+    <button class="qa-small" id="qa-payout">&#128184; Pay</button>
   </section>
+  ${inboxCard}
   ${ordersCard}
 
   <section class="card">
@@ -725,6 +752,32 @@ async function viewReport() {
   const r = await api(`/api/report?month=${month}`);
   const trend = await api(`/api/report/trend?month=${month}`);
   const { customers } = await api('/api/balances');
+  const monthSales = await api(`/api/sales?month=${month}`);
+
+  const itemAgg = {};
+  for (const sale of monthSales) {
+    for (const l of parseItemLines(sale.items)) {
+      if (!l.label || l.label === 'Goods') continue;
+      const key = l.label;
+      itemAgg[key] = itemAgg[key] || { qty: 0, revenue: 0 };
+      itemAgg[key].qty += l.qty;
+      itemAgg[key].revenue += l.qty * (l.rate || 0);
+    }
+  }
+  const topItems = Object.entries(itemAgg)
+    .sort((a, b) => b[1].qty - a[1].qty)
+    .slice(0, 8);
+  const maxItemQty = Math.max(1, ...topItems.map(([, v]) => v.qty));
+  const topItemsRows = topItems
+    .map(
+      ([label, v]) => `
+      <div class="chart-row">
+        <span class="chart-label" style="width:120px" title="${esc(label)}">${esc(label)}</span>
+        <div class="mini-track"><div class="mini-bar trend-bar-pos" style="width:${Math.round((v.qty / maxItemQty) * 100)}%"></div></div>
+        <span class="chart-val">${v.qty}${v.revenue > 0 ? ' · ' + fmtMoney(v.revenue) : ''}</span>
+      </div>`
+    )
+    .join('');
 
   const maxExp = Math.max(1, ...(r.expenses.byCategory || []).map((c) => c.total));
   const catRows = (r.expenses.byCategory || [])
@@ -799,6 +852,8 @@ async function viewReport() {
     <div class="pl-line pl-total"><span>Net profit</span><b class="${r.profit >= 0 ? 'good' : 'bad'}">${fmtMoney(r.profit)}</b></div>
   </section>
 
+  ${topItemsRows ? `<section class="card"><h3>Top items — ${monthLabel(month)}</h3>${topItemsRows}</section>` : ''}
+
   <section class="card">
     <h3>Profit — last 6 months</h3>
     ${trendRows}
@@ -845,7 +900,23 @@ async function exportCsv() {
 
 /* ---------- order book ---------- */
 
-function orderForm() {
+function noteForm() {
+  openModal(
+    'Quick note',
+    `
+    <label>What should you remember?
+      <textarea name="note" rows="3" placeholder="e.g. Krishna Bakery wants 5 kg Spice covers on Friday"></textarea>
+    </label>`,
+    async (fd, close) => {
+      await api('/api/notes', { method: 'POST', body: JSON.stringify({ note: fd.get('note') }) });
+      close();
+      toast('Noted ✓');
+      render();
+    }
+  );
+}
+
+function orderForm(prefillNote, fromNoteId) {
   openModal(
     'New Order (rough)',
     `
@@ -870,6 +941,7 @@ function orderForm() {
           notes: fd.get('notes'),
         }),
       });
+      if (fromNoteId) await api(`/api/notes/${fromNoteId}`, { method: 'PUT' });
       close();
       toast('Order noted ✓');
       render();
@@ -877,6 +949,7 @@ function orderForm() {
   );
   wirePartyField('customer');
   wireItemPicker('sale');
+  if (prefillNote) $('#modal-root input[name="notes"]').value = prefillNote;
 }
 
 /* ---------- statement / invoice (WhatsApp share) ---------- */
@@ -1509,7 +1582,28 @@ function wireView() {
 
   if (state.tab === 'home') {
     $('#qa-sale').onclick = () => saleForm();
-    $('#qa-order').onclick = orderForm;
+    $('#qa-note').onclick = noteForm;
+    $('#qa-order').onclick = () => orderForm();
+    $$('.note-order', view).forEach((b) => {
+      b.onclick = () => {
+        const n = (state.notes || []).find((x) => String(x.id) === b.dataset.id);
+        if (n) orderForm(n.note, n.id);
+      };
+    });
+    $$('.note-done', view).forEach((b) => {
+      b.onclick = async () => {
+        await api(`/api/notes/${b.dataset.id}`, { method: 'PUT' });
+        toast('Done ✓');
+        render();
+      };
+    });
+    $$('.note-del', view).forEach((b) => {
+      b.onclick = async () => {
+        await api(`/api/notes/${b.dataset.id}`, { method: 'DELETE' });
+        toast('Deleted');
+        render();
+      };
+    });
     $$('.order-sale', view).forEach((b) => {
       b.onclick = () => {
         const o = (state.pendingOrders || []).find((x) => String(x.id) === b.dataset.id);

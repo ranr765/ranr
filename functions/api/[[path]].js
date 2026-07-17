@@ -710,6 +710,31 @@ export async function onRequest(context) {
       }
     }
 
+    // inbox notes: /api/notes
+    if (resource === 'notes') {
+      if (method === 'GET' && !id) {
+        const { results } = await db
+          .prepare(`SELECT * FROM notes WHERE status = 'pending' ORDER BY id DESC LIMIT 100`)
+          .all()
+        return json(results)
+      }
+      if (method === 'POST' && !id) {
+        const b = await readBody()
+        const note = str(b.note)
+        if (!note) return json({ error: 'Write something first' }, 400)
+        const r = await db.prepare('INSERT INTO notes (note) VALUES (?)').bind(note).run()
+        return json({ id: r.meta.last_row_id }, 201)
+      }
+      if (method === 'PUT' && id) {
+        await db.prepare(`UPDATE notes SET status = 'done' WHERE id = ?`).bind(id).run()
+        return json({ ok: true })
+      }
+      if (method === 'DELETE' && id) {
+        await db.prepare('DELETE FROM notes WHERE id = ?').bind(id).run()
+        return json({ ok: true })
+      }
+    }
+
     // order book: /api/orders
     if (resource === 'orders') {
       if (method === 'GET' && !id) {
