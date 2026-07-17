@@ -760,6 +760,67 @@ async function viewReport() {
   const { customers } = await api('/api/balances');
   const monthSales = await api(`/api/sales?month=${month}`);
   const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
+  const products = await api('/api/products');
+
+  // margin-basis P&L: price each sold line against the price book
+  const bookByLabel = {};
+  for (const p of products) bookByLabel[`${p.name} ${p.size}`.trim().toLowerCase()] = p;
+  let estRevenue = 0, estCost = 0, matchedSaleAmount = 0;
+  const marginByItem = {};
+  for (const sale of monthSales) {
+    let saleMatched = false;
+    for (const l of parseItemLines(sale.items)) {
+      const p = bookByLabel[l.label.trim().toLowerCase()];
+      if (!p) continue;
+      const rate = l.rate > 0 ? l.rate : p.sale_price || 0;
+      if (!(rate > 0)) continue;
+      const rev = l.qty * rate;
+      const cost = l.qty * (p.purchase_price || 0);
+      estRevenue += rev;
+      estCost += cost;
+      saleMatched = true;
+      const key = l.label;
+      marginByItem[key] = marginByItem[key] || { qty: 0, revenue: 0, cost: 0 };
+      marginByItem[key].qty += l.qty;
+      marginByItem[key].revenue += rev;
+      marginByItem[key].cost += cost;
+    }
+    if (saleMatched) matchedSaleAmount += sale.total_amount;
+  }
+  const grossProfit = Math.round((estRevenue - estCost) * 100) / 100;
+  const calcNet = Math.round((grossProfit - r.expenses.total) * 100) / 100;
+  const coverage = r.sales.total > 0 ? Math.round((matchedSaleAmount / r.sales.total) * 100) : 0;
+
+  const itemProfits = Object.entries(marginByItem)
+    .map(([label, v]) => ({ label, profit: Math.round((v.revenue - v.cost) * 100) / 100, qty: v.qty }))
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 8);
+  const maxItemProfit = Math.max(1, ...itemProfits.map((x) => Math.abs(x.profit)));
+  const itemProfitRows = itemProfits
+    .map(
+      (x) => `
+      <div class="chart-row">
+        <span class="chart-label" style="width:120px" title="${esc(x.label)}">${esc(x.label)}</span>
+        <div class="mini-track"><div class="mini-bar ${x.profit >= 0 ? 'trend-bar-pos' : 'trend-bar-neg'}" style="width:${Math.round((Math.abs(x.profit) / maxItemProfit) * 100)}%"></div></div>
+        <span class="chart-val ${x.profit >= 0 ? 'good' : 'bad'}">${fmtMoney(x.profit)}</span>
+      </div>`
+    )
+    .join('');
+
+  const marginCard = estRevenue > 0
+    ? `
+  <section class="card">
+    <h3>Calculated profit — margin basis</h3>
+    <div class="hint">Each sold item priced against the price book's buying rate — works even for
+    old stock bought before the app. Covers ${coverage}% of this month's sales (item-wise entries only).</div>
+    <div class="pl-line"><span>Sold items (calculated revenue)</span><b class="good">${fmtMoney(estRevenue)}</b></div>
+    <div class="pl-line"><span>Buying cost (price book)</span><b>&minus; ${fmtMoney(estCost)}</b></div>
+    <div class="pl-line"><span>Gross profit on goods</span><b class="${grossProfit >= 0 ? 'good' : 'bad'}">${fmtMoney(grossProfit)}</b></div>
+    <div class="pl-line"><span>Expenses (${r.expenses.count})</span><b class="bad">&minus; ${fmtMoney(r.expenses.total)}</b></div>
+    <div class="pl-line pl-total"><span>Calculated net profit</span><b class="${calcNet >= 0 ? 'good' : 'bad'}">${fmtMoney(calcNet)}</b></div>
+    ${itemProfitRows ? '<div class="hint" style="margin-top:10px">Profit by item</div>' + itemProfitRows : ''}
+  </section>`
+    : '';
 
   const located = daylog.stops.filter((st) => st.lat != null && st.lng != null);
   const daylogRows = daylog.stops
@@ -873,6 +934,8 @@ async function viewReport() {
     ${catRows}
     <div class="pl-line pl-total"><span>Net profit</span><b class="${r.profit >= 0 ? 'good' : 'bad'}">${fmtMoney(r.profit)}</b></div>
   </section>
+
+  ${marginCard}
 
   ${topItemsRows ? `<section class="card"><h3>Top items — ${monthLabel(month)}</h3>${topItemsRows}</section>` : ''}
 
