@@ -902,9 +902,10 @@ function noteForm() {
   openModal(
     'Quick note',
     `
-    <label>What should you remember?
-      <textarea name="note" rows="3" placeholder="e.g. Krishna Bakery wants 5 kg Spice covers on Friday"></textarea>
-    </label>`,
+    <label>What should you remember? <span class="muted" style="font-weight:400">(type @ to tag a shop or supplier)</span>
+      <textarea name="note" rows="3" placeholder="e.g. @Krishna Bakery wants 5 kg Spice covers Friday"></textarea>
+    </label>
+    <div class="mention-list hidden" data-mentions></div>`,
     async (fd, close) => {
       await api('/api/notes', { method: 'POST', body: JSON.stringify({ note: fd.get('note') }) });
       close();
@@ -912,6 +913,65 @@ function noteForm() {
       render();
     }
   );
+  wireMentions();
+}
+
+async function wireMentions() {
+  if (!state.customers.length && !state.suppliers.length) {
+    try { await loadParties(); } catch (e) { /* offline lists are fine */ }
+  }
+  const root = $('#modal-root');
+  const ta = $('textarea[name="note"]', root);
+  const list = $('[data-mentions]', root);
+  if (!ta || !list) return;
+  const parties = [
+    ...state.customers.map((p) => ({ ...p, kind: 'Shop' })),
+    ...state.suppliers.map((p) => ({ ...p, kind: 'Supplier' })),
+  ];
+
+  const activeToken = () => {
+    const upto = ta.value.slice(0, ta.selectionStart);
+    const m = /@([^@\n]*)$/.exec(upto);
+    return m ? { query: m[1].trimStart(), start: upto.length - m[0].length } : null;
+  };
+
+  const refresh = () => {
+    const tok = activeToken();
+    if (!tok) return list.classList.add('hidden');
+    const q = tok.query.toLowerCase();
+    const matches = parties
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || (p.place || '').toLowerCase().includes(q))
+      .slice(0, 6);
+    if (!matches.length) return list.classList.add('hidden');
+    list.classList.remove('hidden');
+    list.innerHTML = matches
+      .map(
+        (p, i) => `
+      <button type="button" class="mention-item" data-mi="${i}">
+        ${avatarHtml(p.name)}
+        <span class="mention-name">${esc(p.name)}${p.place ? ' · ' + esc(p.place) : ''}</span>
+        <span class="mention-kind">${p.kind}</span>
+      </button>`
+      )
+      .join('');
+    $$('.mention-item', list).forEach((btn) => {
+      btn.onclick = () => {
+        const p = matches[Number(btn.dataset.mi)];
+        const tok2 = activeToken();
+        if (!tok2) return;
+        const before = ta.value.slice(0, tok2.start);
+        const after = ta.value.slice(ta.selectionStart);
+        ta.value = before + '@' + p.name + ' ' + after;
+        const pos = (before + '@' + p.name + ' ').length;
+        ta.setSelectionRange(pos, pos);
+        ta.focus();
+        list.classList.add('hidden');
+      };
+    });
+  };
+
+  ta.addEventListener('input', refresh);
+  ta.addEventListener('keyup', (e) => { if (e.key === 'Escape') list.classList.add('hidden'); });
 }
 
 function orderForm(prefillNote, fromNoteId) {
@@ -947,7 +1007,14 @@ function orderForm(prefillNote, fromNoteId) {
   );
   wirePartyField('customer');
   wireItemPicker('sale');
-  if (prefillNote) $('#modal-root input[name="notes"]').value = prefillNote;
+  if (prefillNote) {
+    $('#modal-root input[name="notes"]').value = prefillNote;
+    // if the note tags a shop with @, preselect it
+    const tagged = [...state.customers]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find((c) => prefillNote.toLowerCase().includes('@' + c.name.toLowerCase()));
+    if (tagged) $('#modal-root select[name="customer"]').value = String(tagged.id);
+  }
 }
 
 /* ---------- statement / invoice (WhatsApp share) ---------- */

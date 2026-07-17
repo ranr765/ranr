@@ -329,6 +329,37 @@ main {
 
 .head-actions { display: flex; gap: 6px; }
 
+/* ---------- @ mentions in notes ---------- */
+
+.mention-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: -6px;
+}
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.mention-item:last-child { border-bottom: none; }
+.mention-item:active { background: var(--bg); }
+.mention-item .avatar { width: 28px; height: 28px; font-size: 13px; }
+.mention-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-kind { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+
 /* ---------- location & route ---------- */
 
 .loc-box {
