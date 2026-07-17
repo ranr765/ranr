@@ -568,8 +568,7 @@ async function viewHome() {
     <button class="qa qa-expense" id="qa-expense"><span class="qa-ico">&#9981;</span>Expense</button>
   </section>
   <section class="quick-actions secondary">
-    <button class="qa-small" id="qa-note">&#128221; Note</button>
-    <button class="qa-small" id="qa-order">&#128203; Order</button>
+    <button class="qa-small" id="qa-order">&#128203; New order</button>
     <button class="qa-small" id="qa-collect">&#129297; Collect</button>
     <button class="qa-small" id="qa-payout">&#128184; Pay</button>
   </section>
@@ -1582,7 +1581,6 @@ function wireView() {
 
   if (state.tab === 'home') {
     $('#qa-sale').onclick = () => saleForm();
-    $('#qa-note').onclick = noteForm;
     $('#qa-order').onclick = () => orderForm();
     $$('.note-order', view).forEach((b) => {
       b.onclick = () => {
@@ -1741,6 +1739,7 @@ async function render() {
 function setAuthedChrome(authed) {
   document.body.classList.toggle('noauth', !authed);
   $('#account-btn').classList.toggle('hidden', !authed);
+  $('#fab').classList.toggle('hidden', !authed);
 }
 
 function showAuthScreen(setupRequired) {
@@ -1867,6 +1866,7 @@ $$('.nav-btn').forEach((b) => {
 });
 
 $('#account-btn').onclick = accountModal;
+$('#fab').onclick = () => noteForm();
 
 async function boot() {
   try {

@@ -670,6 +670,29 @@ main {
 }
 .btn-primary:disabled { opacity: .6; }
 
+/* ---------- floating quick-note button ---------- */
+
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--red), var(--red-dark));
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+  z-index: 30;
+  transition: transform .08s;
+}
+.fab:active { transform: scale(.92); }
+@media (prefers-reduced-motion: reduce) { .fab { transition: none; } }
+
 /* ---------- toast ---------- */
 
 #toast {
