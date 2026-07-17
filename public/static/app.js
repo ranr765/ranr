@@ -1173,15 +1173,27 @@ async function buildInvoiceCanvas(st, settings) {
   grad.addColorStop(1, '#7f1d1d');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, 130);
-  ctx.fillStyle = '#fbbf24';
-  ctx.beginPath();
-  ctx.arc(M + 34, 65, 34, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#7f1d1d';
-  ctx.font = 'bold 30px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('SS', M + 34, 76);
-  ctx.textAlign = 'left';
+  const logoImg = await loadImage('/static/logo.png');
+  if (logoImg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(M + 34, 65, 36, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.clip();
+    ctx.drawImage(logoImg, M - 2, 29, 72, 72);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(M + 34, 65, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7f1d1d';
+    ctx.font = 'bold 30px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('SS', M + 34, 76);
+    ctx.textAlign = 'left';
+  }
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 40px system-ui, sans-serif';
   ctx.fillText('Simple Serve', M + 90, 62);
