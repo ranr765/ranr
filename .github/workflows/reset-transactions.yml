@@ -25,6 +25,16 @@ jobs:
         with:
           node-version: 22
 
+      - name: Point wrangler.jsonc at the real database id
+        run: |
+          DB_ID=$(npx wrangler@4 d1 list --json | node -e "
+            let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const db=JSON.parse(s).find(d=>d.name==='simple-serve-production');
+              if(!db){console.error('database not found');process.exit(1);}
+              console.log(db.uuid);
+            })")
+          sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
+
       - name: Clear transaction tables
         run: npx wrangler@4 d1 execute simple-serve-production --remote --command "DELETE FROM sales; DELETE FROM purchases; DELETE FROM expenses; DELETE FROM payments; DELETE FROM orders;"
 
