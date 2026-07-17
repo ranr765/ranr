@@ -490,12 +490,14 @@ function avatarHtml(name) {
 async function viewHome() {
   const today = todayStr();
   const month = today.slice(0, 7);
-  const [t, report, pendingOrders, notes] = await Promise.all([
-    api(`/api/today?date=${today}`),
-    api(`/api/report?month=${month}`),
-    api('/api/orders?status=pending'),
-    api('/api/notes'),
-  ]);
+  const bundle = await api(`/api/bundle/home?date=${today}&month=${month}`);
+  const t = bundle.today;
+  const report = bundle.report;
+  const pendingOrders = bundle.orders;
+  const notes = bundle.notes;
+  state.customers = bundle.customers;
+  state.suppliers = bundle.suppliers;
+  state.products = bundle.products;
   state.pendingOrders = pendingOrders;
   state.notes = notes;
 
@@ -673,10 +675,9 @@ async function viewEntries() {
 }
 
 async function viewParties() {
-  const [{ customers, suppliers }, products] = await Promise.all([
-    api('/api/balances'),
-    api('/api/products'),
-  ]);
+  const [bal, products] = await Promise.all([api('/api/balances'), api('/api/products')]);
+  const customers = bal.customers;
+  const suppliers = bal.suppliers;
   state.customers = customers;
   state.suppliers = suppliers;
   state.products = products;
@@ -755,13 +756,18 @@ async function viewParties() {
 
 async function viewReport() {
   const month = state.reportMonth;
-  const r = await api(`/api/report?month=${month}`);
-  const trend = await api(`/api/report/trend?month=${month}`);
-  const { customers } = await api('/api/balances');
-  const monthSales = await api(`/api/sales?month=${month}`);
-  const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
-  const products = await api('/api/products');
-  const psum = await api(`/api/profit-summary?date=${todayStr()}`);
+  const bundle = await api(
+    `/api/bundle/report?month=${month}&date=${todayStr()}&daylog=${state.daylogDate}`
+  );
+  const r = bundle.report;
+  const trend = bundle.trend;
+  const customers = bundle.balances.customers;
+  const monthSales = bundle.monthSales;
+  const daylog = bundle.daylog;
+  state.lastDaylog = daylog;
+  const products = bundle.products;
+  const psum = bundle.profitSummary;
+  state.products = products;
 
   const glanceTile = (label, v) => `
     <div class="stat">
@@ -1915,7 +1921,7 @@ function wireView() {
     if (dl) dl.onchange = (e) => { state.daylogDate = e.target.value; render(); };
     const dr = $('#daylog-route');
     if (dr) dr.onclick = async () => {
-      const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
+      const daylog = state.lastDaylog || (await api(`/api/daylog?date=${state.daylogDate}`));
       const seen = new Set();
       const stops = daylog.stops.filter((st) => {
         if (st.lat == null || st.lng == null) return false;
@@ -1934,7 +1940,6 @@ async function render() {
   const view = $('#view');
   view.innerHTML = '<div class="loading">Loading…</div>';
   try {
-    if (state.tab === 'home' || state.tab === 'entries') await loadParties();
     const html =
       state.tab === 'home' ? await viewHome()
       : state.tab === 'entries' ? await viewEntries()

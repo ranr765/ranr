@@ -466,7 +466,7 @@ async function createPayment(db, b) {
   return json({ id: r.meta.last_row_id }, 201)
 }
 
-async function balances(db) {
+async function balancesData(db) {
   const [customers, custSales, custPays, suppliers, supPurchases, supPays] = await Promise.all([
     db.prepare('SELECT * FROM customers ORDER BY name COLLATE NOCASE').all(),
     db
@@ -506,14 +506,13 @@ async function balances(db) {
   const custBal = balanceMap(custSales.results, custPays.results)
   const supBal = balanceMap(supPurchases.results, supPays.results)
 
-  return json({
+  return {
     customers: customers.results.map((r) => ({ ...r, balance: round2(custBal.get(r.id) || 0) })),
     suppliers: suppliers.results.map((r) => ({ ...r, balance: round2(supBal.get(r.id) || 0) })),
-  })
+  }
 }
 
-async function trendReport(db, endMonth) {
-  if (!isMonth(endMonth)) return json({ error: 'month=YYYY-MM is required' }, 400)
+async function trendData(db, endMonth) {
   const [y, m] = endMonth.split('-').map(Number)
   const months = []
   for (let i = 5; i >= 0; i--) {
@@ -538,22 +537,19 @@ async function trendReport(db, endMonth) {
     sumByMonth('purchases', 'purchase_date', 'total_amount'),
     sumByMonth('expenses', 'expense_date', 'amount'),
   ])
-  return json(
-    months.map((mo) => {
-      const sales = s[mo] || 0, purchases = p[mo] || 0, expenses = e[mo] || 0
-      return {
-        month: mo,
-        sales,
-        purchases,
-        expenses,
-        profit: Math.round((sales - purchases - expenses) * 100) / 100,
-      }
-    })
-  )
+  return months.map((mo) => {
+    const sales = s[mo] || 0, purchases = p[mo] || 0, expenses = e[mo] || 0
+    return {
+      month: mo,
+      sales,
+      purchases,
+      expenses,
+      profit: Math.round((sales - purchases - expenses) * 100) / 100,
+    }
+  })
 }
 
-async function report(db, month) {
-  if (!isMonth(month)) return json({ error: 'month=YYYY-MM is required' }, 400)
+async function reportData(db, month) {
 
   const [sales, purchases, expenses, expByCat, receivable, payable, salesDaily] =
     await Promise.all([
@@ -610,7 +606,7 @@ async function report(db, month) {
 
   const profit = num(sales.total) - num(purchases.total) - num(expenses.total)
 
-  return json({
+  return {
     month,
     sales: { count: num(sales.count), total: num(sales.total), paid: num(sales.paid) },
     purchases: { count: num(purchases.count), total: num(purchases.total), paid: num(purchases.paid) },
@@ -618,11 +614,10 @@ async function report(db, month) {
     profit,
     outstanding: { receivable: num(receivable.v), payable: num(payable.v) },
     salesDaily: salesDaily.results,
-  })
+  }
 }
 
-async function today(db, date) {
-  if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+async function todayData(db, date) {
   const [s, p, e, coll] = await Promise.all([
     db
       .prepare(
@@ -649,7 +644,122 @@ async function today(db, date) {
       .bind(date)
       .first(),
   ])
-  return json({ date, sales: s, purchases: p, expenses: e, collected: coll.total })
+  return { date, sales: s, purchases: p, expenses: e, collected: coll.total }
+}
+
+async function daylogData(db, date) {
+  const [salesRes, collRes] = await Promise.all([
+    db
+      .prepare(
+        `SELECT s.created_at, s.total_amount, s.paid_amount, s.items,
+                COALESCE(c.name, s.customer_name) AS name, c.place, c.lat, c.lng
+         FROM sales s LEFT JOIN customers c ON c.id = s.customer_id
+         WHERE s.sale_date = ?`
+      )
+      .bind(date)
+      .all(),
+    db
+      .prepare(
+        `SELECT p.created_at, p.amount,
+                COALESCE(c.name, p.party_name) AS name, c.place, c.lat, c.lng
+         FROM payments p LEFT JOIN customers c ON c.id = p.party_id
+         WHERE p.type = 'in' AND p.payment_date = ?`
+      )
+      .bind(date)
+      .all(),
+  ])
+  const stops = [
+    ...salesRes.results.map((r) => ({
+      kind: 'sale',
+      time: r.created_at,
+      name: r.name || 'Cash sale',
+      place: r.place || '',
+      lat: r.lat,
+      lng: r.lng,
+      amount: num(r.total_amount),
+      paid: num(r.paid_amount),
+      items: r.items || '',
+    })),
+    ...collRes.results.map((r) => ({
+      kind: 'collection',
+      time: r.created_at,
+      name: r.name || '?',
+      place: r.place || '',
+      lat: r.lat,
+      lng: r.lng,
+      amount: num(r.amount),
+    })),
+  ].sort((a, b) => String(a.time).localeCompare(String(b.time)))
+  return { date, stops }
+}
+
+async function profitSummaryData(db, date) {
+  const { results: products } = await db
+    .prepare('SELECT name, size, sale_price, purchase_price FROM products')
+    .all()
+  const book = {}
+  for (const p of products) book[`${p.name} ${p.size}`.trim().toLowerCase()] = p
+
+  const [y, m, d] = date.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const monday = new Date(dt)
+  monday.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7))
+  const ranges = {
+    day: [date, date],
+    week: [monday.toISOString().slice(0, 10), date],
+    month: [date.slice(0, 7) + '-01', date],
+    ytd: [date.slice(0, 4) + '-01-01', date],
+  }
+
+  const calc = async ([from, to]) => {
+    const [salesRes, expRow] = await Promise.all([
+      db
+        .prepare(
+          `SELECT items, total_amount FROM sales WHERE sale_date >= ? AND sale_date <= ? LIMIT 5000`
+        )
+        .bind(from, to)
+        .all(),
+      db
+        .prepare(
+          `SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE expense_date >= ? AND expense_date <= ?`
+        )
+        .bind(from, to)
+        .first(),
+    ])
+    let billed = 0, revenue = 0, cost = 0
+    for (const sRow of salesRes.results) {
+      billed += num(sRow.total_amount)
+      for (const part of String(sRow.items || '').split(/,\s*/)) {
+        const mm = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+        if (!mm) continue
+        const p = book[mm[1].trim().toLowerCase()]
+        if (!p) continue
+        const qty = parseFloat(mm[2])
+        const rate = parseFloat(mm[3]) > 0 ? parseFloat(mm[3]) : num(p.sale_price)
+        if (!(qty > 0 && rate > 0)) continue
+        revenue += qty * rate
+        cost += qty * num(p.purchase_price)
+      }
+    }
+    const expenses = num(expRow.v)
+    return {
+      billed: round2(billed),
+      revenue: round2(revenue),
+      cost: round2(cost),
+      gross: round2(revenue - cost),
+      expenses: round2(expenses),
+      net: round2(revenue - cost - expenses),
+      unpriced: round2(billed - revenue),
+    }
+  }
+
+  const [day, week, month, ytd] = await Promise.all([
+    calc(ranges.day),
+    calc(ranges.week),
+    calc(ranges.month),
+    calc(ranges.ytd),
+  ])
+  return { date, day, week, month, ytd }
 }
 
 // ---------- router ----------
@@ -851,130 +961,75 @@ export async function onRequest(context) {
     if (resource === 'profit-summary' && method === 'GET') {
       const date = str(url.searchParams.get('date') || '')
       if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
-      const { results: products } = await db
-        .prepare('SELECT name, size, sale_price, purchase_price FROM products')
-        .all()
-      const book = {}
-      for (const p of products) book[`${p.name} ${p.size}`.trim().toLowerCase()] = p
-
-      const [y, m, d] = date.split('-').map(Number)
-      const dt = new Date(Date.UTC(y, m - 1, d))
-      const monday = new Date(dt)
-      monday.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7))
-      const ranges = {
-        day: [date, date],
-        week: [monday.toISOString().slice(0, 10), date],
-        month: [date.slice(0, 7) + '-01', date],
-        ytd: [date.slice(0, 4) + '-01-01', date],
-      }
-
-      const calc = async ([from, to]) => {
-        const [salesRes, expRow] = await Promise.all([
-          db
-            .prepare(
-              `SELECT items, total_amount FROM sales WHERE sale_date >= ? AND sale_date <= ? LIMIT 5000`
-            )
-            .bind(from, to)
-            .all(),
-          db
-            .prepare(
-              `SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE expense_date >= ? AND expense_date <= ?`
-            )
-            .bind(from, to)
-            .first(),
-        ])
-        let billed = 0, revenue = 0, cost = 0
-        for (const s of salesRes.results) {
-          billed += num(s.total_amount)
-          for (const part of String(s.items || '').split(/,\s*/)) {
-            const mm = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
-            if (!mm) continue
-            const p = book[mm[1].trim().toLowerCase()]
-            if (!p) continue
-            const qty = parseFloat(mm[2])
-            const rate = parseFloat(mm[3]) > 0 ? parseFloat(mm[3]) : num(p.sale_price)
-            if (!(qty > 0 && rate > 0)) continue
-            revenue += qty * rate
-            cost += qty * num(p.purchase_price)
-          }
-        }
-        const expenses = num(expRow.v)
-        return {
-          billed: round2(billed),
-          revenue: round2(revenue),
-          cost: round2(cost),
-          gross: round2(revenue - cost),
-          expenses: round2(expenses),
-          net: round2(revenue - cost - expenses),
-          unpriced: round2(billed - revenue),
-        }
-      }
-
-      return json({
-        date,
-        day: await calc(ranges.day),
-        week: await calc(ranges.week),
-        month: await calc(ranges.month),
-        ytd: await calc(ranges.ytd),
-      })
+      return json(await profitSummaryData(db, date))
     }
+
+    // one-round-trip bundles per screen
+    if (resource === 'bundle' && id === 'home' && method === 'GET') {
+      const date = str(url.searchParams.get('date') || '')
+      const month = str(url.searchParams.get('month') || '')
+      if (!isDate(date) || !isMonth(month)) return json({ error: 'date and month required' }, 400)
+      const [today, report, orders, notes, customers, suppliers, products] = await Promise.all([
+        todayData(db, date),
+        reportData(db, month),
+        db.prepare(`SELECT * FROM orders WHERE status = 'pending' ORDER BY order_date, id LIMIT 200`).all().then((r) => r.results),
+        db.prepare(`SELECT * FROM notes WHERE status = 'pending' ORDER BY id DESC LIMIT 100`).all().then((r) => r.results),
+        db.prepare('SELECT * FROM customers ORDER BY name COLLATE NOCASE').all().then((r) => r.results),
+        db.prepare('SELECT * FROM suppliers ORDER BY name COLLATE NOCASE').all().then((r) => r.results),
+        db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id').all().then((r) => r.results),
+      ])
+      return json({ today, report, orders, notes, customers, suppliers, products })
+    }
+
+    if (resource === 'bundle' && id === 'report' && method === 'GET') {
+      const month = str(url.searchParams.get('month') || '')
+      const date = str(url.searchParams.get('date') || '')
+      const daylogDate = str(url.searchParams.get('daylog') || '')
+      if (!isMonth(month) || !isDate(date) || !isDate(daylogDate))
+        return json({ error: 'month, date and daylog required' }, 400)
+      const [report, trend, bal, monthSales, daylog, products, profitSummary] = await Promise.all([
+        reportData(db, month),
+        trendData(db, month),
+        balancesData(db),
+        db
+          .prepare(`SELECT * FROM sales WHERE substr(sale_date,1,7) = ? ORDER BY sale_date DESC, id DESC LIMIT 500`)
+          .bind(month)
+          .all()
+          .then((r) => r.results),
+        daylogData(db, daylogDate),
+        db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id').all().then((r) => r.results),
+        profitSummaryData(db, date),
+      ])
+      return json({ report, trend, balances: bal, monthSales, daylog, products, profitSummary })
+    }
+
 
     // travel log: the day's shop visits in entry order
     if (resource === 'daylog' && method === 'GET') {
       const date = str(url.searchParams.get('date') || '')
       if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
-      const [salesRes, collRes] = await Promise.all([
-        db
-          .prepare(
-            `SELECT s.created_at, s.total_amount, s.paid_amount, s.items,
-                    COALESCE(c.name, s.customer_name) AS name, c.place, c.lat, c.lng
-             FROM sales s LEFT JOIN customers c ON c.id = s.customer_id
-             WHERE s.sale_date = ?`
-          )
-          .bind(date)
-          .all(),
-        db
-          .prepare(
-            `SELECT p.created_at, p.amount,
-                    COALESCE(c.name, p.party_name) AS name, c.place, c.lat, c.lng
-             FROM payments p LEFT JOIN customers c ON c.id = p.party_id
-             WHERE p.type = 'in' AND p.payment_date = ?`
-          )
-          .bind(date)
-          .all(),
-      ])
-      const stops = [
-        ...salesRes.results.map((r) => ({
-          kind: 'sale',
-          time: r.created_at,
-          name: r.name || 'Cash sale',
-          place: r.place || '',
-          lat: r.lat,
-          lng: r.lng,
-          amount: num(r.total_amount),
-          paid: num(r.paid_amount),
-          items: r.items || '',
-        })),
-        ...collRes.results.map((r) => ({
-          kind: 'collection',
-          time: r.created_at,
-          name: r.name || '?',
-          place: r.place || '',
-          lat: r.lat,
-          lng: r.lng,
-          amount: num(r.amount),
-        })),
-      ].sort((a, b) => String(a.time).localeCompare(String(b.time)))
-      return json({ date, stops })
+      return json(await daylogData(db, date))
     }
 
-    if (resource === 'balances' && method === 'GET') return await balances(db)
+    if (resource === 'balances' && method === 'GET') return json(await balancesData(db))
     if (resource === 'report' && id === 'trend' && method === 'GET')
-      return await trendReport(db, url.searchParams.get('month') || '')
+      {
+        const m2 = str(url.searchParams.get('month') || '')
+        if (!isMonth(m2)) return json({ error: 'month=YYYY-MM is required' }, 400)
+        return json(await trendData(db, m2))
+      }
     if (resource === 'report' && method === 'GET')
-      return await report(db, url.searchParams.get('month') || '')
+      {
+        const m2 = str(url.searchParams.get('month') || '')
+        if (!isMonth(m2)) return json({ error: 'month=YYYY-MM is required' }, 400)
+        return json(await reportData(db, m2))
+      }
     if (resource === 'today' && method === 'GET')
-      return await today(db, url.searchParams.get('date') || '')
+      {
+        const d2 = str(url.searchParams.get('date') || '')
+        if (!isDate(d2)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+        return json(await todayData(db, d2))
+      }
 
     return json({ error: 'Not found' }, 404)
   } catch (err) {
