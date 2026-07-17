@@ -761,6 +761,25 @@ async function viewReport() {
   const monthSales = await api(`/api/sales?month=${month}`);
   const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
   const products = await api('/api/products');
+  const psum = await api(`/api/profit-summary?date=${todayStr()}`);
+
+  const glanceTile = (label, v) => `
+    <div class="stat">
+      <div class="stat-label">${label}</div>
+      <div class="stat-val ${v.net >= 0 ? 'good' : 'bad'}">${fmtMoney(v.net)}</div>
+      <div class="stat-sub">goods ${fmtMoney(v.gross)}</div>
+    </div>`;
+  const glanceCard = `
+  <section class="card">
+    <h3>Calculated profit at a glance</h3>
+    <div class="stat-row">
+      ${glanceTile('Today', psum.day)}
+      ${glanceTile('This week', psum.week)}
+      ${glanceTile('This month', psum.month)}
+      ${glanceTile('Year', psum.ytd)}
+    </div>
+    <div class="hint" style="margin:8px 0 0">Net of expenses · margin basis from the price book</div>
+  </section>`;
 
   // margin-basis P&L: price each sold line against the price book
   const bookByLabel = {};
@@ -789,7 +808,7 @@ async function viewReport() {
   }
   const grossProfit = Math.round((estRevenue - estCost) * 100) / 100;
   const calcNet = Math.round((grossProfit - r.expenses.total) * 100) / 100;
-  const coverage = r.sales.total > 0 ? Math.round((matchedSaleAmount / r.sales.total) * 100) : 0;
+  const unpricedDiff = Math.round((r.sales.total - estRevenue) * 100) / 100;
 
   const itemProfits = Object.entries(marginByItem)
     .map(([label, v]) => ({ label, profit: Math.round((v.revenue - v.cost) * 100) / 100, qty: v.qty }))
@@ -812,8 +831,9 @@ async function viewReport() {
   <section class="card">
     <h3>Calculated profit — margin basis</h3>
     <div class="hint">Each sold item priced against the price book's buying rate — works even for
-    old stock bought before the app. Covers ${coverage}% of this month's sales (item-wise entries only).</div>
+    old stock bought before the app.</div>
     <div class="pl-line"><span>Sold items (calculated revenue)</span><b class="good">${fmtMoney(estRevenue)}</b></div>
+    ${Math.abs(unpricedDiff) >= 0.5 ? `<div class="pl-line pl-muted"><span>&nbsp;&nbsp;Not item-priced (billed ${fmtMoney(r.sales.total)} − items ${fmtMoney(estRevenue)})</span><b>${fmtMoney(unpricedDiff)}</b></div>` : ''}
     <div class="pl-line"><span>Buying cost (price book)</span><b>&minus; ${fmtMoney(estCost)}</b></div>
     <div class="pl-line"><span>Gross profit on goods</span><b class="${grossProfit >= 0 ? 'good' : 'bad'}">${fmtMoney(grossProfit)}</b></div>
     <div class="pl-line"><span>Expenses (${r.expenses.count})</span><b class="bad">&minus; ${fmtMoney(r.expenses.total)}</b></div>
@@ -920,6 +940,8 @@ async function viewReport() {
     .join('');
 
   return `
+  ${glanceCard}
+
   <section class="card">
     <div class="entries-head">
       <input type="month" id="report-month" value="${month}" />

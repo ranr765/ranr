@@ -847,6 +847,78 @@ export async function onRequest(context) {
     if (resource === 'statement' && id && method === 'GET')
       return await customerStatement(db, id, url.searchParams.get('date') || '')
 
+    // calculated profit for day / week / month / year-to-date
+    if (resource === 'profit-summary' && method === 'GET') {
+      const date = str(url.searchParams.get('date') || '')
+      if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+      const { results: products } = await db
+        .prepare('SELECT name, size, sale_price, purchase_price FROM products')
+        .all()
+      const book = {}
+      for (const p of products) book[`${p.name} ${p.size}`.trim().toLowerCase()] = p
+
+      const [y, m, d] = date.split('-').map(Number)
+      const dt = new Date(Date.UTC(y, m - 1, d))
+      const monday = new Date(dt)
+      monday.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7))
+      const ranges = {
+        day: [date, date],
+        week: [monday.toISOString().slice(0, 10), date],
+        month: [date.slice(0, 7) + '-01', date],
+        ytd: [date.slice(0, 4) + '-01-01', date],
+      }
+
+      const calc = async ([from, to]) => {
+        const [salesRes, expRow] = await Promise.all([
+          db
+            .prepare(
+              `SELECT items, total_amount FROM sales WHERE sale_date >= ? AND sale_date <= ? LIMIT 5000`
+            )
+            .bind(from, to)
+            .all(),
+          db
+            .prepare(
+              `SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE expense_date >= ? AND expense_date <= ?`
+            )
+            .bind(from, to)
+            .first(),
+        ])
+        let billed = 0, revenue = 0, cost = 0
+        for (const s of salesRes.results) {
+          billed += num(s.total_amount)
+          for (const part of String(s.items || '').split(/,\s*/)) {
+            const mm = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+            if (!mm) continue
+            const p = book[mm[1].trim().toLowerCase()]
+            if (!p) continue
+            const qty = parseFloat(mm[2])
+            const rate = parseFloat(mm[3]) > 0 ? parseFloat(mm[3]) : num(p.sale_price)
+            if (!(qty > 0 && rate > 0)) continue
+            revenue += qty * rate
+            cost += qty * num(p.purchase_price)
+          }
+        }
+        const expenses = num(expRow.v)
+        return {
+          billed: round2(billed),
+          revenue: round2(revenue),
+          cost: round2(cost),
+          gross: round2(revenue - cost),
+          expenses: round2(expenses),
+          net: round2(revenue - cost - expenses),
+          unpriced: round2(billed - revenue),
+        }
+      }
+
+      return json({
+        date,
+        day: await calc(ranges.day),
+        week: await calc(ranges.week),
+        month: await calc(ranges.month),
+        ytd: await calc(ranges.ytd),
+      })
+    }
+
     // travel log: the day's shop visits in entry order
     if (resource === 'daylog' && method === 'GET') {
       const date = str(url.searchParams.get('date') || '')
