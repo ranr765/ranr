@@ -329,6 +329,19 @@ main {
 
 .head-actions { display: flex; gap: 6px; }
 
+/* ---------- route log ---------- */
+
+.route-step {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
 /* ---------- @ mentions in notes ---------- */
 
 .mention-list {

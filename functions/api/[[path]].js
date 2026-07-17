@@ -847,6 +847,55 @@ export async function onRequest(context) {
     if (resource === 'statement' && id && method === 'GET')
       return await customerStatement(db, id, url.searchParams.get('date') || '')
 
+    // travel log: the day's shop visits in entry order
+    if (resource === 'daylog' && method === 'GET') {
+      const date = str(url.searchParams.get('date') || '')
+      if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+      const [salesRes, collRes] = await Promise.all([
+        db
+          .prepare(
+            `SELECT s.created_at, s.total_amount, s.paid_amount, s.items,
+                    COALESCE(c.name, s.customer_name) AS name, c.place, c.lat, c.lng
+             FROM sales s LEFT JOIN customers c ON c.id = s.customer_id
+             WHERE s.sale_date = ?`
+          )
+          .bind(date)
+          .all(),
+        db
+          .prepare(
+            `SELECT p.created_at, p.amount,
+                    COALESCE(c.name, p.party_name) AS name, c.place, c.lat, c.lng
+             FROM payments p LEFT JOIN customers c ON c.id = p.party_id
+             WHERE p.type = 'in' AND p.payment_date = ?`
+          )
+          .bind(date)
+          .all(),
+      ])
+      const stops = [
+        ...salesRes.results.map((r) => ({
+          kind: 'sale',
+          time: r.created_at,
+          name: r.name || 'Cash sale',
+          place: r.place || '',
+          lat: r.lat,
+          lng: r.lng,
+          amount: num(r.total_amount),
+          paid: num(r.paid_amount),
+          items: r.items || '',
+        })),
+        ...collRes.results.map((r) => ({
+          kind: 'collection',
+          time: r.created_at,
+          name: r.name || '?',
+          place: r.place || '',
+          lat: r.lat,
+          lng: r.lng,
+          amount: num(r.amount),
+        })),
+      ].sort((a, b) => String(a.time).localeCompare(String(b.time)))
+      return json({ date, stops })
+    }
+
     if (resource === 'balances' && method === 'GET') return await balances(db)
     if (resource === 'report' && id === 'trend' && method === 'GET')
       return await trendReport(db, url.searchParams.get('month') || '')

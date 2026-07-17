@@ -19,6 +19,7 @@ const state = {
   tab: 'home',
   entriesKind: 'sales',
   reportMonth: todayStr().slice(0, 7),
+  daylogDate: todayStr(),
   customers: [],
   suppliers: [],
   products: [],
@@ -41,6 +42,13 @@ function fmtDate(s) {
   if (!s) return '';
   const [y, m, d] = s.split('-');
   return `${d}/${m}/${y.slice(2)}`;
+}
+
+function fmtTimeIST(createdAt) {
+  if (!createdAt) return '';
+  const d = new Date(String(createdAt).replace(' ', 'T') + 'Z');
+  if (isNaN(d)) return '';
+  return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDateFull(s) {
@@ -751,6 +759,22 @@ async function viewReport() {
   const trend = await api(`/api/report/trend?month=${month}`);
   const { customers } = await api('/api/balances');
   const monthSales = await api(`/api/sales?month=${month}`);
+  const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
+
+  const located = daylog.stops.filter((st) => st.lat != null && st.lng != null);
+  const daylogRows = daylog.stops
+    .map(
+      (st, i) => `
+      <div class="row">
+        <span class="route-step">${i + 1}</span>
+        <div class="row-main">
+          <div class="row-title">${esc(st.name)}${st.lat != null ? ' 📍' : ''}</div>
+          <div class="row-sub">${fmtTimeIST(st.time)}${st.place ? ' · ' + esc(st.place) : ''}</div>
+          <div class="row-sub">${st.kind === 'sale' ? `Sale ${fmtMoney(st.amount)}${st.paid < st.amount ? ` (${fmtMoney(st.paid)} received)` : ''}` : `Collected ${fmtMoney(st.amount)}`}</div>
+        </div>
+      </div>`
+    )
+    .join('');
 
   const itemAgg = {};
   for (const sale of monthSales) {
@@ -864,7 +888,17 @@ async function viewReport() {
     ${topPending ? '<div class="hint" style="margin-top:10px">Top pending shops</div>' + topPending : ''}
   </section>
 
-  ${bars ? `<section class="card"><h3>Daily sales</h3>${bars}</section>` : ''}`;
+  ${bars ? `<section class="card"><h3>Daily sales</h3>${bars}</section>` : ''}
+
+  <section class="card">
+    <div class="entries-head">
+      <h3 style="margin:0">Route log</h3>
+      <input type="date" id="daylog-date" value="${state.daylogDate}" />
+    </div>
+    <div class="hint">The day's shop visits in the order they were entered</div>
+    ${daylogRows || '<div class="empty">No shop visits recorded this day</div>'}
+    ${located.length >= 2 ? '<button type="button" class="btn-primary" id="daylog-route" style="margin-top:10px">🗺️ Open travelled route in Google Maps</button>' : ''}
+  </section>`;
 }
 
 /* ---------- CSV export ---------- */
@@ -1792,6 +1826,22 @@ function wireView() {
       render();
     };
     $('#export-csv').onclick = exportCsv;
+    const dl = $('#daylog-date');
+    if (dl) dl.onchange = (e) => { state.daylogDate = e.target.value; render(); };
+    const dr = $('#daylog-route');
+    if (dr) dr.onclick = async () => {
+      const daylog = await api(`/api/daylog?date=${state.daylogDate}`);
+      const seen = new Set();
+      const stops = daylog.stops.filter((st) => {
+        if (st.lat == null || st.lng == null) return false;
+        const k = st.lat + ',' + st.lng;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      if (stops.length < 2) return toast('Need at least 2 located stops', false);
+      window.open('https://www.google.com/maps/dir/' + stops.map((st) => `${st.lat},${st.lng}`).join('/'), '_blank');
+    };
   }
 }
 
