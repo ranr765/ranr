@@ -247,24 +247,60 @@ async function listParties(db, table) {
   return json(results)
 }
 
+const latLngOf = (b) => {
+  const lat = parseFloat(b.lat)
+  const lng = parseFloat(b.lng)
+  if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+    return { lat, lng }
+  return { lat: null, lng: null }
+}
+
 async function createParty(db, table, b) {
   const name = str(b.name)
   if (!name) return json({ error: 'Name is required' }, 400)
+  const { lat, lng } = latLngOf(b)
   let r
   if (table === 'customers') {
     const n = parseFloat(b.credit_days)
     const days = Number.isFinite(n) ? Math.min(365, Math.max(0, Math.round(n))) : 30
     r = await db
-      .prepare(`INSERT INTO customers (name, place, phone, credit_days) VALUES (?, ?, ?, ?)`)
-      .bind(name, str(b.place), str(b.phone), days)
+      .prepare(
+        `INSERT INTO customers (name, place, phone, credit_days, lat, lng) VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(name, str(b.place), str(b.phone), days, lat, lng)
       .run()
   } else {
     r = await db
-      .prepare(`INSERT INTO ${table} (name, place, phone) VALUES (?, ?, ?)`)
-      .bind(name, str(b.place), str(b.phone))
+      .prepare(`INSERT INTO ${table} (name, place, phone, lat, lng) VALUES (?, ?, ?, ?, ?)`)
+      .bind(name, str(b.place), str(b.phone), lat, lng)
       .run()
   }
   return json({ id: r.meta.last_row_id, name }, 201)
+}
+
+async function updateParty(db, table, id, b) {
+  const name = str(b.name)
+  if (!name) return json({ error: 'Name is required' }, 400)
+  const { lat, lng } = latLngOf(b)
+  if (table === 'customers') {
+    const n = parseFloat(b.credit_days)
+    const days = Number.isFinite(n) ? Math.min(365, Math.max(0, Math.round(n))) : 30
+    await db
+      .prepare(
+        `UPDATE customers SET name = ?, place = ?, phone = ?, credit_days = ?, lat = ?, lng = ? WHERE id = ?`
+      )
+      .bind(name, str(b.place), str(b.phone), days, lat, lng, id)
+      .run()
+    // keep history readable if the name changed
+    await db.prepare('UPDATE sales SET customer_name = ? WHERE customer_id = ?').bind(name, id).run()
+  } else {
+    await db
+      .prepare(`UPDATE suppliers SET name = ?, place = ?, phone = ?, lat = ?, lng = ? WHERE id = ?`)
+      .bind(name, str(b.place), str(b.phone), lat, lng, id)
+      .run()
+    await db.prepare('UPDATE purchases SET supplier_name = ? WHERE supplier_id = ?').bind(name, id).run()
+  }
+  return json({ ok: true })
 }
 
 // ---------- shop statement (for invoice / WhatsApp share) ----------
@@ -647,6 +683,7 @@ export async function onRequest(context) {
       const table = PARTY_TABLES[resource]
       if (method === 'GET' && !id) return await listParties(db, table)
       if (method === 'POST' && !id) return await createParty(db, table, await readBody())
+      if (method === 'PUT' && id) return await updateParty(db, table, id, await readBody())
       if (method === 'DELETE' && id) {
         await db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run()
         return json({ ok: true })

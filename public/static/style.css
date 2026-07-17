@@ -328,6 +328,42 @@ main {
 
 .head-actions { display: flex; gap: 6px; }
 
+/* ---------- location & route ---------- */
+
+.loc-box {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.loc-status { font-size: 13px; font-weight: 600; }
+.loc-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.loc-box input[data-loc-paste] {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--card);
+  width: 100%;
+}
+
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14.5px;
+  cursor: pointer;
+}
+.route-row input { width: 20px; height: 20px; accent-color: var(--red); }
+.route-name { flex: 1; }
+.row-tap { cursor: pointer; }
+
 /* ---------- line-item builder ---------- */
 
 .li-box {

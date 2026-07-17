@@ -670,9 +670,9 @@ async function viewParties() {
   const partyRow = (p, kind) => `
     <div class="row" data-name="${esc((p.name + ' ' + (p.place || '')).toLowerCase())}">
       ${avatarHtml(p.name)}
-      <div class="row-main">
-        <div class="row-title">${esc(p.name)}</div>
-        <div class="row-sub">${esc([p.place, p.phone].filter(Boolean).join(' · '))}</div>
+      <div class="row-main row-tap" data-edit-kind="${kind}" data-edit-id="${p.id}">
+        <div class="row-title">${esc(p.name)}${p.lat != null ? ' 📍' : ''}</div>
+        <div class="row-sub">${esc([p.place, p.phone].filter(Boolean).join(' · ')) || 'Tap to edit'}</div>
       </div>
       <div class="row-amount ${p.balance > 0.005 ? (kind === 'customer' ? 'good' : 'bad') : 'muted'}">
         ${p.balance > 0.005 ? fmtMoney(p.balance) : '✓ Clear'}
@@ -690,6 +690,7 @@ async function viewParties() {
     <div class="card-head-row">
       <h3>Shops (customers)</h3>
       <div class="head-actions">
+        <button class="btn-small" id="route-btn">&#128506;</button>
         <button class="btn-small" id="import-customers">&#8686; Import</button>
         <button class="btn-small" id="add-customer">＋ Add</button>
       </div>
@@ -1369,30 +1370,138 @@ function importProductsForm() {
 
 /* ---------- wiring ---------- */
 
-function addPartyForm(kind) {
+function parseLatLng(text) {
+  const t = String(text || '');
+  const m = t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+            t.match(/[?&](?:q|ll|query)=(-?\d+\.\d+)[,%2C]+(-?\d+\.\d+)/i) ||
+            t.match(/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+  if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  return null;
+}
+
+function partyForm(kind, party) {
   const isCust = kind === 'customer';
+  const hasLoc = party && party.lat != null && party.lng != null;
   openModal(
-    isCust ? 'Add shop / customer' : 'Add supplier',
+    party ? (isCust ? 'Edit shop' : 'Edit supplier') : (isCust ? 'Add shop / customer' : 'Add supplier'),
     `
-    <label>Name <input name="name" required placeholder="Name" /></label>
-    <label>Place <input name="place" placeholder="e.g. Urakam, Ollur" /></label>
-    <label>Phone <input name="phone" inputmode="tel" placeholder="Needed for WhatsApp bills" /></label>
-    ${isCust ? '<label>Highlight as overdue after (days) <input type="number" name="credit_days" min="0" max="365" value="30" inputmode="numeric" /></label>' : ''}`,
+    <label>Name <input name="name" required value="${esc(party ? party.name : '')}" placeholder="Name" /></label>
+    <label>Place <input name="place" value="${esc(party ? party.place : '')}" placeholder="e.g. Urakam, Ollur" /></label>
+    <label>Phone <input name="phone" inputmode="tel" value="${esc(party ? party.phone : '')}" placeholder="Needed for WhatsApp bills" /></label>
+    ${isCust ? `<label>Highlight as overdue after (days) <input type="number" name="credit_days" min="0" max="365" value="${party ? party.credit_days : 30}" inputmode="numeric" /></label>` : ''}
+    <div class="loc-box">
+      <div class="loc-status" data-loc-status>${hasLoc ? '📍 Location saved' : 'No map location yet'}</div>
+      <input type="hidden" name="lat" value="${hasLoc ? party.lat : ''}" />
+      <input type="hidden" name="lng" value="${hasLoc ? party.lng : ''}" />
+      <div class="loc-actions">
+        <button type="button" class="btn-small" data-loc-here>📍 Use current location</button>
+        ${hasLoc ? `<button type="button" class="btn-small" data-loc-open>🧭 Navigate</button>` : ''}
+        <button type="button" class="btn-small" data-loc-clear>Clear</button>
+      </div>
+      <input data-loc-paste placeholder="…or paste a Google Maps link here" />
+    </div>`,
     async (fd, close) => {
-      await api(isCust ? '/api/customers' : '/api/suppliers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: fd.get('name'),
-          place: fd.get('place'),
-          phone: fd.get('phone'),
-          credit_days: fd.get('credit_days'),
-        }),
+      const body = JSON.stringify({
+        name: fd.get('name'),
+        place: fd.get('place'),
+        phone: fd.get('phone'),
+        credit_days: fd.get('credit_days'),
+        lat: fd.get('lat'),
+        lng: fd.get('lng'),
       });
+      const ep = isCust ? '/api/customers' : '/api/suppliers';
+      if (party) await api(`${ep}/${party.id}`, { method: 'PUT', body });
+      else await api(ep, { method: 'POST', body });
       close();
       toast('Saved ✓');
       render();
     }
   );
+  const root = $('#modal-root');
+  const setLoc = (lat, lng) => {
+    $('input[name="lat"]', root).value = lat == null ? '' : lat;
+    $('input[name="lng"]', root).value = lng == null ? '' : lng;
+    $('[data-loc-status]', root).textContent =
+      lat == null ? 'No map location yet' : `📍 Location set (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+  };
+  $('[data-loc-here]', root).onclick = () => {
+    if (!navigator.geolocation) return toast('Location not available on this browser', false);
+    $('[data-loc-status]', root).textContent = 'Getting location…';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setLoc(pos.coords.latitude, pos.coords.longitude),
+      () => {
+        $('[data-loc-status]', root).textContent = 'Could not get location — allow location access and try again';
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+  $('[data-loc-clear]', root).onclick = () => setLoc(null, null);
+  const openBtn = $('[data-loc-open]', root);
+  if (openBtn)
+    openBtn.onclick = () => window.open(`https://www.google.com/maps?q=${party.lat},${party.lng}`, '_blank');
+  $('[data-loc-paste]', root).oninput = (e) => {
+    const p = parseLatLng(e.target.value);
+    if (p) {
+      setLoc(p.lat, p.lng);
+      e.target.value = '';
+      toast('Location read from link ✓');
+    }
+  };
+}
+
+function addPartyForm(kind) {
+  partyForm(kind, null);
+}
+
+/* ---------- route builder: multi-stop Google Maps link ---------- */
+
+function routeModal() {
+  const located = state.customers.filter((c) => c.lat != null && c.lng != null);
+  if (!located.length) {
+    infoModal(
+      'Plan a route',
+      '<div class="empty">No shops have a map location yet.<br/>Open a shop and tap “📍 Use current location” while you are there — after a few visits your whole route is mapped.</div>'
+    );
+    return;
+  }
+  infoModal(
+    'Plan a route',
+    `
+    <div class="hint" style="margin-bottom:4px">Tick the shops to visit — shops with pending money are pre-selected.</div>
+    ${located
+      .map(
+        (c) => `
+      <label class="route-row">
+        <input type="checkbox" data-route-id="${c.id}" ${c.balance > 0.005 ? 'checked' : ''} />
+        <span class="route-name">${esc(c.name)}${c.place ? ' · ' + esc(c.place) : ''}</span>
+        ${c.balance > 0.005 ? `<b class="good">${fmtMoney(c.balance)}</b>` : ''}
+      </label>`
+      )
+      .join('')}
+    <button type="button" class="btn-primary" id="route-open">🗺️ Open route in Google Maps</button>`
+  );
+  $('#route-open').onclick = () => {
+    const chosen = $$('#modal-root [data-route-id]:checked').map((el) =>
+      located.find((c) => String(c.id) === el.dataset.routeId)
+    );
+    if (!chosen.length) return toast('Tick at least one shop', false);
+    // greedy nearest-neighbour ordering from the first tick
+    const order = [chosen[0]];
+    const rest = chosen.slice(1);
+    while (rest.length) {
+      const last = order[order.length - 1];
+      let bi = 0, bd = Infinity;
+      rest.forEach((c, i) => {
+        const d = (c.lat - last.lat) ** 2 + (c.lng - last.lng) ** 2;
+        if (d < bd) { bd = d; bi = i; }
+      });
+      order.push(rest.splice(bi, 1)[0]);
+    }
+    const url = 'https://www.google.com/maps/dir/' + order.map((c) => `${c.lat},${c.lng}`).join('/');
+    window.open(url, '_blank');
+  };
 }
 
 function wireView() {
@@ -1467,6 +1576,15 @@ function wireView() {
     }
     $('#add-customer').onclick = () => addPartyForm('customer');
     $('#add-supplier').onclick = () => addPartyForm('supplier');
+    $('#route-btn').onclick = routeModal;
+    $$('.row-tap', view).forEach((el) => {
+      el.onclick = () => {
+        const kind = el.dataset.editKind;
+        const list = kind === 'customer' ? state.customers : state.suppliers;
+        const p = list.find((x) => String(x.id) === el.dataset.editId);
+        if (p) partyForm(kind, p);
+      };
+    });
     $('#add-product').onclick = () => productForm(null);
     $('#import-products').onclick = importProductsForm;
     $$('.item-chip', view).forEach((b) => {
