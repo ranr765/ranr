@@ -253,7 +253,7 @@ async function createParty(db, table, b) {
   let r
   if (table === 'customers') {
     const n = parseFloat(b.credit_days)
-    const days = Number.isFinite(n) ? Math.min(365, Math.max(0, Math.round(n))) : 15
+    const days = Number.isFinite(n) ? Math.min(365, Math.max(0, Math.round(n))) : 30
     r = await db
       .prepare(`INSERT INTO customers (name, place, phone, credit_days) VALUES (?, ?, ?, ?)`)
       .bind(name, str(b.place), str(b.phone), days)
@@ -277,7 +277,8 @@ const addDays = (dateStr, days) => {
 
 /**
  * Outstanding bills for one shop, with collections applied to the oldest
- * bills first (FIFO), and each bill's pay-by date from the shop's credit_days.
+ * bills first (FIFO). Bills are due immediately; credit_days is only the
+ * window after which an unpaid bill is highlighted as overdue (default 30).
  */
 async function customerStatement(db, customerId, today) {
   if (!isDate(today)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
@@ -301,7 +302,7 @@ async function customerStatement(db, customerId, today) {
   ])
 
   let pool = num(collectedRow.v)
-  const creditDays = num(customer.credit_days) || 15
+  const creditDays = Number.isFinite(num(customer.credit_days)) && customer.credit_days !== null ? num(customer.credit_days) : 30
   const open = []
   for (const s of salesRes.results) {
     let bal = num(s.total_amount) - num(s.paid_amount)

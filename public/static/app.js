@@ -909,16 +909,15 @@ function statementText(st) {
   lines.push('');
   lines.push('Pending bills:');
   st.open.forEach((b, i) => {
-    lines.push(`${i + 1}) Bought on ${fmtDateFull(b.date)} — pay by ${fmtDateFull(b.due_date)}${b.overdue ? ' ⚠️ OVERDUE' : ''}`);
+    lines.push(`${i + 1}) Bought on ${fmtDateFull(b.date)}${b.overdue ? ' ⚠️ OVERDUE' : ''}`);
     for (const li of (b.items ? b.items.split(/,\s*/) : ['Goods'])) lines.push(`   • ${li}`);
     lines.push(`   Amount: ${fmtMoney(b.balance)}`);
   });
   lines.push('');
-  if (st.totals.overdue > 0) lines.push(`Overdue: ${fmtMoney(st.totals.overdue)}`);
-  if (st.totals.notYetDue > 0) lines.push(`Not yet due: ${fmtMoney(st.totals.notYetDue)}`);
+  if (st.totals.overdue > 0) lines.push(`⚠️ Overdue (old bills): ${fmtMoney(st.totals.overdue)}`);
   lines.push(`*Total to pay: ${fmtMoney(st.totals.due)}*`);
   lines.push('');
-  lines.push(`Payment terms: within ${c.credit_days} days of each bill.`);
+  lines.push('All bills are due on purchase — kindly settle at the earliest.');
   lines.push('Simple Serve, Urakam, Thrissur');
   return lines.join('\n');
 }
@@ -941,7 +940,6 @@ async function statementModal(customerId) {
       <div class="row-main">
         <div class="row-title">Bought on ${fmtDateFull(b.date)}</div>
         ${(b.items ? b.items.split(/,\s*/) : ['Goods']).map((li) => `<div class="row-sub row-wrap">• ${esc(li)}</div>`).join('')}
-        <div class="row-sub">Pay by ${fmtDateFull(b.due_date)}</div>
         ${b.overdue ? '<div class="row-pending">⚠️ Overdue</div>' : ''}
       </div>
       <div class="row-amount">${fmtMoney(b.balance)}</div>
@@ -952,8 +950,8 @@ async function statementModal(customerId) {
     `Statement — ${c.name}`,
     `
     <div class="rows">${billRows}</div>
-    <div class="pl-line"><span>Overdue</span><b class="bad">${fmtMoney(st.totals.overdue)}</b></div>
-    <div class="pl-line"><span>Not yet due</span><b>${fmtMoney(st.totals.notYetDue)}</b></div>
+    ${st.totals.overdue > 0 ? `<div class="pl-line"><span>⚠️ Overdue (old bills)</span><b class="bad">${fmtMoney(st.totals.overdue)}</b></div>` : ''}
+    ${st.totals.overdue > 0 ? `<div class="pl-line"><span>Recent bills</span><b>${fmtMoney(st.totals.notYetDue)}</b></div>` : ''}
     <div class="pl-line pl-total"><span>Total to pay</span><b>${fmtMoney(st.totals.due)}</b></div>
     <button type="button" class="btn-primary btn-wa" id="stmt-img">&#129534; Invoice image → WhatsApp</button>
     <button type="button" class="btn-small" id="stmt-wa">&#128172; Send as text${phone ? '' : ' (no phone saved — pick contact)'}</button>
@@ -1077,7 +1075,7 @@ async function buildInvoiceCanvas(st, settings) {
   // measure body height first
   ctx.font = '26px system-ui, sans-serif';
   const ITEMS_X = M + 205;
-  const ITEMS_W = (W - M - 310) - ITEMS_X;
+  const ITEMS_W = (W - M - 170) - ITEMS_X;
   let rowsHeight = 0;
   const rowLines = st.open.map((b) => {
     const itemList = b.items ? b.items.split(/,\s*/) : ['Goods'];
@@ -1142,7 +1140,6 @@ async function buildInvoiceCanvas(st, settings) {
   ctx.font = 'bold 22px system-ui, sans-serif';
   ctx.fillText('BOUGHT ON', M + 14, y + 31);
   ctx.fillText('ITEMS', ITEMS_X, y + 31);
-  ctx.fillText('PAY BY', W - M - 300, y + 31);
   ctx.textAlign = 'right';
   ctx.fillText('AMOUNT', W - M - 14, y + 31);
   ctx.textAlign = 'left';
@@ -1159,11 +1156,10 @@ async function buildInvoiceCanvas(st, settings) {
     ctx.font = '24px system-ui, sans-serif';
     ctx.fillText(fmtDateFull(b.date), M + 14, y + 34);
     lines.forEach((ln, i) => ctx.fillText(ln, ITEMS_X, y + 34 + i * 32));
-    ctx.fillStyle = b.overdue ? '#b91c1c' : '#44403c';
-    ctx.fillText(fmtDate(b.due_date), W - M - 300, y + 34);
     if (b.overdue) {
-      ctx.font = 'bold 18px system-ui, sans-serif';
-      ctx.fillText('OVERDUE', W - M - 300, y + 60);
+      ctx.fillStyle = '#b91c1c';
+      ctx.font = 'bold 17px system-ui, sans-serif';
+      ctx.fillText('OVERDUE', M + 14, y + 60);
     }
     ctx.font = 'bold 24px system-ui, sans-serif';
     ctx.fillStyle = '#1c1917';
@@ -1185,8 +1181,7 @@ async function buildInvoiceCanvas(st, settings) {
     ctx.textAlign = 'left';
     y += bold ? 50 : 40;
   };
-  if (st.totals.overdue > 0) totalLine('Overdue', st.totals.overdue, false, '#b91c1c');
-  if (st.totals.notYetDue > 0) totalLine('Not yet due', st.totals.notYetDue);
+  if (st.totals.overdue > 0) totalLine('Overdue (old bills)', st.totals.overdue, false, '#b91c1c');
   ctx.strokeStyle = '#1c1917';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -1236,7 +1231,7 @@ async function buildInvoiceCanvas(st, settings) {
   // footer
   ctx.fillStyle = '#78716c';
   ctx.font = '22px system-ui, sans-serif';
-  ctx.fillText(`Payment terms: within ${st.customer.credit_days} days of each bill date.`, M, y + 26);
+  ctx.fillText('All bills are due on purchase — kindly settle at the earliest.', M, y + 26);
   ctx.fillText('Thank you for your business! — Simple Serve', M, y + 60);
 
   return c;
@@ -1382,7 +1377,7 @@ function addPartyForm(kind) {
     <label>Name <input name="name" required placeholder="Name" /></label>
     <label>Place <input name="place" placeholder="e.g. Urakam, Ollur" /></label>
     <label>Phone <input name="phone" inputmode="tel" placeholder="Needed for WhatsApp bills" /></label>
-    ${isCust ? '<label>Credit days (pay within) <input type="number" name="credit_days" min="0" max="365" value="15" inputmode="numeric" /></label>' : ''}`,
+    ${isCust ? '<label>Highlight as overdue after (days) <input type="number" name="credit_days" min="0" max="365" value="30" inputmode="numeric" /></label>' : ''}`,
     async (fd, close) => {
       await api(isCust ? '/api/customers' : '/api/suppliers', {
         method: 'POST',
