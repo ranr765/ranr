@@ -181,7 +181,7 @@ async function resolveParty(fd, name, endpoint, list) {
 
 /* ---------- quick-entry forms ---------- */
 
-function saleForm() {
+function saleForm(prefill) {
   openModal(
     'New Sale',
     `
@@ -213,14 +213,24 @@ function saleForm() {
           notes: fd.get('notes'),
         }),
       });
+      if (prefill && prefill.orderId) {
+        await api(`/api/orders/${prefill.orderId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'done' }),
+        });
+      }
       close();
-      toast('Sale saved ✓');
+      toast(prefill && prefill.orderId ? 'Sale saved — order marked done ✓' : 'Sale saved ✓');
       render();
     }
   );
   wirePartyField('customer');
   wirePaidChips();
-  wireItemPicker('sale');
+  wireItemPicker('sale', prefill ? parseItemLines(prefill.items) : null);
+  if (prefill && prefill.customer_id) {
+    const sel = $('#modal-root select[name="customer"]');
+    if (sel.querySelector(`option[value="${prefill.customer_id}"]`)) sel.value = String(prefill.customer_id);
+  }
 }
 
 function purchaseForm() {
@@ -295,7 +305,18 @@ function itemPickerHtml(mode) {
     </div>`;
 }
 
-function wireItemPicker(mode) {
+function parseItemLines(text) {
+  return String(text || '')
+    .split(/,\s*/)
+    .filter(Boolean)
+    .map((t) => {
+      const m = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(t.trim());
+      if (m) return { label: m[1], qty: parseFloat(m[2]), rate: parseFloat(m[3]) };
+      return { label: t.trim(), qty: 1, rate: 0 };
+    });
+}
+
+function wireItemPicker(mode, initialLines) {
   const root = $('#modal-root');
   const sel = $('[data-li-product]', root);
   if (!sel) return;
@@ -305,7 +326,7 @@ function wireItemPicker(mode) {
   const listEl = $('[data-li-list]', root);
   const itemsField = $('input[name="items"]', root);
   const totalField = $('input[name="total_amount"]', root);
-  const lines = [];
+  const lines = initialLines && initialLines.length ? initialLines.slice() : [];
 
   const sync = () => {
     listEl.innerHTML = lines
@@ -364,6 +385,7 @@ function wireItemPicker(mode) {
     rateInput.value = '';
     sync();
   };
+  if (lines.length) sync();
 }
 
 function wirePaidChips() {
@@ -460,10 +482,36 @@ function avatarHtml(name) {
 async function viewHome() {
   const today = todayStr();
   const month = today.slice(0, 7);
-  const [t, report] = await Promise.all([
+  const [t, report, pendingOrders] = await Promise.all([
     api(`/api/today?date=${today}`),
     api(`/api/report?month=${month}`),
+    api('/api/orders?status=pending'),
   ]);
+  state.pendingOrders = pendingOrders;
+
+  const ordersCard = pendingOrders.length
+    ? `
+  <section class="card">
+    <h3>Order book — to prepare (${pendingOrders.length})</h3>
+    <div class="rows">
+      ${pendingOrders
+        .map(
+          (o) => `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-title">${esc(o.customer_name || 'Unknown shop')}</div>
+            ${(o.items ? o.items.split(/,\s*/) : []).map((li) => `<div class="row-sub row-wrap">• ${esc(li)}</div>`).join('')}
+            <div class="row-sub">${fmtDate(o.order_date)}${o.notes ? ' · ' + esc(o.notes) : ''}${o.total_amount > 0 ? ' · ~' + fmtMoney(o.total_amount) : ''}</div>
+          </div>
+          <button class="row-collect order-sale" data-id="${o.id}">→ Sale</button>
+          <button class="row-stmt order-done" data-id="${o.id}" title="Mark done">✓</button>
+          <button class="row-del order-del" data-id="${o.id}" title="Delete">&#128465;</button>
+        </div>`
+        )
+        .join('')}
+    </div>
+  </section>`
+    : '';
 
   const recv = report.outstanding.receivable;
   const pay = report.outstanding.payable;
@@ -495,9 +543,11 @@ async function viewHome() {
     <button class="qa qa-expense" id="qa-expense"><span class="qa-ico">&#9981;</span>Expense</button>
   </section>
   <section class="quick-actions secondary">
+    <button class="qa-small" id="qa-order">&#128203; New order</button>
     <button class="qa-small" id="qa-collect">&#129297; Collect payment</button>
     <button class="qa-small" id="qa-payout">&#128184; Pay supplier</button>
   </section>
+  ${ordersCard}
 
   <section class="card">
     <h3>Today &middot; ${fmtDate(today)}</h3>
@@ -792,6 +842,42 @@ async function exportCsv() {
   toast('CSV downloaded ✓');
 }
 
+/* ---------- order book ---------- */
+
+function orderForm() {
+  openModal(
+    'New Order (rough)',
+    `
+    <div class="hint" style="margin-bottom:0">Note down what a shop asked for — prepare it later
+    and convert it to a sale with one tap when delivered.</div>
+    <label>Date <input type="date" name="order_date" value="${todayStr()}" required /></label>
+    ${partyField('Shop / Customer', 'customer', state.customers, 'Add new shop')}
+    ${itemPickerHtml('sale')}
+    <input type="hidden" name="items" />
+    <label>Estimated total (₹, optional) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
+    <label>Notes <input name="notes" placeholder="e.g. deliver Friday morning" /></label>`,
+    async (fd, close) => {
+      const party = await resolveParty(fd, 'customer', '/api/customers', state.customers);
+      await api('/api/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+          order_date: fd.get('order_date'),
+          customer_id: party.id,
+          customer_name: party.name,
+          items: fd.get('items'),
+          total_amount: fd.get('total_amount') || 0,
+          notes: fd.get('notes'),
+        }),
+      });
+      close();
+      toast('Order noted ✓');
+      render();
+    }
+  );
+  wirePartyField('customer');
+  wireItemPicker('sale');
+}
+
 /* ---------- statement / invoice (WhatsApp share) ---------- */
 
 function infoModal(title, bodyHtml) {
@@ -823,10 +909,9 @@ function statementText(st) {
   lines.push('');
   lines.push('Pending bills:');
   st.open.forEach((b, i) => {
-    lines.push(
-      `${i + 1}) Bought on ${fmtDateFull(b.date)}: ${b.items || 'Goods'} — ${fmtMoney(b.balance)}` +
-      ` (pay by ${fmtDateFull(b.due_date)})${b.overdue ? ' ⚠️ OVERDUE' : ''}`
-    );
+    lines.push(`${i + 1}) Bought on ${fmtDateFull(b.date)} — pay by ${fmtDateFull(b.due_date)}${b.overdue ? ' ⚠️ OVERDUE' : ''}`);
+    for (const li of (b.items ? b.items.split(/,\s*/) : ['Goods'])) lines.push(`   • ${li}`);
+    lines.push(`   Amount: ${fmtMoney(b.balance)}`);
   });
   lines.push('');
   if (st.totals.overdue > 0) lines.push(`Overdue: ${fmtMoney(st.totals.overdue)}`);
@@ -855,7 +940,7 @@ async function statementModal(customerId) {
     <div class="row">
       <div class="row-main">
         <div class="row-title">Bought on ${fmtDateFull(b.date)}</div>
-        <div class="row-sub">${esc(b.items || 'Goods')}</div>
+        ${(b.items ? b.items.split(/,\s*/) : ['Goods']).map((li) => `<div class="row-sub row-wrap">• ${esc(li)}</div>`).join('')}
         <div class="row-sub">Pay by ${fmtDateFull(b.due_date)}</div>
         ${b.overdue ? '<div class="row-pending">⚠️ Overdue</div>' : ''}
       </div>
@@ -995,7 +1080,8 @@ async function buildInvoiceCanvas(st, settings) {
   const ITEMS_W = (W - M - 310) - ITEMS_X;
   let rowsHeight = 0;
   const rowLines = st.open.map((b) => {
-    const lines = wrapText(ctx, b.items || 'Goods', ITEMS_W);
+    const itemList = b.items ? b.items.split(/,\s*/) : ['Goods'];
+    const lines = itemList.flatMap((li) => wrapText(ctx, li, ITEMS_W));
     const h = Math.max(40, lines.length * 32 + 26);
     rowsHeight += h;
     return { b, lines, h };
@@ -1318,7 +1404,29 @@ function wireView() {
   const view = $('#view');
 
   if (state.tab === 'home') {
-    $('#qa-sale').onclick = saleForm;
+    $('#qa-sale').onclick = () => saleForm();
+    $('#qa-order').onclick = orderForm;
+    $$('.order-sale', view).forEach((b) => {
+      b.onclick = () => {
+        const o = (state.pendingOrders || []).find((x) => String(x.id) === b.dataset.id);
+        if (o) saleForm({ orderId: o.id, customer_id: o.customer_id, customer_name: o.customer_name, items: o.items });
+      };
+    });
+    $$('.order-done', view).forEach((b) => {
+      b.onclick = async () => {
+        await api(`/api/orders/${b.dataset.id}`, { method: 'PUT', body: JSON.stringify({ status: 'done' }) });
+        toast('Order marked done ✓');
+        render();
+      };
+    });
+    $$('.order-del', view).forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm('Delete this order?')) return;
+        await api(`/api/orders/${b.dataset.id}`, { method: 'DELETE' });
+        toast('Deleted');
+        render();
+      };
+    });
     $('#qa-purchase').onclick = purchaseForm;
     $('#qa-expense').onclick = expenseForm;
     $('#qa-collect').onclick = () => {

@@ -672,6 +672,53 @@ export async function onRequest(context) {
       }
     }
 
+    // order book: /api/orders
+    if (resource === 'orders') {
+      if (method === 'GET' && !id) {
+        const status = str(url.searchParams.get('status') || '')
+        const where = status === 'pending' || status === 'done' ? 'WHERE status = ?' : ''
+        const stmt = db.prepare(
+          `SELECT * FROM orders ${where} ORDER BY order_date, id LIMIT 200`
+        )
+        const { results } = await (where ? stmt.bind(status) : stmt).all()
+        return json(results)
+      }
+      if (method === 'POST' && !id) {
+        const b = await readBody()
+        const date = str(b.order_date)
+        if (!isDate(date)) return json({ error: 'Valid date is required' }, 400)
+        const items = str(b.items)
+        if (!items && !str(b.notes)) return json({ error: 'Add at least one item or a note' }, 400)
+        const r = await db
+          .prepare(
+            `INSERT INTO orders (order_date, customer_id, customer_name, items, total_amount, notes)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            date,
+            b.customer_id ? Number(b.customer_id) : null,
+            str(b.customer_name),
+            items,
+            Math.max(num(b.total_amount), 0),
+            str(b.notes)
+          )
+          .run()
+        return json({ id: r.meta.last_row_id }, 201)
+      }
+      if (method === 'PUT' && id) {
+        const b = await readBody()
+        const status = str(b.status)
+        if (status !== 'pending' && status !== 'done')
+          return json({ error: 'Invalid status' }, 400)
+        await db.prepare('UPDATE orders SET status = ? WHERE id = ?').bind(status, id).run()
+        return json({ ok: true })
+      }
+      if (method === 'DELETE' && id) {
+        await db.prepare('DELETE FROM orders WHERE id = ?').bind(id).run()
+        return json({ ok: true })
+      }
+    }
+
     // settings: /api/settings (payment QR, UPI id, ...)
     if (resource === 'settings') {
       if (method === 'GET' && !id) {
