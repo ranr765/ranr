@@ -413,6 +413,110 @@ async function createSale(db, b) {
   return json({ id: r.meta.last_row_id }, 201)
 }
 
+/**
+ * Correct an existing sale in place (owner fixing their own record — the ₹100
+ * kind of mistake). Only the fields on the bill change; collections/payments are
+ * untouched, so the shop's running balance recomputes naturally from the new
+ * totals. Never deletes or resets — this is an additive edit to one row.
+ */
+async function updateSale(db, id, b) {
+  const existing = await db.prepare('SELECT * FROM sales WHERE id = ?').bind(id).first()
+  if (!existing) return json({ error: 'Bill not found' }, 404)
+  const date = str(b.sale_date)
+  const total = num(b.total_amount)
+  if (!isDate(date)) return json({ error: 'Valid date is required' }, 400)
+  if (total <= 0) return json({ error: 'Amount must be more than 0' }, 400)
+  const paid = Math.min(Math.max(num(b.paid_amount), 0), total)
+  await db
+    .prepare(
+      `UPDATE sales SET sale_date = ?, items = ?, total_amount = ?, paid_amount = ?, notes = ? WHERE id = ?`
+    )
+    .bind(date, str(b.items), total, paid, str(b.notes), id)
+    .run()
+  return json({ ok: true })
+}
+
+async function updatePurchase(db, id, b) {
+  const existing = await db.prepare('SELECT * FROM purchases WHERE id = ?').bind(id).first()
+  if (!existing) return json({ error: 'Bill not found' }, 404)
+  const date = str(b.purchase_date)
+  const total = num(b.total_amount)
+  if (!isDate(date)) return json({ error: 'Valid date is required' }, 400)
+  if (total <= 0) return json({ error: 'Amount must be more than 0' }, 400)
+  const paid = Math.min(Math.max(num(b.paid_amount), 0), total)
+  await db
+    .prepare(
+      `UPDATE purchases SET purchase_date = ?, items = ?, total_amount = ?, paid_amount = ?, notes = ? WHERE id = ?`
+    )
+    .bind(date, str(b.items), total, paid, str(b.notes), id)
+    .run()
+  return json({ ok: true })
+}
+
+/**
+ * Full dated ledger for one shop: every sale newest-first, with each bill's
+ * remaining balance after applying pooled collections oldest-first (FIFO),
+ * so the same rupee is never double-counted against two bills.
+ */
+async function customerHistory(db, customerId) {
+  const customer = await db
+    .prepare('SELECT * FROM customers WHERE id = ?')
+    .bind(customerId)
+    .first()
+  if (!customer) return json({ error: 'Shop not found' }, 404)
+
+  const [salesRes, collectedRow] = await Promise.all([
+    db
+      .prepare('SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date, id')
+      .bind(customerId)
+      .all(),
+    db
+      .prepare(`SELECT COALESCE(SUM(amount),0) AS v FROM payments WHERE type = 'in' AND party_id = ?`)
+      .bind(customerId)
+      .first(),
+  ])
+
+  let pool = num(collectedRow.v)
+  const creditDays =
+    Number.isFinite(num(customer.credit_days)) && customer.credit_days !== null
+      ? num(customer.credit_days)
+      : 30
+  const today = new Date().toISOString().slice(0, 10)
+
+  // walk oldest-first to apply the collection pool, then present newest-first
+  const bills = salesRes.results.map((s) => {
+    const total = num(s.total_amount)
+    const billPaid = Math.min(Math.max(num(s.paid_amount), 0), total)
+    let remaining = round2(total - billPaid)
+    const fromPool = Math.min(pool, remaining)
+    pool = round2(pool - fromPool)
+    remaining = round2(remaining - fromPool)
+    const settled = remaining <= 0.005
+    const overdue = !settled && addDays(s.sale_date, creditDays) < today
+    return {
+      id: s.id,
+      date: s.sale_date,
+      items: s.items || '',
+      total,
+      billPaid, // received on this bill itself (for editing) — excludes pooled collections
+      paid: round2(total - remaining), // effective paid incl. pooled collections (for display)
+      balance: remaining,
+      settled,
+      overdue,
+      notes: s.notes || '',
+    }
+  })
+  bills.reverse()
+
+  const totalBilled = round2(bills.reduce((a, b) => a + b.total, 0))
+  const outstanding = round2(bills.reduce((a, b) => a + b.balance, 0))
+  return json({
+    customer: { id: customer.id, name: customer.name, place: customer.place, phone: customer.phone },
+    bills,
+    totals: { billed: totalBilled, outstanding, advance: round2(pool) },
+  })
+}
+
 async function createPurchase(db, b) {
   const date = str(b.purchase_date)
   const total = num(b.total_amount)
@@ -769,7 +873,7 @@ export async function onRequest(context) {
   const db = env.DB
   const url = new URL(request.url)
   const parts = url.pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean)
-  const [resource, id] = parts
+  const [resource, id, sub] = parts
   const method = request.method
 
   const readBody = async () => {
@@ -787,6 +891,10 @@ export async function onRequest(context) {
     // everything else requires a valid session
     const user = await currentUserFor(db, request)
     if (!user) return json({ error: 'Unauthorized' }, 401)
+
+    // full dated history for one shop: /api/customers/:id/history
+    if (resource === 'customers' && id && sub === 'history' && method === 'GET')
+      return await customerHistory(db, id)
 
     // parties: /api/customers, /api/suppliers
     if (PARTY_TABLES[resource]) {
@@ -817,6 +925,11 @@ export async function onRequest(context) {
         if (resource === 'purchases') return await createPurchase(db, b)
         if (resource === 'expenses') return await createExpense(db, b)
         if (resource === 'payments') return await createPayment(db, b)
+      }
+      if (method === 'PUT' && id) {
+        const b = await readBody()
+        if (resource === 'sales') return await updateSale(db, id, b)
+        if (resource === 'purchases') return await updatePurchase(db, id, b)
       }
     }
 

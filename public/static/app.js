@@ -814,22 +814,39 @@ async function viewParties() {
     )
     .join('');
 
-  const partyRow = (p, kind) => `
+  // suppliers stay a simple row; shops (customers) expand into a dated history
+  const supplierRow = (p) => `
     <div class="row" data-name="${esc((p.name + ' ' + (p.place || '')).toLowerCase())}">
       ${avatarHtml(p.name)}
-      <div class="row-main row-tap" data-edit-kind="${kind}" data-edit-id="${p.id}">
+      <div class="row-main row-tap" data-edit-kind="supplier" data-edit-id="${p.id}">
         <div class="row-title">${esc(p.name)}${p.lat != null ? ' 📍' : ''}</div>
         <div class="row-sub">${esc([p.place, p.phone].filter(Boolean).join(' · ')) || 'Tap to edit'}</div>
       </div>
-      <div class="row-amount ${p.balance > 0.005 ? (kind === 'customer' ? 'good' : 'bad') : 'muted'}">
+      <div class="row-amount ${p.balance > 0.005 ? 'bad' : 'muted'}">
         ${p.balance > 0.005 ? fmtMoney(p.balance) : '✓ Clear'}
       </div>
-      ${kind === 'customer' && p.balance > 0.005
-        ? `<button class="row-stmt" data-id="${p.id}" title="Bill statement">&#129534;</button>`
-        : ''}
       ${p.balance > 0.005
-        ? `<button class="row-collect" data-kind="${kind}" data-id="${p.id}">${kind === 'customer' ? 'Collect' : 'Pay'}</button>`
-        : `<button class="row-del party-del" data-kind="${kind}" data-id="${p.id}" title="Delete">&#128465;</button>`}
+        ? `<button class="row-collect" data-kind="supplier" data-id="${p.id}">Pay</button>`
+        : `<button class="row-del party-del" data-kind="supplier" data-id="${p.id}" title="Delete">&#128465;</button>`}
+    </div>`;
+
+  const shopBlock = (p) => `
+    <div class="shop-block" data-name="${esc((p.name + ' ' + (p.place || '')).toLowerCase())}">
+      <div class="row shop-row">
+        ${avatarHtml(p.name)}
+        <div class="row-main shop-toggle" data-shop-id="${p.id}">
+          <div class="row-title"><span class="chev" data-chev="${p.id}">▸</span> ${esc(p.name)}${p.lat != null ? ' 📍' : ''}</div>
+          <div class="row-sub">${esc([p.place, p.phone].filter(Boolean).join(' · ')) || 'Tap to see bills'}</div>
+        </div>
+        <div class="row-amount ${p.balance > 0.005 ? 'good' : 'muted'}">
+          ${p.balance > 0.005 ? fmtMoney(p.balance) : '✓ Clear'}
+        </div>
+        ${p.balance > 0.005
+          ? `<button class="row-stmt" data-id="${p.id}" title="Bill statement">&#129534;</button>
+             <button class="row-collect" data-kind="customer" data-id="${p.id}">Collect</button>`
+          : `<button class="row-del party-del" data-kind="customer" data-id="${p.id}" title="Delete">&#128465;</button>`}
+      </div>
+      <div class="shop-history hidden" data-history-for="${p.id}"></div>
     </div>`;
 
   return `
@@ -842,9 +859,9 @@ async function viewParties() {
         <button class="btn-small" id="add-customer">＋ Add</button>
       </div>
     </div>
-    <div class="hint">Amount shown = money the shop still owes you &middot; &#129534; = bill statement for WhatsApp</div>
+    <div class="hint">Tap a shop to open its bills by date &middot; tap any bill to edit it &middot; &#129534; = statement for WhatsApp</div>
     <input class="search-box" id="shop-search" placeholder="🔍 Search shop or place…" />
-    <div class="rows">${customers.map((p) => partyRow(p, 'customer')).join('') || '<div class="empty">No shops added yet</div>'}</div>
+    <div class="rows">${customers.map((p) => shopBlock(p)).join('') || '<div class="empty">No shops added yet</div>'}</div>
   </section>
   <section class="card">
     <div class="card-head-row">
@@ -852,7 +869,7 @@ async function viewParties() {
       <button class="btn-small" id="add-supplier">＋ Add</button>
     </div>
     <div class="hint">Amount shown = money you still owe the supplier</div>
-    <div class="rows">${suppliers.map((p) => partyRow(p, 'supplier')).join('') || '<div class="empty">No suppliers added yet</div>'}</div>
+    <div class="rows">${suppliers.map((p) => supplierRow(p)).join('') || '<div class="empty">No suppliers added yet</div>'}</div>
   </section>
   <section class="card">
     <div class="card-head-row">
@@ -865,6 +882,123 @@ async function viewParties() {
     <div class="hint">Tap an item to set its price or remove it. Items appear in the Sale / Purchase forms.</div>
     ${itemsHtml || '<div class="empty">No items yet</div>'}
   </section>`;
+}
+
+/* ---------- shop → expandable dated history ---------- */
+
+function shopHistoryRows(data) {
+  if (!data.bills.length) return '<div class="empty">No bills yet for this shop</div>';
+  const shopName = data.customer.name;
+  return (
+    `<div class="hist-summary">
+      <span>Billed <b>${fmtMoney(data.totals.billed)}</b></span>
+      <span class="${data.totals.outstanding > 0.005 ? 'good' : 'muted'}">Due <b>${fmtMoney(data.totals.outstanding)}</b></span>
+      ${data.totals.advance > 0.005 ? `<span class="muted">Advance ${fmtMoney(data.totals.advance)}</span>` : ''}
+    </div>` +
+    data.bills
+      .map((b) => {
+        const itemLines = (b.items ? b.items.split(/,\s*/) : ['Goods'])
+          .map((li) => `<div class="hist-item">• ${esc(li)}</div>`)
+          .join('');
+        const status = b.settled
+          ? '<span class="hist-paid">✓ Paid</span>'
+          : `<span class="hist-due ${b.overdue ? 'bad' : 'pend'}">${b.overdue ? '⚠️ ' : ''}${fmtMoney(b.balance)} due</span>`;
+        return `
+        <button type="button" class="hist-bill" data-bill-id="${b.id}" data-shop-id="${data.customer.id}" data-shop-name="${esc(shopName)}">
+          <div class="hist-bill-top">
+            <span class="hist-date">${fmtDateFull(b.date)}</span>
+            <span class="hist-total">${fmtMoney(b.total)}</span>
+          </div>
+          <div class="hist-items">${itemLines}</div>
+          <div class="hist-bill-foot">${status}<span class="hist-edit-hint">tap to edit ✎</span></div>
+        </button>`;
+      })
+      .join('')
+  );
+}
+
+async function toggleShopHistory(shopId) {
+  const el = $(`.shop-history[data-history-for="${shopId}"]`);
+  const chev = $(`[data-chev="${shopId}"]`);
+  if (!el) return;
+  const isOpen = !el.classList.contains('hidden');
+  if (isOpen) {
+    el.classList.add('hidden');
+    if (chev) chev.textContent = '▸';
+    return;
+  }
+  if (chev) chev.textContent = '▾';
+  el.classList.remove('hidden');
+  if (!el.dataset.loaded) {
+    el.innerHTML = '<div class="loading">Loading bills…</div>';
+    try {
+      const data = await api(`/api/customers/${shopId}/history`);
+      state.shopHistory = state.shopHistory || {};
+      state.shopHistory[shopId] = data;
+      el.innerHTML = shopHistoryRows(data);
+      el.dataset.loaded = '1';
+      wireShopHistory(el);
+    } catch (e) {
+      el.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function wireShopHistory(el) {
+  $$('.hist-bill', el).forEach((b) => {
+    b.onclick = () => {
+      const data = state.shopHistory && state.shopHistory[b.dataset.shopId];
+      const bill = data && data.bills.find((x) => String(x.id) === b.dataset.billId);
+      if (bill) editSaleForm(bill, Number(b.dataset.shopId), b.dataset.shopName);
+    };
+  });
+}
+
+/* Edit or delete one past sale (owner correcting their own record). */
+function editSaleForm(bill, customerId, customerName) {
+  openModal(
+    `Edit bill — ${customerName}`,
+    `
+    <div class="hint" style="margin-bottom:0">${esc(customerName)} · originally ${fmtDateFull(bill.date)}</div>
+    <label>Date <input type="date" name="sale_date" value="${bill.date}" required /></label>
+    ${itemPickerHtml('sale')}
+    <input type="hidden" name="items" />
+    <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required value="${bill.total}" /></label>
+    <label>Received on this bill (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" value="${bill.billPaid}" /></label>
+    <label>Notes <input name="notes" value="${esc(bill.notes || '')}" placeholder="Optional" /></label>
+    <button type="button" class="btn-danger" id="del-bill">🗑 Delete this bill</button>`,
+    async (fd, close) => {
+      const total = parseFloat(fd.get('total_amount'));
+      const paidRaw = fd.get('paid_amount');
+      const paid = paidRaw === '' ? 0 : parseFloat(paidRaw);
+      await api(`/api/sales/${bill.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          sale_date: fd.get('sale_date'),
+          items: fd.get('items'),
+          total_amount: total,
+          paid_amount: paid,
+          notes: fd.get('notes'),
+        }),
+      });
+      close();
+      toast('Bill updated ✓');
+      render();
+    }
+  );
+  wireItemPicker('sale', parseItemLines(bill.items));
+  $('#del-bill').onclick = async () => {
+    if (!confirm(`Delete this bill (${fmtMoney(bill.total)}, ${fmtDateFull(bill.date)})?\nThis removes a real recorded sale and cannot be undone.`))
+      return;
+    try {
+      await api(`/api/sales/${bill.id}`, { method: 'DELETE' });
+      $('#modal-root').innerHTML = '';
+      toast('Bill deleted');
+      render();
+    } catch (e) {
+      toast(e.message, false);
+    }
+  };
 }
 
 async function viewReport() {
@@ -1977,7 +2111,7 @@ function wireView() {
     if (search) {
       search.oninput = () => {
         const q = search.value.trim().toLowerCase();
-        $$('.rows .row[data-name]', view).forEach((row) => {
+        $$('.rows > [data-name]', view).forEach((row) => {
           row.style.display = !q || row.dataset.name.includes(q) ? '' : 'none';
         });
       };
@@ -1992,6 +2126,9 @@ function wireView() {
         const p = list.find((x) => String(x.id) === el.dataset.editId);
         if (p) partyForm(kind, p);
       };
+    });
+    $$('.shop-toggle', view).forEach((el) => {
+      el.onclick = () => toggleShopHistory(el.dataset.shopId);
     });
     $('#add-product').onclick = () => productForm(null);
     $('#import-products').onclick = importProductsForm;

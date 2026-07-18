@@ -480,6 +480,85 @@ main {
   flex-shrink: 0;
 }
 
+/* ---------- shop expandable history ---------- */
+
+.shop-block { border-bottom: 1px solid var(--line); }
+.shop-block:last-child { border-bottom: none; }
+.shop-row { border-bottom: none; }
+.chev { display: inline-block; width: 14px; color: var(--muted); font-size: 12px; transition: none; }
+.shop-toggle { cursor: pointer; }
+
+.shop-history {
+  background: var(--bg);
+  border-radius: 12px;
+  margin: 0 0 10px;
+  padding: 10px 12px 4px;
+}
+.hist-summary {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--muted);
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 8px;
+}
+.hist-summary b { color: var(--ink); }
+.hist-summary .good b { color: var(--good); }
+
+.hist-bill {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.hist-bill:active { background: var(--bg); }
+.hist-bill-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.hist-date { font-weight: 700; font-size: 14px; }
+.hist-total { font-weight: 700; font-size: 15px; }
+.hist-items { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.hist-item { white-space: normal; word-break: break-word; }
+.hist-bill-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+.hist-paid { font-size: 12.5px; font-weight: 700; color: var(--good); }
+.hist-due { font-size: 12.5px; font-weight: 700; }
+.hist-due.pend { color: var(--pend); }
+.hist-due.bad { color: var(--bad); }
+.hist-edit-hint { font-size: 11.5px; color: var(--muted); }
+
+.btn-danger {
+  border: 1.5px solid var(--bad);
+  background: var(--bad-soft);
+  color: var(--bad);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 4px;
+}
+.btn-danger:active { background: #f9dede; }
+
 /* ---------- searchable dropdown (combo) ---------- */
 
 .combo { position: relative; width: 100%; }
