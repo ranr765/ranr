@@ -389,6 +389,9 @@ async function listEntries(db, kind, month) {
   return json(results)
 }
 
+const PAYMENT_MODES = ['cash', 'credit', 'cheque']
+const payModeOf = (b) => (PAYMENT_MODES.includes(str(b.payment_mode)) ? str(b.payment_mode) : '')
+
 async function createSale(db, b) {
   const date = str(b.sale_date)
   const total = num(b.total_amount)
@@ -397,8 +400,8 @@ async function createSale(db, b) {
   const paid = Math.min(Math.max(num(b.paid_amount), 0), total)
   const r = await db
     .prepare(
-      `INSERT INTO sales (sale_date, customer_id, customer_name, items, total_amount, paid_amount, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sales (sale_date, customer_id, customer_name, items, total_amount, paid_amount, notes, payment_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       date,
@@ -407,7 +410,8 @@ async function createSale(db, b) {
       str(b.items),
       total,
       paid,
-      str(b.notes)
+      str(b.notes),
+      payModeOf(b)
     )
     .run()
   return json({ id: r.meta.last_row_id }, 201)
@@ -429,9 +433,9 @@ async function updateSale(db, id, b) {
   const paid = Math.min(Math.max(num(b.paid_amount), 0), total)
   await db
     .prepare(
-      `UPDATE sales SET sale_date = ?, items = ?, total_amount = ?, paid_amount = ?, notes = ? WHERE id = ?`
+      `UPDATE sales SET sale_date = ?, items = ?, total_amount = ?, paid_amount = ?, notes = ?, payment_mode = ? WHERE id = ?`
     )
-    .bind(date, str(b.items), total, paid, str(b.notes), id)
+    .bind(date, str(b.items), total, paid, str(b.notes), payModeOf(b), id)
     .run()
   return json({ ok: true })
 }
@@ -504,6 +508,7 @@ async function customerHistory(db, customerId) {
       settled,
       overdue,
       notes: s.notes || '',
+      mode: s.payment_mode || '',
     }
   })
   bills.reverse()

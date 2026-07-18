@@ -307,11 +307,8 @@ function saleForm(prefill) {
     ${itemPickerHtml('sale')}
     <input type="hidden" name="items" />
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required placeholder="0" /></label>
+    ${paymentModeField('cash')}
     <label>Received now (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" placeholder="Leave empty if full amount received" /></label>
-    <div class="paid-quick">
-      <button type="button" class="chip" data-paid="full">Full cash</button>
-      <button type="button" class="chip" data-paid="zero">Full credit</button>
-    </div>
     <label>Notes <input name="notes" placeholder="Optional" /></label>`,
     async (fd, close) => {
       const party = await resolveParty(fd, 'customer', '/api/customers', state.customers);
@@ -328,6 +325,7 @@ function saleForm(prefill) {
           total_amount: total,
           paid_amount: paid,
           notes: fd.get('notes'),
+          payment_mode: fd.get('payment_mode'),
         }),
       });
       if (prefill && prefill.orderId) {
@@ -342,7 +340,7 @@ function saleForm(prefill) {
     }
   );
   const customerCombo = wirePartyField('customer', state.customers, 'Add new shop');
-  wirePaidChips();
+  wirePaymentMode();
   wireItemPicker('sale', prefill ? parseItemLines(prefill.items) : null);
   if (prefill && prefill.customer_id && state.customers.some((c) => c.id === prefill.customer_id)) {
     customerCombo.set(String(prefill.customer_id));
@@ -517,6 +515,48 @@ function wirePaidChips() {
       const paidInput = $('#modal-root input[name="paid_amount"]');
       const totalInput = $('#modal-root input[name="total_amount"]');
       paidInput.value = chip.dataset.paid === 'zero' ? '0' : (totalInput.value || '');
+    };
+  });
+}
+
+/* payment method selector — how the money came in: cash, credit (owed), cheque */
+const PAY_MODES = [
+  ['cash', '💵 Cash'],
+  ['credit', '📋 Credit'],
+  ['cheque', '🧾 Cheque'],
+];
+function payModeLabel(mode, paid, total) {
+  if (mode === 'cash') return 'Cash';
+  if (mode === 'credit') return 'Credit';
+  if (mode === 'cheque') return 'Cheque';
+  // old sales with no stored mode — infer from paid vs total
+  if (paid >= total - 0.005) return 'Cash';
+  if (paid <= 0.005) return 'Credit';
+  return 'Part paid';
+}
+function paymentModeField(mode) {
+  const m = PAY_MODES.some(([v]) => v === mode) ? mode : 'cash';
+  return `
+    <label>Payment method</label>
+    <div class="seg-row pay-modes">
+      ${PAY_MODES.map(([v, label]) => `<button type="button" class="seg pay-mode ${v === m ? 'active' : ''}" data-mode="${v}">${label}</button>`).join('')}
+    </div>
+    <input type="hidden" name="payment_mode" value="${m}" />`;
+}
+/* Tapping a mode also fills "Received now": cash/cheque = full, credit = 0.
+   The received field stays editable for the odd part-payment. */
+function wirePaymentMode() {
+  const root = $('#modal-root');
+  const hidden = $('input[name="payment_mode"]', root);
+  if (!hidden) return;
+  $$('.pay-mode', root).forEach((b) => {
+    b.onclick = () => {
+      $$('.pay-mode', root).forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      hidden.value = b.dataset.mode;
+      const total = parseFloat($('input[name="total_amount"]', root).value) || 0;
+      const paid = $('input[name="paid_amount"]', root);
+      if (paid) paid.value = b.dataset.mode === 'credit' ? '0' : total ? String(total) : '';
     };
   });
 }
@@ -742,11 +782,13 @@ async function viewEntries() {
 
   const rowHtml = rows
     .map((r) => {
-      let title = '', sub = '', amount = 0, pending = 0;
+      let title = '', sub = '', amount = 0, pending = 0, modeTag = '';
       if (kind === 'sales') {
         title = r.customer_name || 'Cash sale';
         sub = r.items || r.notes || '';
         amount = r.total_amount;
+        const ml = payModeLabel(r.payment_mode || '', r.paid_amount, r.total_amount);
+        modeTag = `<span class="pay-badge pay-${ml.toLowerCase().replace(' ', '-')}">${ml}</span>`;
         pending = r.total_amount - r.paid_amount;
       } else if (kind === 'purchases') {
         title = r.supplier_name || 'Purchase';
@@ -766,7 +808,7 @@ async function viewEntries() {
       return `
       <div class="row">
         <div class="row-main ${editable ? 'entry-edit row-tap' : ''}" ${editable ? `data-id="${r.id}"` : ''}>
-          <div class="row-title">${esc(title)}${editable ? ' <span class="entry-edit-hint">✎</span>' : ''}</div>
+          <div class="row-title">${esc(title)}${modeTag}${editable ? ' <span class="entry-edit-hint">✎</span>' : ''}</div>
           <div class="row-sub">${fmtDate(dateField)}${sub ? ' &middot; ' + esc(sub) : ''}</div>
           ${pending > 0.005 ? `<div class="row-pending">Pending: ${fmtMoney(pending)}</div>` : ''}
         </div>
@@ -905,10 +947,11 @@ function shopHistoryRows(data) {
         const status = b.settled
           ? '<span class="hist-paid">✓ Paid</span>'
           : `<span class="hist-due ${b.overdue ? 'bad' : 'pend'}">${b.overdue ? '⚠️ ' : ''}${fmtMoney(b.balance)} due</span>`;
+        const ml = payModeLabel(b.mode || '', b.billPaid, b.total);
         return `
         <button type="button" class="hist-bill" data-bill-id="${b.id}" data-shop-id="${data.customer.id}" data-shop-name="${esc(shopName)}">
           <div class="hist-bill-top">
-            <span class="hist-date">${fmtDateFull(b.date)}</span>
+            <span class="hist-date">${fmtDateFull(b.date)} <span class="pay-badge pay-${ml.toLowerCase().replace(' ', '-')}">${ml}</span></span>
             <span class="hist-total">${fmtMoney(b.total)}</span>
           </div>
           <div class="hist-items">${itemLines}</div>
@@ -966,6 +1009,7 @@ function editSaleForm(bill, customerId, customerName) {
     ${itemPickerHtml('sale')}
     <input type="hidden" name="items" />
     <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required value="${bill.total}" /></label>
+    ${paymentModeField(bill.mode || payModeLabel('', bill.billPaid, bill.total).toLowerCase())}
     <label>Received on this bill (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" value="${bill.billPaid}" /></label>
     <label>Notes <input name="notes" value="${esc(bill.notes || '')}" placeholder="Optional" /></label>
     <button type="button" class="btn-danger" id="del-bill">🗑 Delete this bill</button>`,
@@ -981,6 +1025,7 @@ function editSaleForm(bill, customerId, customerName) {
           total_amount: total,
           paid_amount: paid,
           notes: fd.get('notes'),
+          payment_mode: fd.get('payment_mode'),
         }),
       });
       close();
@@ -988,6 +1033,7 @@ function editSaleForm(bill, customerId, customerName) {
       render();
     }
   );
+  wirePaymentMode();
   wireItemPicker('sale', parseItemLines(bill.items));
   wireDeleteButton('del-bill', 'sales', bill.id, `bill (${fmtMoney(bill.total)}, ${fmtDateFull(bill.date)})`, 'sale');
 }
@@ -1001,6 +1047,7 @@ function saleRowToBill(r) {
     total: r.total_amount,
     billPaid: r.paid_amount,
     notes: r.notes || '',
+    mode: r.payment_mode || '',
   };
 }
 

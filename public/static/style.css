@@ -562,6 +562,39 @@ main {
 .entry-edit { cursor: pointer; }
 .entry-edit-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 
+/* payment method selector + badges */
+.pay-modes { display: flex; gap: 8px; }
+.pay-modes .pay-mode {
+  flex: 1;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 11px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.pay-modes .pay-mode.active {
+  border-color: var(--red);
+  background: var(--bad-soft);
+  color: var(--red-dark);
+}
+.pay-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.pay-cash { background: var(--good-soft); color: var(--good); }
+.pay-cheque { background: #eef2ff; color: #4338ca; }
+.pay-credit { background: #fff4e0; color: var(--pend); }
+.pay-part-paid { background: #fff4e0; color: var(--pend); }
+
 .note-view {
   background: var(--bg);
   border-radius: 12px;
