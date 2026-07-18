@@ -559,6 +559,9 @@ main {
 }
 .btn-danger:active { background: #f9dede; }
 
+.entry-edit { cursor: pointer; }
+.entry-edit-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+
 /* ---------- searchable dropdown (combo) ---------- */
 
 .combo { position: relative; width: 100%; }

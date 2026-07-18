@@ -436,7 +436,10 @@ function wireItemPicker(mode, initialLines) {
   const totalField = $('input[name="total_amount"]', root);
   const lines = initialLines && initialLines.length ? initialLines.slice() : [];
 
-  const sync = () => {
+  // updateTotal=false on the initial render so a manually-set total (e.g. a
+  // discount or the ₹100 reconciliation on an edited bill) isn't clobbered by
+  // the line-item sum. Adding/removing a line does recompute the total.
+  const sync = (updateTotal = true) => {
     listEl.innerHTML = lines
       .map(
         (l, i) => `
@@ -451,9 +454,8 @@ function wireItemPicker(mode, initialLines) {
       )
       .join('');
     itemsField.value = lines.map((l) => `${l.label} x ${l.qty} @ ₹${l.rate}`).join(', ');
-    totalField.value = lines.length
-      ? String(Math.round(lines.reduce((a, l) => a + l.qty * l.rate, 0) * 100) / 100)
-      : totalField.value;
+    if (updateTotal && lines.length)
+      totalField.value = String(Math.round(lines.reduce((a, l) => a + l.qty * l.rate, 0) * 100) / 100);
     $$('[data-li-del]', root).forEach((b) => {
       b.onclick = () => {
         lines.splice(Number(b.dataset.liDel), 1);
@@ -506,7 +508,7 @@ function wireItemPicker(mode, initialLines) {
     rateInput.value = '';
     sync();
   };
-  if (lines.length) sync();
+  if (lines.length) sync(false);
 }
 
 function wirePaidChips() {
@@ -725,6 +727,8 @@ async function viewEntries() {
   const kind = state.entriesKind;
   const month = state.reportMonth;
   const rows = await api(`/api/${kind}?month=${month}`);
+  state.entriesRows = rows; // so the edit handler can find the tapped row
+  const editable = kind === 'sales' || kind === 'purchases' || kind === 'expenses';
 
   const tabs = [
     ['sales', 'Sales'],
@@ -763,8 +767,8 @@ async function viewEntries() {
       const dateField = r.sale_date || r.purchase_date || r.expense_date || r.payment_date;
       return `
       <div class="row">
-        <div class="row-main">
-          <div class="row-title">${esc(title)}</div>
+        <div class="row-main ${editable ? 'entry-edit row-tap' : ''}" ${editable ? `data-id="${r.id}"` : ''}>
+          <div class="row-title">${esc(title)}${editable ? ' <span class="entry-edit-hint">✎</span>' : ''}</div>
           <div class="row-sub">${fmtDate(dateField)}${sub ? ' &middot; ' + esc(sub) : ''}</div>
           ${pending > 0.005 ? `<div class="row-pending">Pending: ${fmtMoney(pending)}</div>` : ''}
         </div>
@@ -987,13 +991,105 @@ function editSaleForm(bill, customerId, customerName) {
     }
   );
   wireItemPicker('sale', parseItemLines(bill.items));
-  $('#del-bill').onclick = async () => {
-    if (!confirm(`Delete this bill (${fmtMoney(bill.total)}, ${fmtDateFull(bill.date)})?\nThis removes a real recorded sale and cannot be undone.`))
-      return;
+  wireDeleteButton('del-bill', 'sales', bill.id, `bill (${fmtMoney(bill.total)}, ${fmtDateFull(bill.date)})`, 'sale');
+}
+
+// normalize a raw /api/sales row into the bill shape editSaleForm expects
+function saleRowToBill(r) {
+  return {
+    id: r.id,
+    date: r.sale_date,
+    items: r.items || '',
+    total: r.total_amount,
+    billPaid: r.paid_amount,
+    notes: r.notes || '',
+  };
+}
+
+/* Edit or delete one purchase (owner correcting their own record). */
+function editPurchaseForm(row) {
+  const supplierName = row.supplier_name || 'Purchase';
+  openModal(
+    `Edit purchase — ${supplierName}`,
+    `
+    <div class="hint" style="margin-bottom:0">${esc(supplierName)} · originally ${fmtDateFull(row.purchase_date)}</div>
+    <label>Date <input type="date" name="purchase_date" value="${row.purchase_date}" required /></label>
+    ${itemPickerHtml('purchase')}
+    <input type="hidden" name="items" />
+    <label>Total amount (₹) <input type="number" name="total_amount" min="0" step="0.01" inputmode="decimal" required value="${row.total_amount}" /></label>
+    <label>Paid on this bill (₹) <input type="number" name="paid_amount" min="0" step="0.01" inputmode="decimal" value="${row.paid_amount}" /></label>
+    <label>Notes <input name="notes" value="${esc(row.notes || '')}" placeholder="Optional" /></label>
+    <button type="button" class="btn-danger" id="del-purchase">🗑 Delete this purchase</button>`,
+    async (fd, close) => {
+      const total = parseFloat(fd.get('total_amount'));
+      const paidRaw = fd.get('paid_amount');
+      const paid = paidRaw === '' ? 0 : parseFloat(paidRaw);
+      await api(`/api/purchases/${row.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          purchase_date: fd.get('purchase_date'),
+          items: fd.get('items'),
+          total_amount: total,
+          paid_amount: paid,
+          notes: fd.get('notes'),
+        }),
+      });
+      close();
+      toast('Purchase updated ✓');
+      render();
+    }
+  );
+  wireItemPicker('purchase', parseItemLines(row.items));
+  wireDeleteButton('del-purchase', 'purchases', row.id, `purchase (${fmtMoney(row.total_amount)}, ${fmtDateFull(row.purchase_date)})`, 'purchase');
+}
+
+/* Edit or delete one expense. */
+function editExpenseForm(row) {
+  openModal(
+    'Edit expense',
+    `
+    <label>Date <input type="date" name="expense_date" value="${row.expense_date}" required /></label>
+    <label>Category
+      ${comboHtml('category', 'Search or pick a category…')}
+    </label>
+    <label>Amount (₹) <input type="number" name="amount" min="0" step="0.01" inputmode="decimal" required value="${row.amount}" /></label>
+    <label>Notes <input name="notes" value="${esc(row.notes || '')}" placeholder="Optional" /></label>
+    <button type="button" class="btn-danger" id="del-expense">🗑 Delete this expense</button>`,
+    async (fd, close) => {
+      if (!fd.get('category')) throw new Error('Choose a category');
+      await api(`/api/expenses/${row.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          expense_date: fd.get('expense_date'),
+          category: fd.get('category'),
+          amount: parseFloat(fd.get('amount')),
+          notes: fd.get('notes'),
+        }),
+      });
+      close();
+      toast('Expense updated ✓');
+      render();
+    }
+  );
+  // category list plus the row's own value if it was a custom one not in the list
+  const cats = EXPENSE_CATEGORIES.includes(row.category)
+    ? EXPENSE_CATEGORIES
+    : [row.category, ...EXPENSE_CATEGORIES];
+  const catCombo = wireCombo('category', cats.map((c) => ({ value: c, label: c })));
+  catCombo.set(row.category);
+  wireDeleteButton('del-expense', 'expenses', row.id, `expense (${fmtMoney(row.amount)}, ${esc(row.category)})`, 'expense');
+}
+
+/* Shared delete button for the edit modals: confirm, DELETE, close, refresh. */
+function wireDeleteButton(btnId, kind, id, label, noun) {
+  const btn = $(`#${btnId}`);
+  if (!btn) return;
+  btn.onclick = async () => {
+    if (!confirm(`Delete this ${label}?\nThis removes a real recorded ${noun} and cannot be undone.`)) return;
     try {
-      await api(`/api/sales/${bill.id}`, { method: 'DELETE' });
+      await api(`/api/${kind}/${id}`, { method: 'DELETE' });
       $('#modal-root').innerHTML = '';
-      toast('Bill deleted');
+      toast('Deleted');
       render();
     } catch (e) {
       toast(e.message, false);
@@ -2096,6 +2192,16 @@ function wireView() {
       state.reportMonth = e.target.value;
       render();
     };
+    $$('.entry-edit', view).forEach((el) => {
+      el.onclick = () => {
+        const r = (state.entriesRows || []).find((x) => String(x.id) === el.dataset.id);
+        if (!r) return;
+        if (state.entriesKind === 'sales')
+          editSaleForm(saleRowToBill(r), r.customer_id, r.customer_name || 'Cash sale');
+        else if (state.entriesKind === 'purchases') editPurchaseForm(r);
+        else if (state.entriesKind === 'expenses') editExpenseForm(r);
+      };
+    });
     $$('.row-del', view).forEach((b) => {
       b.onclick = async () => {
         if (!confirm('Delete this entry?')) return;

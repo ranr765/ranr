@@ -553,6 +553,20 @@ async function createExpense(db, b) {
   return json({ id: r.meta.last_row_id }, 201)
 }
 
+async function updateExpense(db, id, b) {
+  const existing = await db.prepare('SELECT id FROM expenses WHERE id = ?').bind(id).first()
+  if (!existing) return json({ error: 'Expense not found' }, 404)
+  const date = str(b.expense_date)
+  const amount = num(b.amount)
+  if (!isDate(date)) return json({ error: 'Valid date is required' }, 400)
+  if (amount <= 0) return json({ error: 'Amount must be more than 0' }, 400)
+  await db
+    .prepare('UPDATE expenses SET expense_date = ?, category = ?, amount = ?, notes = ? WHERE id = ?')
+    .bind(date, str(b.category) || 'Other', amount, str(b.notes), id)
+    .run()
+  return json({ ok: true })
+}
+
 async function createPayment(db, b) {
   const date = str(b.payment_date)
   const amount = num(b.amount)
@@ -930,6 +944,7 @@ export async function onRequest(context) {
         const b = await readBody()
         if (resource === 'sales') return await updateSale(db, id, b)
         if (resource === 'purchases') return await updatePurchase(db, id, b)
+        if (resource === 'expenses') return await updateExpense(db, id, b)
       }
     }
 
