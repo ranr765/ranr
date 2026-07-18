@@ -624,12 +624,12 @@ async function viewHome() {
       ${notes
         .map(
           (n) => `
-        <div class="row">
-          <div class="row-main note-open row-tap" data-id="${n.id}">
+        <div class="row note-open row-tap" data-id="${n.id}">
+          <div class="row-main">
             <div class="row-title row-wrap" style="font-weight:500">${esc(n.note)}</div>
-            <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))} · tap to view</div>
+            <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))} · tap to view &amp; decide</div>
           </div>
-          <button class="row-collect note-order" data-id="${n.id}">→ Order</button>
+          <span class="chev">›</span>
         </div>`
         )
         .join('')}
@@ -2222,13 +2222,6 @@ function wireView() {
       el.onclick = () => {
         const n = (state.notes || []).find((x) => String(x.id) === el.dataset.id);
         if (n) noteDetailModal(n);
-      };
-    });
-    $$('.note-order', view).forEach((b) => {
-      b.onclick = (e) => {
-        e.stopPropagation();
-        const n = (state.notes || []).find((x) => String(x.id) === b.dataset.id);
-        if (n) orderForm(n.note, n.id);
       };
     });
     $$('.order-sale', view).forEach((b) => {
