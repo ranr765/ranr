@@ -1135,17 +1135,27 @@ async function viewReport() {
   for (const p of products) bookByLabel[`${p.name} ${p.size}`.trim().toLowerCase()] = p;
   let estRevenue = 0, estCost = 0, matchedSaleAmount = 0;
   const marginByItem = {};
+  const gapSales = []; // bills whose billed total differs from their item-priced value
+  const unmatchedItems = {}; // item labels not found in the price book, with qty
   for (const sale of monthSales) {
     let saleMatched = false;
+    let saleItemRev = 0;
+    const saleUnmatched = [];
     for (const l of parseItemLines(sale.items)) {
       const p = bookByLabel[l.label.trim().toLowerCase()];
-      if (!p) continue;
-      const rate = l.rate > 0 ? l.rate : p.sale_price || 0;
-      if (!(rate > 0)) continue;
+      const rate = l.rate > 0 ? l.rate : p ? p.sale_price || 0 : 0;
+      if (!p || !(rate > 0)) {
+        if (l.label) {
+          saleUnmatched.push(l.label);
+          unmatchedItems[l.label] = (unmatchedItems[l.label] || 0) + (l.qty || 0);
+        }
+        continue;
+      }
       const rev = l.qty * rate;
       const cost = l.qty * (p.purchase_price || 0);
       estRevenue += rev;
       estCost += cost;
+      saleItemRev += rev;
       saleMatched = true;
       const key = l.label;
       marginByItem[key] = marginByItem[key] || { qty: 0, revenue: 0, cost: 0 };
@@ -1154,7 +1164,19 @@ async function viewReport() {
       marginByItem[key].cost += cost;
     }
     if (saleMatched) matchedSaleAmount += sale.total_amount;
+    const billed = Number(sale.total_amount) || 0;
+    const gap = Math.round((billed - saleItemRev) * 100) / 100;
+    if (Math.abs(gap) >= 0.5)
+      gapSales.push({
+        name: sale.customer_name || 'Cash sale',
+        date: sale.sale_date,
+        billed,
+        itemRev: Math.round(saleItemRev * 100) / 100,
+        gap,
+        unmatched: saleUnmatched,
+      });
   }
+  gapSales.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
   const grossProfit = Math.round((estRevenue - estCost) * 100) / 100;
   const calcNet = Math.round((grossProfit - r.expenses.total) * 100) / 100;
   const unpricedDiff = Math.round((r.sales.total - estRevenue) * 100) / 100;
@@ -1175,6 +1197,35 @@ async function viewReport() {
     )
     .join('');
 
+  // breakdown behind the "Not item-priced" line so the gap is explainable
+  const unmatchedList = Object.entries(unmatchedItems).sort((a, b) => b[1] - a[1]);
+  const gapBillRows = gapSales
+    .map(
+      (g) => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${esc(g.name)} · ${fmtDate(g.date)}</div>
+          <div class="row-sub">Billed ${fmtMoney(g.billed)} · priced ${fmtMoney(g.itemRev)}${g.unmatched.length ? ' · not in price book: ' + esc(g.unmatched.join(', ')) : ''}</div>
+        </div>
+        <div class="row-amount ${g.gap >= 0 ? '' : 'good'}">${fmtMoney(g.gap)}</div>
+      </div>`
+    )
+    .join('');
+  const unmatchedChips = unmatchedList.length
+    ? `<div class="hint" style="margin-top:10px">Items not in your price book — tap to add so these bills get priced:</div>
+       <div class="item-chips" style="margin-top:6px">${unmatchedList
+         .map(([label, qty]) => `<button class="chip unpriced-add" data-name="${esc(label)}">＋ ${esc(label)}${qty ? ` <span class="muted">×${qty}</span>` : ''}</button>`)
+         .join('')}</div>`
+    : '';
+  const unpricedDetail = `
+    <div class="unpriced-detail hidden" id="unpriced-detail">
+      <div class="hint" style="margin:0 0 6px">This is the part of your billing that couldn't be matched to a
+      price-book item — cash sales with no items listed, hand-typed items, or amounts that differ from the item lines.
+      Add the missing items (below) or edit those bills so the calculated profit gets sharper.</div>
+      ${gapBillRows || '<div class="empty">No specific bills — the gap is only rounding.</div>'}
+      ${unmatchedChips}
+    </div>`;
+
   const marginCard = estRevenue > 0
     ? `
   <section class="card">
@@ -1182,7 +1233,7 @@ async function viewReport() {
     <div class="hint">Each sold item priced against the price book's buying rate — works even for
     old stock bought before the app.</div>
     <div class="pl-line"><span>Sold items (calculated revenue)</span><b class="good">${fmtMoney(estRevenue)}</b></div>
-    ${Math.abs(unpricedDiff) >= 0.5 ? `<div class="pl-line pl-muted"><span>&nbsp;&nbsp;Not item-priced (billed ${fmtMoney(r.sales.total)} − items ${fmtMoney(estRevenue)})</span><b>${fmtMoney(unpricedDiff)}</b></div>` : ''}
+    ${Math.abs(unpricedDiff) >= 0.5 ? `<div class="pl-line pl-muted pl-expand" id="unpriced-toggle"><span><span class="chev" id="unpriced-chev">▸</span> Not item-priced (billed ${fmtMoney(r.sales.total)} − items ${fmtMoney(estRevenue)})</span><b>${fmtMoney(unpricedDiff)}</b></div>${unpricedDetail}` : ''}
     <div class="pl-line"><span>Buying cost (price book)</span><b>&minus; ${fmtMoney(estCost)}</b></div>
     <div class="pl-line"><span>Gross profit on goods</span><b class="${grossProfit >= 0 ? 'good' : 'bad'}">${fmtMoney(grossProfit)}</b></div>
     <div class="pl-line"><span>Expenses (${r.expenses.count})</span><b class="bad">&minus; ${fmtMoney(r.expenses.total)}</b></div>
@@ -1916,11 +1967,11 @@ function importCustomersForm() {
 
 /* ---------- item catalog management ---------- */
 
-function productForm(product) {
+function productForm(product, prefillName) {
   openModal(
     product ? 'Edit item' : 'Add item',
     `
-    <label>Item name <input name="name" required value="${esc(product ? product.name : '')}" placeholder="e.g. Spice LD Cover" /></label>
+    <label>Item name <input name="name" required value="${esc(product ? product.name : prefillName || '')}" placeholder="e.g. Spice LD Cover" /></label>
     <label>Size <input name="size" value="${esc(product ? product.size : '')}" placeholder="e.g. 1 kg, 10x12, Triple Zero" /></label>
     <label>Selling price (₹, editable on each sale) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>
     <label>Purchase price (₹, editable on each purchase) <input type="number" name="purchase_price" min="0" step="0.01" inputmode="decimal" value="${product && product.purchase_price > 0 ? product.purchase_price : ''}" placeholder="Auto-fills purchase amount when picked" /></label>`,
@@ -2272,6 +2323,18 @@ function wireView() {
       state.reportMonth = e.target.value;
       render();
     };
+    const unpricedToggle = $('#unpriced-toggle');
+    if (unpricedToggle) {
+      unpricedToggle.onclick = () => {
+        const detail = $('#unpriced-detail');
+        const chev = $('#unpriced-chev');
+        const open = detail.classList.toggle('hidden');
+        if (chev) chev.textContent = open ? '▸' : '▾';
+      };
+    }
+    $$('.unpriced-add', view).forEach((b) => {
+      b.onclick = () => productForm(null, b.dataset.name);
+    });
     $('#export-csv').onclick = exportCsv;
     const dl = $('#daylog-date');
     if (dl) dl.onchange = (e) => { state.daylogDate = e.target.value; render(); };

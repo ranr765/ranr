@@ -562,6 +562,17 @@ main {
 .entry-edit { cursor: pointer; }
 .entry-edit-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 
+.pl-expand { cursor: pointer; }
+.pl-expand:active { opacity: 0.7; }
+.unpriced-detail {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 12px 4px;
+  margin: 4px 0 8px;
+}
+.unpriced-add { cursor: pointer; }
+.unpriced-add .muted { color: var(--muted); }
+
 /* ---------- searchable dropdown (combo) ---------- */
 
 .combo { position: relative; width: 100%; }
