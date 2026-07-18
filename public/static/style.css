@@ -562,6 +562,17 @@ main {
 .entry-edit { cursor: pointer; }
 .entry-edit-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 
+.note-view {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .pl-expand { cursor: pointer; }
 .pl-expand:active { opacity: 0.7; }
 .unpriced-detail {

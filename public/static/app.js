@@ -625,13 +625,11 @@ async function viewHome() {
         .map(
           (n) => `
         <div class="row">
-          <div class="row-main">
+          <div class="row-main note-open row-tap" data-id="${n.id}">
             <div class="row-title row-wrap" style="font-weight:500">${esc(n.note)}</div>
-            <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))}</div>
+            <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))} · tap to view</div>
           </div>
           <button class="row-collect note-order" data-id="${n.id}">→ Order</button>
-          <button class="row-stmt note-done" data-id="${n.id}" title="Done">✓</button>
-          <button class="row-del note-del" data-id="${n.id}" title="Delete">&#128465;</button>
         </div>`
         )
         .join('')}
@@ -1417,6 +1415,47 @@ async function exportCsv() {
 
 /* ---------- order book ---------- */
 
+/* Tap an inbox memo → view it, with two ways forward: convert it into an order,
+   or leave it. Closing (or "Keep in inbox") returns to the inbox unchanged. */
+function noteDetailModal(note) {
+  const { close } = infoModal(
+    'Inbox note',
+    `
+    <div class="note-view">${esc(note.note)}</div>
+    <div class="row-sub" style="margin:0 0 14px">Added ${fmtDate(note.created_at.slice(0, 10))}</div>
+    <button type="button" class="btn-primary" id="nd-order">→ Convert to an order</button>
+    <button type="button" class="btn-small" id="nd-done">✓ Mark done &amp; clear from inbox</button>
+    <button type="button" class="btn-small" id="nd-keep">Keep in inbox</button>
+    <button type="button" class="btn-danger" id="nd-del">🗑 Delete</button>`
+  );
+  $('#nd-order').onclick = () => {
+    close();
+    orderForm(note.note, note.id);
+  };
+  $('#nd-done').onclick = async () => {
+    try {
+      await api(`/api/notes/${note.id}`, { method: 'PUT' });
+      close();
+      toast('Done ✓');
+      render();
+    } catch (e) {
+      toast(e.message, false);
+    }
+  };
+  $('#nd-keep').onclick = close;
+  $('#nd-del').onclick = async () => {
+    if (!confirm('Delete this note?')) return;
+    try {
+      await api(`/api/notes/${note.id}`, { method: 'DELETE' });
+      close();
+      toast('Deleted');
+      render();
+    } catch (e) {
+      toast(e.message, false);
+    }
+  };
+}
+
 function noteForm() {
   openModal(
     'Quick note',
@@ -2179,24 +2218,17 @@ function wireView() {
   if (state.tab === 'home') {
     $('#qa-sale').onclick = () => saleForm();
     $('#qa-order').onclick = () => orderForm();
+    $$('.note-open', view).forEach((el) => {
+      el.onclick = () => {
+        const n = (state.notes || []).find((x) => String(x.id) === el.dataset.id);
+        if (n) noteDetailModal(n);
+      };
+    });
     $$('.note-order', view).forEach((b) => {
-      b.onclick = () => {
+      b.onclick = (e) => {
+        e.stopPropagation();
         const n = (state.notes || []).find((x) => String(x.id) === b.dataset.id);
         if (n) orderForm(n.note, n.id);
-      };
-    });
-    $$('.note-done', view).forEach((b) => {
-      b.onclick = async () => {
-        await api(`/api/notes/${b.dataset.id}`, { method: 'PUT' });
-        toast('Done ✓');
-        render();
-      };
-    });
-    $$('.note-del', view).forEach((b) => {
-      b.onclick = async () => {
-        await api(`/api/notes/${b.dataset.id}`, { method: 'DELETE' });
-        toast('Deleted');
-        render();
       };
     });
     $$('.order-sale', view).forEach((b) => {
