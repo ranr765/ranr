@@ -1,0 +1,14 @@
+{
+  "name": "Simple Serve — Business Book",
+  "short_name": "Simple Serve",
+  "description": "Daily business book for Simple Serve — sales, purchases, expenses, profit.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#b91c1c",
+  "icons": [
+    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

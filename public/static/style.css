@@ -562,6 +562,8 @@ main {
 .entry-edit { cursor: pointer; }
 .entry-edit-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 
+.reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
+
 /* payment method selector + badges */
 .pay-modes { display: flex; gap: 8px; }
 .pay-modes .pay-mode {

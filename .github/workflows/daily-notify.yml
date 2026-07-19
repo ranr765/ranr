@@ -1,0 +1,62 @@
+name: Morning inbox reminder
+
+# Sends a web-push notification each morning (~7:00 AM IST = 01:30 UTC) listing
+# the pending inbox items to every device that turned the reminder on.
+# GitHub's scheduler can run a few minutes late — that's fine for a morning nudge.
+#
+# One-time setup: add the repo secret VAPID_PRIVATE_KEY (paired with the public
+# key baked into the app). Without it, this workflow runs and quietly no-ops.
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+    steps:
+      - name: Skip if not configured
+        run: |
+          if [ -z "$VAPID_PRIVATE_KEY" ]; then
+            echo "VAPID_PRIVATE_KEY not set — nothing to send. Add the secret to enable the morning reminder."
+          fi
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::Cloudflare secrets missing — cannot read the database."
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Point wrangler.jsonc at the real database id
+        if: env.VAPID_PRIVATE_KEY != '' && env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          DB_ID=$(npx wrangler@4 d1 list --json | node -e "
+            let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const db=JSON.parse(s).find(d=>d.name==='simple-serve-production');
+              if(!db){console.error('database not found');process.exit(1);}
+              console.log(db.uuid);
+            })")
+          sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
+
+      - name: Read pending notes and subscriptions
+        if: env.VAPID_PRIVATE_KEY != '' && env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          npx wrangler@4 d1 execute simple-serve-production --remote --json \
+            --command "SELECT note FROM notes WHERE status = 'pending' ORDER BY id DESC LIMIT 50" > notes.json
+          npx wrangler@4 d1 execute simple-serve-production --remote --json \
+            --command "SELECT endpoint, p256dh, auth FROM push_subscriptions" > subs.json
+
+      - name: Install web-push and send
+        if: env.VAPID_PRIVATE_KEY != '' && env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install web-push@3 >/dev/null 2>&1
+          node .github/scripts/send-morning-reminder.mjs

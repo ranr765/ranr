@@ -519,6 +519,69 @@ function wirePaidChips() {
   });
 }
 
+/* ---------- morning reminder (web push) ---------- */
+
+const VAPID_PUBLIC_KEY =
+  'BFQGMl1wbNlIwEpDxxIMDY8SaUj79z6S8RwuKue0reb7NZEZe1Y0GM4htBiusNQg7_tErYI1S-04kUd_bnv7_II';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+function reminderOn() {
+  return localStorage.getItem('morningReminder') === '1';
+}
+
+async function enableMorningReminder() {
+  if (!pushSupported()) {
+    return infoModal(
+      'Reminder not available',
+      `<div class="hint" style="margin:0">This phone/browser can't show reminders here. On iPhone, open the app from its
+      <b>Home Screen icon</b> (not the Safari tab) and try again — that's an Apple requirement for web apps.</div>`
+    );
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return toast('Permission not granted', false);
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub) });
+    localStorage.setItem('morningReminder', '1');
+    toast('Morning reminder on ✓');
+    render();
+  } catch (e) {
+    toast('Could not turn on reminder: ' + (e.message || e), false);
+  }
+}
+
+async function disableMorningReminder() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await api('/api/push/unsubscribe', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      await sub.unsubscribe();
+    }
+  } catch { /* clearing locally is enough */ }
+  localStorage.removeItem('morningReminder');
+  toast('Morning reminder off');
+  render();
+}
+
 /* payment method selector — how the money came in: cash, credit (owed), cheque */
 const PAY_MODES = [
   ['cash', '💵 Cash'],
@@ -658,7 +721,12 @@ async function viewHome() {
 
   const inboxCard = `
   <section class="card">
-    <h3>Inbox${notes.length ? ` (${notes.length})` : ''}</h3>
+    <div class="card-head-row">
+      <h3>Inbox${notes.length ? ` (${notes.length})` : ''}</h3>
+      <button class="btn-small reminder-toggle ${reminderOn() ? 'on' : ''}" id="reminder-toggle">
+        ${reminderOn() ? '🔔 Reminder on' : '🔕 Morning reminder'}
+      </button>
+    </div>
     ${notes.length ? '' : '<div class="hint" style="margin-bottom:0">Empty — tap the red ＋ button (bottom right) to jot a quick note. It waits here until you act on it.</div>'}
     <div class="rows">
       ${notes
@@ -2271,6 +2339,8 @@ function wireView() {
         if (n) noteDetailModal(n);
       };
     });
+    const remBtn = $('#reminder-toggle');
+    if (remBtn) remBtn.onclick = () => (reminderOn() ? disableMorningReminder() : enableMorningReminder());
     $$('.order-sale', view).forEach((b) => {
       b.onclick = () => {
         const o = (state.pendingOrders || []).find((x) => String(x.id) === b.dataset.id);

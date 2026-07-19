@@ -978,6 +978,32 @@ export async function onRequest(context) {
       }
     }
 
+    // web-push subscriptions for the morning inbox reminder: /api/push
+    if (resource === 'push') {
+      if (method === 'POST' && id === 'subscribe') {
+        const b = await readBody()
+        const endpoint = str(b.endpoint)
+        const keys = b.keys || {}
+        const p256dh = str(keys.p256dh)
+        const auth = str(keys.auth)
+        if (!endpoint || !p256dh || !auth) return json({ error: 'Invalid subscription' }, 400)
+        await db
+          .prepare(
+            `INSERT INTO push_subscriptions (endpoint, p256dh, auth) VALUES (?, ?, ?)
+             ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth`
+          )
+          .bind(endpoint, p256dh, auth)
+          .run()
+        return json({ ok: true }, 201)
+      }
+      if (method === 'POST' && id === 'unsubscribe') {
+        const b = await readBody()
+        const endpoint = str(b.endpoint)
+        if (endpoint) await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).run()
+        return json({ ok: true })
+      }
+    }
+
     // order book: /api/orders
     if (resource === 'orders') {
       if (method === 'GET' && !id) {
