@@ -44,6 +44,21 @@ function fmtDate(s) {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
+/* Hierarchical item code "MM-SS": main category (product name) — sub-item
+   (size within that name). Derived from the catalog order (name, id), so each
+   name-group shares the MM and the sizes run SS = 01, 02, … within it. */
+const pad2 = (n) => String(n).padStart(2, '0');
+function itemCodeMap(products) {
+  const map = {};
+  let cat = 0, sub = 0, last = null;
+  for (const p of products || []) {
+    if (p.name !== last) { cat++; sub = 0; last = p.name; }
+    sub++;
+    map[p.id] = pad2(cat) + '-' + pad2(sub);
+  }
+  return map;
+}
+
 function fmtTimeIST(createdAt) {
   if (!createdAt) return '';
   const d = new Date(String(createdAt).replace(' ', 'T') + 'Z');
@@ -462,13 +477,14 @@ function wireItemPicker(mode, initialLines) {
     });
   };
 
+  const codes = itemCodeMap(state.products);
   const productCombo = wireCombo(
     'li_product',
     state.products.map((p) => ({
       value: p.id,
-      // "#12 Spice LD Cover 1 kg" — the number is searchable; the stored line
+      // "12-03 Spice LD Cover 1 kg" — the code is searchable; the stored line
       // still uses just name+size (below), so price-book matching is unchanged.
-      label: `${p.item_code ? '#' + p.item_code + ' ' : ''}${p.name} ${p.size}`.trim(),
+      label: `${codes[p.id] ? codes[p.id] + ' ' : ''}${p.name} ${p.size}`.trim(),
       sub: priceOf(p) ? fmtMoney(priceOf(p)) : '',
     })),
     {
@@ -909,18 +925,19 @@ async function viewParties() {
   state.suppliers = suppliers;
   state.products = products;
 
+  const codes = itemCodeMap(products);
   const groups = {};
   for (const p of products) (groups[p.name] = groups[p.name] || []).push(p);
   const itemsHtml = Object.entries(groups)
     .map(
       ([name, list]) => `
       <div class="item-group">
-        <div class="item-group-name">${esc(name)}</div>
+        <div class="item-group-name">${codes[list[0].id] ? '<span class="cat-no">' + codes[list[0].id].split('-')[0] + '</span> ' : ''}${esc(name)}</div>
         <div class="item-chips">
           ${list
             .map(
               (p) =>
-                `<button class="chip item-chip" data-id="${p.id}"><span class="item-no">#${p.item_code || '—'}</span> ${esc(p.size) || '—'}${p.sale_price > 0 ? ' · ₹' + p.sale_price : ''}</button>`
+                `<button class="chip item-chip" data-id="${p.id}"><span class="item-no">${codes[p.id] || '—'}</span> ${esc(p.size) || '—'}${p.sale_price > 0 ? ' · ₹' + p.sale_price : ''}</button>`
             )
             .join('')}
         </div>
@@ -2124,10 +2141,11 @@ function importCustomersForm() {
 /* ---------- item catalog management ---------- */
 
 function productForm(product, prefillName) {
+  const itemCode = product ? itemCodeMap(state.products)[product.id] : '';
   openModal(
-    product ? `Edit item${product.item_code ? ' #' + product.item_code : ''}` : 'Add item',
+    product ? `Edit item${itemCode ? ' ' + itemCode : ''}` : 'Add item',
     `
-    ${product && product.item_code ? `<div class="hint" style="margin-bottom:0">Item number <b>#${product.item_code}</b> · assigned automatically, never changes</div>` : ''}
+    ${itemCode ? `<div class="hint" style="margin-bottom:0">Item code <b>${itemCode}</b> · main category ${itemCode.split('-')[0]}, item ${itemCode.split('-')[1]}</div>` : ''}
     <label>Item name <input name="name" required value="${esc(product ? product.name : prefillName || '')}" placeholder="e.g. Spice LD Cover" /></label>
     <label>Size <input name="size" value="${esc(product ? product.size : '')}" placeholder="e.g. 1 kg, 10x12, Triple Zero" /></label>
     <label>Selling price (₹, editable on each sale) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>
