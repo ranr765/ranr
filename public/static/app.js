@@ -1642,8 +1642,8 @@ function noteForm() {
   openModal(
     'Quick note',
     `
-    <label>What should you remember? <span class="muted" style="font-weight:400">(type @ to tag a shop or supplier)</span>
-      <textarea name="note" rows="3" placeholder="e.g. @Krishna Bakery wants 5 kg Spice covers Friday"></textarea>
+    <label>What should you remember? <span class="muted" style="font-weight:400">(@ tags a shop · # picks an item)</span>
+      <textarea name="note" rows="3" placeholder="e.g. @Krishna Bakery wants 5 #Spice LD Cover 1 kg Friday"></textarea>
     </label>
     <div class="mention-list hidden" data-mentions></div>`,
     async (fd, close) => {
@@ -1657,7 +1657,7 @@ function noteForm() {
 }
 
 async function wireMentions() {
-  if (!state.customers.length && !state.suppliers.length) {
+  if (!state.products.length || (!state.customers.length && !state.suppliers.length)) {
     try { await loadParties(); } catch (e) { /* offline lists are fine */ }
   }
   const root = $('#modal-root');
@@ -1669,16 +1669,63 @@ async function wireMentions() {
     ...state.suppliers.map((p) => ({ ...p, kind: 'Supplier' })),
   ];
 
+  // the token being typed: @… tags a shop/supplier, #… picks a catalog item
   const activeToken = () => {
     const upto = ta.value.slice(0, ta.selectionStart);
-    const m = /@([^@\n]*)$/.exec(upto);
-    return m ? { query: m[1].trimStart(), start: upto.length - m[0].length } : null;
+    const m = /([@#])([^@#\n]*)$/.exec(upto);
+    return m ? { trigger: m[1], query: m[2].trimStart(), start: upto.length - m[0].length } : null;
+  };
+
+  const insert = (text) => {
+    const tok = activeToken();
+    if (!tok) return;
+    const before = ta.value.slice(0, tok.start);
+    const after = ta.value.slice(ta.selectionStart);
+    ta.value = before + text + ' ' + after;
+    const pos = (before + text + ' ').length;
+    ta.setSelectionRange(pos, pos);
+    ta.focus();
+    list.classList.add('hidden');
   };
 
   const refresh = () => {
     const tok = activeToken();
     if (!tok) return list.classList.add('hidden');
     const q = tok.query.toLowerCase();
+
+    if (tok.trigger === '#') {
+      // product picker: match on name, size or code — "cup" → the cup items
+      const matches = (state.products || [])
+        .filter((p) => {
+          const code = p.sku || skuFor(p.name, p.size);
+          const hay = `${p.name} ${p.size} ${code}`.toLowerCase();
+          const tight = hay.replace(/\s+/g, '');
+          return !q || hay.includes(q) || tight.includes(q);
+        })
+        .slice(0, 8);
+      if (!matches.length) return list.classList.add('hidden');
+      list.classList.remove('hidden');
+      list.innerHTML = matches
+        .map((p, i) => {
+          const code = p.sku || skuFor(p.name, p.size);
+          return `
+          <button type="button" class="mention-item" data-mi="${i}">
+            <span class="li-code">${esc(code)}</span>
+            <span class="mention-name">${esc(`${p.name} ${p.size}`.trim())}</span>
+            <span class="mention-kind">${p.sale_price > 0 ? '₹' + p.sale_price : 'Item'}</span>
+          </button>`;
+        })
+        .join('');
+      $$('.mention-item', list).forEach((btn) => {
+        btn.onclick = () => {
+          const p = matches[Number(btn.dataset.mi)];
+          insert('#' + `${p.name} ${p.size}`.trim());
+        };
+      });
+      return;
+    }
+
+    // @ — shops & suppliers
     const matches = parties
       .filter((p) => !q || p.name.toLowerCase().includes(q) || (p.place || '').toLowerCase().includes(q))
       .slice(0, 6);
@@ -1695,18 +1742,7 @@ async function wireMentions() {
       )
       .join('');
     $$('.mention-item', list).forEach((btn) => {
-      btn.onclick = () => {
-        const p = matches[Number(btn.dataset.mi)];
-        const tok2 = activeToken();
-        if (!tok2) return;
-        const before = ta.value.slice(0, tok2.start);
-        const after = ta.value.slice(ta.selectionStart);
-        ta.value = before + '@' + p.name + ' ' + after;
-        const pos = (before + '@' + p.name + ' ').length;
-        ta.setSelectionRange(pos, pos);
-        ta.focus();
-        list.classList.add('hidden');
-      };
+      btn.onclick = () => insert('@' + matches[Number(btn.dataset.mi)].name);
     });
   };
 
