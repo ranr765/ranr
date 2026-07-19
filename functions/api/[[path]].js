@@ -24,6 +24,44 @@ const isMonth = (s) => /^\d{4}-\d{2}$/.test(s)
 
 const round2 = (n) => Math.round(n * 100) / 100
 
+// ---------- item code (SKU) — mirrors public/static/app.js skuFor() ----------
+
+const SKU_MAP = {
+  'Spice LD Cover': ['LDC', 'SPICE'], 'Money Gold LD Cover': ['LDC', 'GOLD'], 'Gulf LD Cover': ['LDC', 'GULF'], 'Fine Pack LD Cover': ['LDC', 'FINE'],
+  'Elite HM Cover': ['HMC', 'ELITE'], 'JM HM Cover': ['HMC', 'JM'], 'Softy HM Cover': ['HMC', 'SOFTY'], 'Zamkudi HM Cover': ['HMC', 'ZAM'],
+  'PP Cover Nice': ['PPC', 'NICE'], 'PP Cover Single T': ['PPC', 'ST'], 'PP Cover Double T': ['PPC', 'DT'], 'Non Woven Cover': ['NWC', ''],
+  'Bio Ecowin Carry Bag': ['BAG', 'BIOECO'], 'King Carry Bag': ['BAG', 'KING'], 'Palmtree Carry Bag': ['BAG', 'PALM'], 'Power Carry Bag': ['BAG', 'POWER'], 'Superdiamond Carry Bag': ['BAG', 'SDMND'], 'World Cup Carry Bag': ['BAG', 'WCUP'], 'Garbage Bag': ['GBAG', ''],
+  'Juice Glass': ['GLS', 'JUICE'], 'Juice Glass with Lid': ['GLS', 'JUICELID'], 'Paper Glass Bio': ['GLS', 'PAPBIO'], 'Paper Glass Normal': ['GLS', 'PAPER'], 'Plastic Glass': ['GLS', 'PLAS'], 'Plastic Glass Hard': ['GLS', 'PLASHARD'],
+  'Ice Cup': ['CUP', 'ICE'], 'Mayonnaise Cup': ['CUP', 'MAYO'], 'Aluminium Container': ['CON', 'ALU'], 'Plastic Container Rectangle': ['CON', 'PRECT'], 'Plastic Container Round': ['CON', 'PRND'],
+  'Aluminium Foil': ['FOIL', ''], 'Cling Film': ['FILM', 'CLING'], 'Cling Film Normal': ['FILM', 'CLINGN'], 'Stretch Film': ['FILM', 'STRETCH'],
+  'Neck Roll': ['ROLL', 'NECK'], 'Roll Normal': ['ROLL', 'NORMAL'], 'Saree Roll': ['ROLL', 'SAREE'], 'Shawarma Roll': ['ROLL', 'SHAW'],
+  'Brown Paper': ['PAPR', 'BROWN'], 'Butter Paper': ['PAPR', 'BUTTER'], 'JM Leaf': ['LEAF', 'JM'], 'SAS Bio Leaf': ['LEAF', 'SASBIO'], 'SAS Normal Leaf': ['LEAF', 'SAS'],
+  'Plate': ['PLT', ''], 'VIP Plate': ['PLT', 'VIP'], 'Sheet Nice': ['SHT', 'NICE'], 'Sheet Normal': ['SHT', 'NORMAL'], 'Silver Pouch': ['POUCH', 'SILVER'], 'Standing Pouch': ['POUCH', 'STAND'],
+  'Tissue Box': ['TIS', 'BOX'], 'Tissue Kitchen': ['TIS', 'KITCHEN'], 'Tissue Polo': ['TIS', 'POLO'], 'Tissue Prime': ['TIS', 'PRIME'], 'Tissue Rissun': ['TIS', 'RISSUN'],
+  'Cap': ['CAP', ''], 'Gloves Normal': ['GLOV', 'NORMAL'], 'Gloves Surgical': ['GLOV', 'SURG'], 'Mask': ['MASK', ''], 'Onion Net': ['NET', 'ONION'], 'Rubber Band': ['RBAND', ''], 'Spoon': ['SPOON', ''], 'Straw': ['STRAW', ''],
+}
+const SKU_SIZE_WORD = { Small: 'SML', Medium: 'MED', Large: 'LRG', Big: 'BIG', 'Triple Zero': '000', '1/2 kg': 'HALFKG' }
+function skuSize(size) {
+  const s = String(size || '').trim()
+  if (!s) return ''
+  if (SKU_SIZE_WORD[s]) return SKU_SIZE_WORD[s]
+  return s
+    .replace(/(\d+)\s*kg/i, '$1KG').replace(/(\d+)\s*gm/i, '$1G').replace(/(\d+)\s*ml/i, '$1ML')
+    .replace(/(\d+)\s*mtr/i, '$1MTR').replace(/(\d+)\s*nos/i, '$1NOS').replace(/(\d+)\s*inch/i, '$1IN')
+    .replace(/(\d+)\s*x\s*(\d+)/i, '$1X$2')
+    .toUpperCase().replace(/\s+/g, '')
+}
+function skuFor(name, size) {
+  let pfx, brand
+  if (SKU_MAP[name]) [pfx, brand] = SKU_MAP[name]
+  else {
+    const words = String(name || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter(Boolean)
+    pfx = words.length > 1 ? words.map((w) => w[0]).join('').slice(0, 4) : (words[0] || 'ITM').slice(0, 4)
+    brand = ''
+  }
+  return [pfx, brand, skuSize(size)].filter(Boolean).join('-')
+}
+
 // ---------- auth ----------
 
 const SESSION_COOKIE = 'ss_session'
@@ -1095,21 +1133,22 @@ export async function onRequest(context) {
           .prepare('SELECT COALESCE(MAX(item_code), 0) + 1 AS next FROM products')
           .first()
         const itemCode = codeRow ? num(codeRow.next) : 1
+        const sku = skuFor(name, str(b.size))
         const r = await db
           .prepare(
-            'INSERT INTO products (name, size, sale_price, purchase_price, item_code) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO products (name, size, sale_price, purchase_price, item_code, sku) VALUES (?, ?, ?, ?, ?, ?)'
           )
-          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), itemCode)
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), itemCode, sku)
           .run()
-        return json({ id: r.meta.last_row_id, item_code: itemCode }, 201)
+        return json({ id: r.meta.last_row_id, item_code: itemCode, sku }, 201)
       }
       if (method === 'PUT' && id) {
         const b = await readBody()
         const name = str(b.name)
         if (!name) return json({ error: 'Item name is required' }, 400)
         await db
-          .prepare('UPDATE products SET name = ?, size = ?, sale_price = ?, purchase_price = ? WHERE id = ?')
-          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), id)
+          .prepare('UPDATE products SET name = ?, size = ?, sale_price = ?, purchase_price = ?, sku = ? WHERE id = ?')
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), skuFor(name, str(b.size)), id)
           .run()
         return json({ ok: true })
       }
