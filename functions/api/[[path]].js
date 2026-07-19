@@ -1091,11 +1091,17 @@ export async function onRequest(context) {
         const b = await readBody()
         const name = str(b.name)
         if (!name) return json({ error: 'Item name is required' }, 400)
+        const codeRow = await db
+          .prepare('SELECT COALESCE(MAX(item_code), 0) + 1 AS next FROM products')
+          .first()
+        const itemCode = codeRow ? num(codeRow.next) : 1
         const r = await db
-          .prepare('INSERT INTO products (name, size, sale_price, purchase_price) VALUES (?, ?, ?, ?)')
-          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0))
+          .prepare(
+            'INSERT INTO products (name, size, sale_price, purchase_price, item_code) VALUES (?, ?, ?, ?, ?)'
+          )
+          .bind(name, str(b.size), Math.max(num(b.sale_price), 0), Math.max(num(b.purchase_price), 0), itemCode)
           .run()
-        return json({ id: r.meta.last_row_id }, 201)
+        return json({ id: r.meta.last_row_id, item_code: itemCode }, 201)
       }
       if (method === 'PUT' && id) {
         const b = await readBody()

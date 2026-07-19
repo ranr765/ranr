@@ -564,6 +564,8 @@ main {
 
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
+.item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* payment method selector + badges */
 .pay-modes { display: flex; gap: 8px; }
 .pay-modes .pay-mode {
