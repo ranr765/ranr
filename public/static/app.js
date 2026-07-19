@@ -44,19 +44,57 @@ function fmtDate(s) {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
-/* Hierarchical item code "MM-SS": main category (product name) — sub-item
-   (size within that name). Derived from the catalog order (name, id), so each
-   name-group shares the MM and the sizes run SS = 01, 02, … within it. */
-const pad2 = (n) => String(n).padStart(2, '0');
-function itemCodeMap(products) {
-  const map = {};
-  let cat = 0, sub = 0, last = null;
-  for (const p of products || []) {
-    if (p.name !== last) { cat++; sub = 0; last = p.name; }
-    sub++;
-    map[p.id] = pad2(cat) + '-' + pad2(sub);
-  }
-  return map;
+/* Professional item code (SKU): CATEGORY-BRAND-SIZE, e.g. LDC-SPICE-1KG.
+   Derived only from the item's own name + size via a fixed map, so a code
+   never changes when other items are added/removed — it's permanent per item.
+   New product names not in the map fall back to initials of the name. */
+const SKU_MAP = {
+  'Spice LD Cover': ['LDC', 'SPICE'], 'Money Gold LD Cover': ['LDC', 'GOLD'], 'Gulf LD Cover': ['LDC', 'GULF'], 'Fine Pack LD Cover': ['LDC', 'FINE'],
+  'Elite HM Cover': ['HMC', 'ELITE'], 'JM HM Cover': ['HMC', 'JM'], 'Softy HM Cover': ['HMC', 'SOFTY'], 'Zamkudi HM Cover': ['HMC', 'ZAM'],
+  'PP Cover Nice': ['PPC', 'NICE'], 'PP Cover Single T': ['PPC', 'ST'], 'PP Cover Double T': ['PPC', 'DT'],
+  'Non Woven Cover': ['NWC', ''],
+  'Bio Ecowin Carry Bag': ['BAG', 'BIOECO'], 'King Carry Bag': ['BAG', 'KING'], 'Palmtree Carry Bag': ['BAG', 'PALM'], 'Power Carry Bag': ['BAG', 'POWER'], 'Superdiamond Carry Bag': ['BAG', 'SDMND'], 'World Cup Carry Bag': ['BAG', 'WCUP'],
+  'Garbage Bag': ['GBAG', ''],
+  'Juice Glass': ['GLS', 'JUICE'], 'Juice Glass with Lid': ['GLS', 'JUICELID'], 'Paper Glass Bio': ['GLS', 'PAPBIO'], 'Paper Glass Normal': ['GLS', 'PAPER'], 'Plastic Glass': ['GLS', 'PLAS'], 'Plastic Glass Hard': ['GLS', 'PLASHARD'],
+  'Ice Cup': ['CUP', 'ICE'], 'Mayonnaise Cup': ['CUP', 'MAYO'],
+  'Aluminium Container': ['CON', 'ALU'], 'Plastic Container Rectangle': ['CON', 'PRECT'], 'Plastic Container Round': ['CON', 'PRND'],
+  'Aluminium Foil': ['FOIL', ''], 'Cling Film': ['FILM', 'CLING'], 'Cling Film Normal': ['FILM', 'CLINGN'], 'Stretch Film': ['FILM', 'STRETCH'],
+  'Neck Roll': ['ROLL', 'NECK'], 'Roll Normal': ['ROLL', 'NORMAL'], 'Saree Roll': ['ROLL', 'SAREE'], 'Shawarma Roll': ['ROLL', 'SHAW'],
+  'Brown Paper': ['PAPR', 'BROWN'], 'Butter Paper': ['PAPR', 'BUTTER'],
+  'JM Leaf': ['LEAF', 'JM'], 'SAS Bio Leaf': ['LEAF', 'SASBIO'], 'SAS Normal Leaf': ['LEAF', 'SAS'],
+  'Plate': ['PLT', ''], 'VIP Plate': ['PLT', 'VIP'],
+  'Sheet Nice': ['SHT', 'NICE'], 'Sheet Normal': ['SHT', 'NORMAL'],
+  'Silver Pouch': ['POUCH', 'SILVER'], 'Standing Pouch': ['POUCH', 'STAND'],
+  'Tissue Box': ['TIS', 'BOX'], 'Tissue Kitchen': ['TIS', 'KITCHEN'], 'Tissue Polo': ['TIS', 'POLO'], 'Tissue Prime': ['TIS', 'PRIME'], 'Tissue Rissun': ['TIS', 'RISSUN'],
+  'Cap': ['CAP', ''], 'Gloves Normal': ['GLOV', 'NORMAL'], 'Gloves Surgical': ['GLOV', 'SURG'], 'Mask': ['MASK', ''], 'Onion Net': ['NET', 'ONION'], 'Rubber Band': ['RBAND', ''], 'Spoon': ['SPOON', ''], 'Straw': ['STRAW', ''],
+};
+const SKU_SIZE_WORD = { Small: 'SML', Medium: 'MED', Large: 'LRG', Big: 'BIG', 'Triple Zero': '000', '1/2 kg': 'HALFKG' };
+function skuSize(size) {
+  const s = String(size || '').trim();
+  if (!s) return '';
+  if (SKU_SIZE_WORD[s]) return SKU_SIZE_WORD[s];
+  return s
+    .replace(/(\d+)\s*kg/i, '$1KG').replace(/(\d+)\s*gm/i, '$1G').replace(/(\d+)\s*ml/i, '$1ML')
+    .replace(/(\d+)\s*mtr/i, '$1MTR').replace(/(\d+)\s*nos/i, '$1NOS').replace(/(\d+)\s*inch/i, '$1IN')
+    .replace(/(\d+)\s*x\s*(\d+)/i, '$1X$2')
+    .toUpperCase().replace(/\s+/g, '');
+}
+function skuPrefix(name) {
+  if (SKU_MAP[name]) return SKU_MAP[name];
+  // fallback for a new, unmapped name: initials (or first word) → e.g. "Foo Bar" → FB
+  const words = String(name || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter(Boolean);
+  const pfx = words.length > 1 ? words.map((w) => w[0]).join('').slice(0, 4) : (words[0] || 'ITM').slice(0, 4);
+  return [pfx, ''];
+}
+// full SKU for one item
+function skuFor(name, size) {
+  const [pfx, brand] = skuPrefix(name);
+  return [pfx, brand, skuSize(size)].filter(Boolean).join('-');
+}
+// category-level code for a product name (no size), e.g. "LDC-SPICE"
+function skuGroup(name) {
+  const [pfx, brand] = skuPrefix(name);
+  return [pfx, brand].filter(Boolean).join('-');
 }
 
 function fmtTimeIST(createdAt) {
@@ -477,14 +515,13 @@ function wireItemPicker(mode, initialLines) {
     });
   };
 
-  const codes = itemCodeMap(state.products);
   const productCombo = wireCombo(
     'li_product',
     state.products.map((p) => ({
       value: p.id,
-      // "12-03 Spice LD Cover 1 kg" — the code is searchable; the stored line
-      // still uses just name+size (below), so price-book matching is unchanged.
-      label: `${codes[p.id] ? codes[p.id] + ' ' : ''}${p.name} ${p.size}`.trim(),
+      // "LDC-SPICE-1KG Spice LD Cover 1 kg" — searchable by code or name; the
+      // stored line still uses just name+size (below), so P&L matching is unchanged.
+      label: `${skuFor(p.name, p.size)} ${p.name} ${p.size}`.trim(),
       sub: priceOf(p) ? fmtMoney(priceOf(p)) : '',
     })),
     {
@@ -925,19 +962,18 @@ async function viewParties() {
   state.suppliers = suppliers;
   state.products = products;
 
-  const codes = itemCodeMap(products);
   const groups = {};
   for (const p of products) (groups[p.name] = groups[p.name] || []).push(p);
   const itemsHtml = Object.entries(groups)
     .map(
       ([name, list]) => `
       <div class="item-group">
-        <div class="item-group-name">${codes[list[0].id] ? '<span class="cat-no">' + codes[list[0].id].split('-')[0] + '</span> ' : ''}${esc(name)}</div>
+        <div class="item-group-name"><span class="cat-no">${esc(skuGroup(name))}</span> ${esc(name)}</div>
         <div class="item-chips">
           ${list
             .map(
               (p) =>
-                `<button class="chip item-chip" data-id="${p.id}"><span class="item-no">${codes[p.id] || '—'}</span> ${esc(p.size) || '—'}${p.sale_price > 0 ? ' · ₹' + p.sale_price : ''}</button>`
+                `<button class="chip item-chip" data-id="${p.id}"><span class="item-no">${esc(skuFor(p.name, p.size))}</span>${p.sale_price > 0 ? ' · ₹' + p.sale_price : ''}</button>`
             )
             .join('')}
         </div>
@@ -2141,11 +2177,11 @@ function importCustomersForm() {
 /* ---------- item catalog management ---------- */
 
 function productForm(product, prefillName) {
-  const itemCode = product ? itemCodeMap(state.products)[product.id] : '';
+  const itemCode = product ? skuFor(product.name, product.size) : '';
   openModal(
-    product ? `Edit item${itemCode ? ' ' + itemCode : ''}` : 'Add item',
+    product ? `Edit item ${itemCode}` : 'Add item',
     `
-    ${itemCode ? `<div class="hint" style="margin-bottom:0">Item code <b>${itemCode}</b> · main category ${itemCode.split('-')[0]}, item ${itemCode.split('-')[1]}</div>` : ''}
+    ${itemCode ? `<div class="hint" style="margin-bottom:0">Item code <b>${esc(itemCode)}</b> · generated from the name & size</div>` : ''}
     <label>Item name <input name="name" required value="${esc(product ? product.name : prefillName || '')}" placeholder="e.g. Spice LD Cover" /></label>
     <label>Size <input name="size" value="${esc(product ? product.size : '')}" placeholder="e.g. 1 kg, 10x12, Triple Zero" /></label>
     <label>Selling price (₹, editable on each sale) <input type="number" name="sale_price" min="0" step="0.01" inputmode="decimal" value="${product && product.sale_price > 0 ? product.sale_price : ''}" placeholder="Auto-fills sale amount when picked" /></label>
