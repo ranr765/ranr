@@ -96,6 +96,13 @@ function skuGroup(name) {
   const [pfx, brand] = skuPrefix(name);
   return [pfx, brand].filter(Boolean).join('-');
 }
+// SKU for a saved bill line whose label is "name size" — matches it back to a
+// catalog item so the code shows on bills too. '' for hand-typed items.
+function labelSku(label) {
+  const t = String(label || '').trim();
+  const p = (state.products || []).find((x) => `${x.name} ${x.size}`.trim() === t);
+  return p ? p.sku || skuFor(p.name, p.size) : '';
+}
 
 function fmtTimeIST(createdAt) {
   if (!createdAt) return '';
@@ -496,6 +503,7 @@ function wireItemPicker(mode, initialLines) {
         (l, i) => `
         <div class="li-item">
           <div class="li-item-main">
+            ${labelSku(l.label) ? `<span class="li-code">${esc(labelSku(l.label))}</span>` : ''}
             <b>${esc(l.label)}</b>
             <span>${l.qty} × ${fmtMoney(l.rate)}</span>
           </div>
@@ -1064,9 +1072,13 @@ function shopHistoryRows(data) {
     </div>` +
     data.bills
       .map((b) => {
-        const itemLines = (b.items ? b.items.split(/,\s*/) : ['Goods'])
-          .map((li) => `<div class="hist-item">• ${esc(li)}</div>`)
-          .join('');
+        const itemLines =
+          parseItemLines(b.items)
+            .map((l) => {
+              const c = labelSku(l.label);
+              return `<div class="hist-item">${c ? `<span class="li-code">${esc(c)}</span> ` : '• '}${esc(l.label)} — ${l.qty} × ${fmtMoney(l.rate)}</div>`;
+            })
+            .join('') || '<div class="hist-item">• Goods</div>';
         const status = b.settled
           ? '<span class="hist-paid">✓ Paid</span>'
           : `<span class="hist-due ${b.overdue ? 'bad' : 'pend'}">${b.overdue ? '⚠️ ' : ''}${fmtMoney(b.balance)} due</span>`;

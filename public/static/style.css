@@ -565,6 +565,20 @@ main {
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
 .item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.li-code {
+  display: inline-block;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.li-item .li-code { margin-bottom: 2px; }
 .cat-no {
   display: inline-block;
   min-width: 24px;
