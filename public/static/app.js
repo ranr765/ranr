@@ -15,6 +15,10 @@ const EXPENSE_CATEGORIES = [
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+// per-screen HTML cache for instant navigation: paint the last view for a tab
+// immediately, then refresh in the background. Cleared on any data write (api()).
+let viewCache = {};
+
 const state = {
   tab: 'home',
   entriesKind: 'sales',
@@ -135,6 +139,9 @@ async function api(path, opts = {}) {
     throw new Error(data.error || 'Please log in');
   }
   if (!res.ok) throw new Error(data.error || 'Something went wrong');
+  // any successful write makes the cached screens stale — drop them so the next
+  // render fetches fresh data instead of showing an out-of-date view
+  if (opts.method && opts.method !== 'GET') viewCache = {};
   return data;
 }
 
@@ -2602,19 +2609,35 @@ function wireView() {
   }
 }
 
+const viewKey = () => [state.tab, state.reportMonth, state.entriesKind, state.daylogDate].join('|');
+
 async function render() {
   const view = $('#view');
-  view.innerHTML = '<div class="loading">Loading…</div>';
+  const key = viewKey();
+  const cached = viewCache[key];
+  if (cached) {
+    // instant paint of the last-known screen so tapping feels immediate
+    view.innerHTML = cached;
+    wireView();
+  } else {
+    view.innerHTML = '<div class="loading">Loading…</div>';
+  }
   try {
     const html =
       state.tab === 'home' ? await viewHome()
       : state.tab === 'entries' ? await viewEntries()
       : state.tab === 'parties' ? await viewParties()
       : await viewReport();
-    view.innerHTML = html;
-    wireView();
+    viewCache[key] = html;
+    // only repaint if we're still on the same screen (user may have moved on)
+    if (viewKey() === key) {
+      view.innerHTML = html;
+      wireView();
+    }
   } catch (err) {
-    view.innerHTML = `<div class="empty">⚠️ ${esc(err.message)}<br/><button class="btn-small" onclick="render()">Retry</button></div>`;
+    if (!cached) {
+      view.innerHTML = `<div class="empty">⚠️ ${esc(err.message)}<br/><button class="btn-small" onclick="render()">Retry</button></div>`;
+    }
   }
 }
 
