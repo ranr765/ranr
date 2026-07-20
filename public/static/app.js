@@ -1432,7 +1432,28 @@ async function viewReport() {
   state.lastDaylog = daylog;
   const products = bundle.products;
   const psum = bundle.profitSummary;
+  const ssum = bundle.salesSummary;
   state.products = products;
+
+  const salesTile = (label, v) => `
+    <div class="stat">
+      <div class="stat-label">${label}</div>
+      <div class="stat-val good">${fmtMoney(v.total)}</div>
+      <div class="stat-sub">${v.count} ${v.count === 1 ? 'bill' : 'bills'}</div>
+    </div>`;
+  const salesCard = ssum
+    ? `
+  <section class="card">
+    <h3>Sales at a glance</h3>
+    <div class="stat-row">
+      ${salesTile('Today', ssum.day)}
+      ${salesTile('This week', ssum.week)}
+      ${salesTile('This month', ssum.month)}
+      ${salesTile('Year', ssum.ytd)}
+    </div>
+    <div class="hint" style="margin:8px 0 0">Total billed to shops in each period</div>
+  </section>`
+    : '';
 
   const glanceTile = (label, v) => `
     <div class="stat">
@@ -1662,6 +1683,8 @@ async function viewReport() {
     .join('');
 
   return `
+  ${salesCard}
+
   ${glanceCard}
 
   <section class="card">

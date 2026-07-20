@@ -923,6 +923,37 @@ async function profitSummaryData(db, date) {
   return { date, day, week, month, ytd }
 }
 
+// Sales totals for day / week / month / year-to-date (mirrors the profit ranges)
+async function salesSummaryData(db, date) {
+  const [y, m, d] = date.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const monday = new Date(dt)
+  monday.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7))
+  const ranges = {
+    day: [date, date],
+    week: [monday.toISOString().slice(0, 10), date],
+    month: [date.slice(0, 7) + '-01', date],
+    ytd: [date.slice(0, 4) + '-01-01', date],
+  }
+  const calc = async ([from, to]) => {
+    const row = await db
+      .prepare(
+        `SELECT COALESCE(SUM(total_amount),0) AS total, COALESCE(SUM(paid_amount),0) AS paid, COUNT(*) AS count
+         FROM sales WHERE sale_date >= ? AND sale_date <= ?`
+      )
+      .bind(from, to)
+      .first()
+    return { total: round2(num(row.total)), paid: round2(num(row.paid)), count: num(row.count) }
+  }
+  const [day, week, month, ytd] = await Promise.all([
+    calc(ranges.day),
+    calc(ranges.week),
+    calc(ranges.month),
+    calc(ranges.ytd),
+  ])
+  return { date, day, week, month, ytd }
+}
+
 // ---------- stock registry ----------
 
 const parseItemQtys = (itemsStr) => {
@@ -1291,7 +1322,7 @@ export async function onRequest(context) {
       const daylogDate = str(url.searchParams.get('daylog') || '')
       if (!isMonth(month) || !isDate(date) || !isDate(daylogDate))
         return json({ error: 'month, date and daylog required' }, 400)
-      const [report, trend, bal, monthSales, daylog, products, profitSummary] = await Promise.all([
+      const [report, trend, bal, monthSales, daylog, products, profitSummary, salesSummary] = await Promise.all([
         reportData(db, month),
         trendData(db, month),
         balancesData(db),
@@ -1303,8 +1334,9 @@ export async function onRequest(context) {
         daylogData(db, daylogDate),
         db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id').all().then((r) => r.results),
         profitSummaryData(db, date),
+        salesSummaryData(db, date),
       ])
-      return json({ report, trend, balances: bal, monthSales, daylog, products, profitSummary })
+      return json({ report, trend, balances: bal, monthSales, daylog, products, profitSummary, salesSummary })
     }
 
 
