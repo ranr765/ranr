@@ -231,6 +231,7 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
   };
 
   const show = (q) => {
+    const wasHidden = list.classList.contains('hidden');
     // word-wise match: "spice 1kg" finds "Spice LD Cover 1kg"
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const match = words.length
@@ -258,6 +259,9 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
         )
         .join('');
     list.classList.remove('hidden');
+    // on first open, bring the whole list into view (it's in-flow, so the modal
+    // can scroll to it) — do it once, not on every keystroke
+    if (wasHidden) setTimeout(() => list.scrollIntoView({ block: 'nearest' }), 0);
     $$('.combo-opt', list).forEach((b) => {
       // pointerdown fires before the input's blur, so the tap always lands
       b.onpointerdown = (e) => {

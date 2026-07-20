@@ -669,17 +669,17 @@ main {
 }
 .combo .combo-input:focus { outline: none; border-color: var(--red); }
 .combo-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 40;
+  /* in-flow (not absolute) so the modal can scroll to reveal every option —
+     an absolutely-positioned list got clipped by the modal's overflow, hiding
+     the items past the bottom edge. */
+  margin-top: 4px;
   background: var(--card);
   border: 1.5px solid var(--line);
   border-radius: 12px;
-  max-height: 264px;
+  max-height: 46vh;
   overflow-y: auto;
-  box-shadow: 0 14px 34px rgba(28, 25, 23, 0.16);
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
 }
 .combo-opt {
   display: flex;
