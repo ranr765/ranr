@@ -245,7 +245,7 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
         .slice(0, 80)
         .map(
           (o) => `<button type="button" class="combo-opt" data-v="${esc(String(o.value))}">
-            <span>${esc(o.label)}</span>${o.sub ? `<span class="combo-sub">${esc(o.sub)}</span>` : ''}
+            <span>${esc(o.label)}</span>${o.sub ? `<span class="combo-sub ${esc(o.subClass || '')}">${esc(o.sub)}</span>` : ''}
           </button>`
         )
         .join('') +
@@ -531,15 +531,31 @@ function wireItemPicker(mode, initialLines) {
     });
   };
 
+  // stock balance per product, so the picker shows "how many are left"
+  const stockByPid = {};
+  for (const s of state.stock || []) stockByPid[s.product_id] = s;
+  const stockBadge = (p) => {
+    const s = stockByPid[p.id];
+    if (!s || !s.tracked) return { text: '', cls: '' };
+    if (s.balance <= 0.005) return { text: 'Out of stock', cls: 'bad' };
+    if (s.balance <= 5) return { text: `${s.balance} left`, cls: 'pend' };
+    return { text: `${s.balance} left`, cls: 'good' };
+  };
+
   const productCombo = wireCombo(
     'li_product',
-    state.products.map((p) => ({
-      value: p.id,
-      // "LDC-SPICE-1KG Spice LD Cover 1 kg" — searchable by code or name; the
-      // stored line still uses just name+size (below), so P&L matching is unchanged.
-      label: `${skuFor(p.name, p.size)} ${p.name} ${p.size}`.trim(),
-      sub: priceOf(p) ? fmtMoney(priceOf(p)) : '',
-    })),
+    state.products.map((p) => {
+      const priceStr = priceOf(p) ? fmtMoney(priceOf(p)) : '';
+      const sb = stockBadge(p);
+      return {
+        value: p.id,
+        // "LDC-SPICE-1KG Spice LD Cover 1 kg" — searchable by code or name; the
+        // stored line still uses just name+size (below), so P&L matching is unchanged.
+        label: `${skuFor(p.name, p.size)} ${p.name} ${p.size}`.trim(),
+        sub: [sb.text, priceStr].filter(Boolean).join(' · '),
+        subClass: sb.cls,
+      };
+    }),
     {
       specials: [{ value: '__custom__', label: '✏️ Type item name…' }],
       onPick: (v) => {
@@ -787,6 +803,7 @@ async function viewHome() {
   state.customers = bundle.customers;
   state.suppliers = bundle.suppliers;
   state.products = bundle.products;
+  state.stock = bundle.stock || state.stock;
   state.pendingOrders = pendingOrders;
   state.notes = notes;
 

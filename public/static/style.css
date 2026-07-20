@@ -700,6 +700,9 @@ main {
 .combo-opt:last-child { border-bottom: none; }
 .combo-opt:active { background: var(--bg); }
 .combo-sub { font-size: 12.5px; color: var(--muted); flex-shrink: 0; }
+.combo-sub.good { color: var(--good); font-weight: 600; }
+.combo-sub.pend { color: var(--pend); font-weight: 600; }
+.combo-sub.bad { color: var(--bad); font-weight: 600; }
 .combo-special { color: var(--red); font-weight: 700; }
 .combo-empty { padding: 11px 12px; font-size: 13.5px; color: var(--muted); }
 

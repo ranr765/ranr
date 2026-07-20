@@ -1304,7 +1304,7 @@ export async function onRequest(context) {
       const date = str(url.searchParams.get('date') || '')
       const month = str(url.searchParams.get('month') || '')
       if (!isDate(date) || !isMonth(month)) return json({ error: 'date and month required' }, 400)
-      const [today, report, orders, notes, customers, suppliers, products] = await Promise.all([
+      const [today, report, orders, notes, customers, suppliers, products, stock] = await Promise.all([
         todayData(db, date),
         reportData(db, month),
         db.prepare(`SELECT * FROM orders WHERE status = 'pending' ORDER BY order_date, id LIMIT 200`).all().then((r) => r.results),
@@ -1312,8 +1312,9 @@ export async function onRequest(context) {
         db.prepare('SELECT * FROM customers ORDER BY name COLLATE NOCASE').all().then((r) => r.results),
         db.prepare('SELECT * FROM suppliers ORDER BY name COLLATE NOCASE').all().then((r) => r.results),
         db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id').all().then((r) => r.results),
+        stockData(db),
       ])
-      return json({ today, report, orders, notes, customers, suppliers, products })
+      return json({ today, report, orders, notes, customers, suppliers, products, stock })
     }
 
     if (resource === 'bundle' && id === 'report' && method === 'GET') {
