@@ -27,6 +27,7 @@ const state = {
   customers: [],
   suppliers: [],
   products: [],
+  stock: [],
   user: null,
 };
 
@@ -1282,6 +1283,140 @@ function wireDeleteButton(btnId, kind, id, label, noun) {
       toast(e.message, false);
     }
   };
+}
+
+/* ---------- stock registry ---------- */
+
+async function viewStock() {
+  const [rows, products] = await Promise.all([api('/api/stock'), api('/api/products')]);
+  state.products = products;
+  state.stock = rows;
+
+  const tracked = rows.filter((r) => r.tracked);
+  const out = tracked.filter((r) => r.balance <= 0.005).length;
+  const low = tracked.filter((r) => r.balance > 0.005 && r.balance <= 5).length;
+
+  const groups = {};
+  for (const r of rows) (groups[r.name] = groups[r.name] || []).push(r);
+  const stockRows = Object.entries(groups)
+    .map(
+      ([name, list]) => `
+      <div class="item-group">
+        <div class="item-group-name"><span class="cat-no">${esc(skuGroup(name))}</span> ${esc(name)}</div>
+        <div class="rows">
+          ${list
+            .map((r) => {
+              const cls = !r.tracked ? 'muted' : r.balance <= 0.005 ? 'bad' : r.balance <= 5 ? 'pend' : 'good';
+              const bal = !r.tracked
+                ? 'Not counted'
+                : r.balance <= 0.005
+                  ? 'Out of stock'
+                  : `${r.balance} left`;
+              const moves = r.tracked
+                ? `counted ${r.counted}${r.bought ? ' · +' + r.bought + ' bought' : ''}${r.sold ? ' · −' + r.sold + ' sold' : ''}`
+                : 'Tap to set opening count';
+              return `
+              <div class="row stock-row" data-pid="${r.product_id}">
+                <div class="row-main">
+                  <div class="row-title"><span class="li-code">${esc(r.sku)}</span> ${esc(r.size) || '—'}</div>
+                  <div class="row-sub">${moves}</div>
+                </div>
+                <div class="row-amount ${cls}">${bal}</div>
+              </div>`;
+            })
+            .join('')}
+        </div>
+      </div>`
+    )
+    .join('');
+
+  return `
+  <section class="card">
+    <div class="card-head-row">
+      <h3>Stock registry</h3>
+      <button class="btn-small" id="stock-load">&#8686; Load stock</button>
+    </div>
+    <div class="hint">Set your counted stock, then every sale and purchase moves the balance automatically.</div>
+    <div class="stat-row" style="margin-top:10px">
+      <div class="stat"><div class="stat-label">Items tracked</div><div class="stat-val">${tracked.length}</div></div>
+      <div class="stat"><div class="stat-label">Low (≤5)</div><div class="stat-val pend">${low}</div></div>
+      <div class="stat"><div class="stat-label">Out of stock</div><div class="stat-val ${out ? 'bad' : 'muted'}">${out}</div></div>
+    </div>
+  </section>
+  <section class="card">
+    <input class="search-box" id="stock-search" placeholder="🔍 Search item, size or code…" />
+    ${stockRows || '<div class="empty">No items yet</div>'}
+  </section>`;
+}
+
+function setStockForm(row) {
+  openModal(
+    `Set stock — ${row.sku || row.name}`,
+    `
+    <div class="hint" style="margin-bottom:0">${esc(`${row.name} ${row.size}`.trim())}${row.tracked ? ` · now showing ${row.balance} left` : ''}</div>
+    <label>Counted quantity (units you physically have)
+      <input type="number" name="qty" min="0" step="0.01" inputmode="decimal" value="${row.tracked ? row.counted : ''}" placeholder="0" required />
+    </label>
+    <label>Count date <input type="date" name="count_date" value="${todayStr()}" required /></label>`,
+    async (fd, close) => {
+      await api('/api/stock', {
+        method: 'POST',
+        body: JSON.stringify({
+          product_id: row.product_id,
+          qty: parseFloat(fd.get('qty')),
+          count_date: fd.get('count_date'),
+        }),
+      });
+      close();
+      toast('Stock updated ✓');
+      render();
+    }
+  );
+}
+
+/* Paste "code or name = qty" lines to set opening stock in bulk. */
+function importStockForm() {
+  openModal(
+    'Load stock',
+    `
+    <div class="hint" style="margin-bottom:0">One item per line — <b>code or name = quantity</b>.<br/>
+    e.g. <code>LDC-SPICE-1KG = 50</code> or <code>Spice LD Cover 1 kg = 50</code></div>
+    <label>Count date <input type="date" name="count_date" value="${todayStr()}" required /></label>
+    <label>Your stock list
+      <textarea name="list" rows="8" placeholder="LDC-SPICE-1KG = 50&#10;HMC-ZAM-3KG = 20&#10;..."></textarea>
+    </label>`,
+    async (fd, close) => {
+      const lines = String(fd.get('list') || '').split('\n').map((l) => l.trim()).filter(Boolean);
+      const items = [];
+      const unmatched = [];
+      for (const line of lines) {
+        const m = /^(.+?)\s*[=:\t]\s*([\d.]+)\s*$/.exec(line);
+        if (!m) { unmatched.push(line); continue; }
+        const key = m[1].trim().toLowerCase();
+        const qty = parseFloat(m[2]);
+        const p = state.products.find(
+          (x) =>
+            (x.sku || skuFor(x.name, x.size)).toLowerCase() === key ||
+            `${x.name} ${x.size}`.trim().toLowerCase() === key
+        );
+        if (p) items.push({ product_id: p.id, qty });
+        else unmatched.push(line);
+      }
+      if (!items.length) throw new Error('No items matched. Use the exact code or "name size".');
+      const res = await api('/api/stock/import', {
+        method: 'POST',
+        body: JSON.stringify({ items, count_date: fd.get('count_date') }),
+      });
+      close();
+      toast(
+        unmatched.length
+          ? `${res.saved} set · ${unmatched.length} not matched`
+          : `${res.saved} items stocked ✓`,
+        !unmatched.length
+      );
+      render();
+    }
+  );
 }
 
 async function viewReport() {
@@ -2572,6 +2707,32 @@ function wireView() {
     });
   }
 
+  if (state.tab === 'stock') {
+    const s = $('#stock-load');
+    if (s) s.onclick = importStockForm;
+    const search = $('#stock-search');
+    if (search) {
+      search.oninput = () => {
+        const q = search.value.trim().toLowerCase();
+        $$('.item-group', view).forEach((g) => {
+          let anyShown = false;
+          $$('.stock-row', g).forEach((row) => {
+            const hit = !q || row.textContent.toLowerCase().includes(q);
+            row.style.display = hit ? '' : 'none';
+            if (hit) anyShown = true;
+          });
+          g.style.display = anyShown ? '' : 'none';
+        });
+      };
+    }
+    $$('.stock-row', view).forEach((row) => {
+      row.onclick = () => {
+        const r = (state.stock || []).find((x) => String(x.product_id) === row.dataset.pid);
+        if (r) setStockForm(r);
+      };
+    });
+  }
+
   if (state.tab === 'report') {
     $('#report-month').onchange = (e) => {
       state.reportMonth = e.target.value;
@@ -2627,6 +2788,7 @@ async function render() {
       state.tab === 'home' ? await viewHome()
       : state.tab === 'entries' ? await viewEntries()
       : state.tab === 'parties' ? await viewParties()
+      : state.tab === 'stock' ? await viewStock()
       : await viewReport();
     viewCache[key] = html;
     // only repaint if we're still on the same screen (user may have moved on)

@@ -565,6 +565,9 @@ main {
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
 .item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stock-row { cursor: pointer; }
+.stock-row .row-amount { flex-shrink: 0; text-align: right; font-size: 14px; }
+.stock-row .row-amount.pend { color: var(--pend); }
 .li-code {
   display: inline-block;
   background: var(--bg);

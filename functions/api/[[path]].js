@@ -923,6 +923,99 @@ async function profitSummaryData(db, date) {
   return { date, day, week, month, ytd }
 }
 
+// ---------- stock registry ----------
+
+const parseItemQtys = (itemsStr) => {
+  const out = []
+  for (const part of String(itemsStr || '').split(/,\s*/)) {
+    const m = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+    if (m) out.push({ label: m[1].trim().toLowerCase(), qty: parseFloat(m[2]) || 0 })
+  }
+  return out
+}
+
+/**
+ * Per-item stock: latest physical count as the baseline, plus purchases (in) and
+ * minus sales (out) recorded AFTER that count (compared on created_at, so a sale
+ * you ring up right after counting drops the balance immediately). Items with no
+ * count are returned untracked (balance null).
+ */
+async function stockData(db) {
+  const [prodRes, countRes, salesRes, purchRes] = await Promise.all([
+    db.prepare('SELECT id, name, size, sku FROM products ORDER BY name COLLATE NOCASE, id').all(),
+    db.prepare('SELECT product_id, qty, count_date, created_at FROM stock_counts ORDER BY product_id, created_at, id').all(),
+    db.prepare('SELECT items, created_at FROM sales').all(),
+    db.prepare('SELECT items, created_at FROM purchases').all(),
+  ])
+
+  const latest = {} // product_id -> latest count {qty, count_date, created_at}
+  for (const c of countRes.results) latest[c.product_id] = { qty: num(c.qty), count_date: c.count_date, created_at: c.created_at }
+
+  const labelToId = {}
+  for (const p of prodRes.results) labelToId[`${p.name} ${p.size}`.trim().toLowerCase()] = p.id
+
+  const move = (rows, sign, bucket) => {
+    for (const r of rows.results) {
+      for (const l of parseItemQtys(r.items)) {
+        const pid = labelToId[l.label]
+        if (!pid) continue
+        const c = latest[pid]
+        if (!c) continue // untracked item — don't account movements
+        if (String(r.created_at) > String(c.created_at)) bucket[pid] = (bucket[pid] || 0) + sign * l.qty
+      }
+    }
+  }
+  const sold = {}, bought = {}
+  move(salesRes, 1, sold)
+  move(purchRes, 1, bought)
+
+  return prodRes.results.map((p) => {
+    const c = latest[p.id]
+    const s = sold[p.id] || 0
+    const b = bought[p.id] || 0
+    return {
+      product_id: p.id,
+      name: p.name,
+      size: p.size,
+      sku: p.sku || '',
+      tracked: !!c,
+      counted: c ? c.qty : null,
+      count_date: c ? c.count_date : null,
+      sold: round2(s),
+      bought: round2(b),
+      balance: c ? round2(c.qty + b - s) : null,
+    }
+  })
+}
+
+async function setStockCount(db, b) {
+  const pid = Number(b.product_id)
+  if (!pid) return json({ error: 'Item is required' }, 400)
+  const qty = num(b.qty)
+  const date = isDate(str(b.count_date)) ? str(b.count_date) : new Date().toISOString().slice(0, 10)
+  await db
+    .prepare('INSERT INTO stock_counts (product_id, qty, count_date) VALUES (?, ?, ?)')
+    .bind(pid, Math.max(qty, 0), date)
+    .run()
+  return json({ ok: true }, 201)
+}
+
+async function importStockCounts(db, b) {
+  const items = Array.isArray(b.items) ? b.items : []
+  const date = isDate(str(b.count_date)) ? str(b.count_date) : new Date().toISOString().slice(0, 10)
+  let saved = 0
+  for (const it of items) {
+    const pid = Number(it.product_id)
+    if (!pid) continue
+    await db
+      .prepare('INSERT INTO stock_counts (product_id, qty, count_date) VALUES (?, ?, ?)')
+      .bind(pid, Math.max(num(it.qty), 0), date)
+      .run()
+    saved++
+  }
+  return json({ ok: true, saved }, 201)
+}
+
 // ---------- router ----------
 
 export async function onRequest(context) {
@@ -1160,6 +1253,13 @@ export async function onRequest(context) {
 
     if (resource === 'statement' && id && method === 'GET')
       return await customerStatement(db, id, url.searchParams.get('date') || '')
+
+    // stock registry: /api/stock
+    if (resource === 'stock') {
+      if (method === 'GET' && !id) return json(await stockData(db))
+      if (method === 'POST' && id === 'import') return await importStockCounts(db, await readBody())
+      if (method === 'POST' && !id) return await setStockCount(db, await readBody())
+    }
 
     // calculated profit for day / week / month / year-to-date
     if (resource === 'profit-summary' && method === 'GET') {
