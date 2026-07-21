@@ -264,18 +264,22 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
     // Delayed so it runs after the mobile keyboard's own auto-scroll settles.
     if (wasHidden) setTimeout(() => input.scrollIntoView({ block: 'start' }), 250);
     $$('.combo-opt', list).forEach((b) => {
-      // pointerdown fires before the input's blur, so the tap always lands
-      b.onpointerdown = (e) => {
-        e.preventDefault();
-        pick(b.dataset.v);
-      };
+      // 'click' (not pointerdown) so DRAGGING to scroll the list never selects —
+      // the browser suppresses click after a scroll gesture. onPick fires the tap.
+      b.onclick = () => pick(b.dataset.v);
     });
+  };
+
+  const closeList = () => {
+    list.classList.add('hidden');
+    input.value = labelOf(hidden.value); // discard typed text that wasn't picked
   };
 
   const pick = (v) => {
     hidden.value = v;
     input.value = labelOf(v);
     list.classList.add('hidden');
+    input.blur();
     if (onPick) onPick(v);
   };
 
@@ -296,15 +300,16 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
       const first = $('.combo-opt', list);
       if (first && !list.classList.contains('hidden')) pick(first.dataset.v);
     } else if (e.key === 'Escape') {
-      list.classList.add('hidden');
+      closeList();
     }
   };
-  input.onblur = () => {
-    setTimeout(() => {
-      list.classList.add('hidden');
-      input.value = labelOf(hidden.value); // discard typed text that wasn't picked
-    }, 150);
-  };
+  // close the list when tapping anywhere outside this combo (replaces blur-hide,
+  // which used to fire mid-scroll and close the list while you were scrolling it)
+  const overlay = box.closest('.modal-overlay') || document;
+  overlay.addEventListener('pointerdown', (e) => {
+    if (!document.contains(box)) return; // modal gone — listener will drop with it
+    if (!box.contains(e.target) && !list.classList.contains('hidden')) closeList();
+  });
 
   return {
     set: pick,
