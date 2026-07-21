@@ -259,9 +259,10 @@ function wireCombo(name, options, { specials = [], onPick } = {}) {
         )
         .join('');
     list.classList.remove('hidden');
-    // on first open, bring the whole list into view (it's in-flow, so the modal
-    // can scroll to it) — do it once, not on every keystroke
-    if (wasHidden) setTimeout(() => list.scrollIntoView({ block: 'nearest' }), 0);
+    // on first open, pull the search box to the top of the modal so the whole
+    // list has room above the keyboard (otherwise it's crushed into one row).
+    // Delayed so it runs after the mobile keyboard's own auto-scroll settles.
+    if (wasHidden) setTimeout(() => input.scrollIntoView({ block: 'start' }), 250);
     $$('.combo-opt', list).forEach((b) => {
       // pointerdown fires before the input's blur, so the tap always lands
       b.onpointerdown = (e) => {
