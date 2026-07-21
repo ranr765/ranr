@@ -28,6 +28,7 @@ const state = {
   suppliers: [],
   products: [],
   stock: [],
+  shopFilter: 'all',
   user: null,
 };
 
@@ -1059,6 +1060,10 @@ async function viewParties() {
       <div class="shop-history hidden" data-history-for="${p.id}"></div>
     </div>`;
 
+  const pendingCustomers = customers.filter((p) => p.balance > 0.005);
+  const totalPending = pendingCustomers.reduce((a, p) => a + p.balance, 0);
+  const shownCustomers = state.shopFilter === 'pending' ? pendingCustomers : customers;
+
   return `
   <section class="card">
     <div class="card-head-row">
@@ -1070,8 +1075,12 @@ async function viewParties() {
       </div>
     </div>
     <div class="hint">Tap a shop to open its bills by date &middot; tap any bill to edit it &middot; &#129534; = statement for WhatsApp</div>
+    <div class="seg-row">
+      <button class="seg ${state.shopFilter !== 'pending' ? 'active' : ''}" data-shopfilter="all">All (${customers.length})</button>
+      <button class="seg ${state.shopFilter === 'pending' ? 'active' : ''}" data-shopfilter="pending">Pending${pendingCustomers.length ? ` · ${fmtMoney(totalPending)} (${pendingCustomers.length})` : ' (0)'}</button>
+    </div>
     <input class="search-box" id="shop-search" placeholder="🔍 Search shop or place…" />
-    <div class="rows">${customers.map((p) => shopBlock(p)).join('') || '<div class="empty">No shops added yet</div>'}</div>
+    <div class="rows">${shownCustomers.map((p) => shopBlock(p)).join('') || `<div class="empty">${state.shopFilter === 'pending' ? 'No pending amounts — all clear ✓' : 'No shops added yet'}</div>`}</div>
   </section>
   <section class="card">
     <div class="card-head-row">
@@ -2715,6 +2724,12 @@ function wireView() {
     $('#add-customer').onclick = () => addPartyForm('customer');
     $('#add-supplier').onclick = () => addPartyForm('supplier');
     $('#route-btn').onclick = routeModal;
+    $$('[data-shopfilter]', view).forEach((b) => {
+      b.onclick = () => {
+        state.shopFilter = b.dataset.shopfilter;
+        render();
+      };
+    });
     $$('.row-tap', view).forEach((el) => {
       el.onclick = () => {
         const kind = el.dataset.editKind;
@@ -2820,7 +2835,7 @@ function wireView() {
   }
 }
 
-const viewKey = () => [state.tab, state.reportMonth, state.entriesKind, state.daylogDate].join('|');
+const viewKey = () => [state.tab, state.reportMonth, state.entriesKind, state.daylogDate, state.shopFilter].join('|');
 
 async function render() {
   const view = $('#view');
