@@ -1127,7 +1127,8 @@ export async function onRequest(context) {
         const b = await readBody()
         const note = str(b.note)
         if (!note) return json({ error: 'Write something first' }, 400)
-        const r = await db.prepare('INSERT INTO notes (note) VALUES (?)').bind(note).run()
+        const kind = str(b.kind) === 'purchase' ? 'purchase' : 'sale'
+        const r = await db.prepare('INSERT INTO notes (note, kind) VALUES (?, ?)').bind(note, kind).run()
         return json({ id: r.meta.last_row_id }, 201)
       }
       if (method === 'PUT' && id) {

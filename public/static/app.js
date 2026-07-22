@@ -426,7 +426,7 @@ function saleForm(prefill) {
   }
 }
 
-function purchaseForm() {
+function purchaseForm(prefillNote, fromNoteId) {
   openModal(
     'New Purchase',
     `
@@ -458,14 +458,23 @@ function purchaseForm() {
           notes: fd.get('notes'),
         }),
       });
+      if (fromNoteId) await api(`/api/notes/${fromNoteId}`, { method: 'PUT' });
       close();
-      toast('Purchase saved ✓');
+      toast(fromNoteId ? 'Purchase saved — note cleared ✓' : 'Purchase saved ✓');
       render();
     }
   );
-  wirePartyField('supplier', state.suppliers, 'Add new supplier');
+  const supplierCombo = wirePartyField('supplier', state.suppliers, 'Add new supplier');
   wirePaidChips();
   wireItemPicker('purchase');
+  if (prefillNote) {
+    $('#modal-root input[name="notes"]').value = prefillNote;
+    // if the note @-tags a supplier, preselect it
+    const tagged = [...state.suppliers]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find((s) => prefillNote.toLowerCase().includes('@' + s.name.toLowerCase()));
+    if (tagged) supplierCombo.set(String(tagged.id));
+  }
 }
 
 /* line-item builder: same shop buys many products — each becomes a visible
@@ -818,29 +827,38 @@ async function viewHome() {
   state.pendingOrders = pendingOrders;
   state.notes = notes;
 
-  const inboxCard = `
-  <section class="card">
-    <div class="card-head-row">
-      <h3>Inbox${notes.length ? ` (${notes.length})` : ''}</h3>
-      <button class="btn-small reminder-toggle ${reminderOn() ? 'on' : ''}" id="reminder-toggle">
-        ${reminderOn() ? '🔔 Reminder on' : '🔕 Morning reminder'}
-      </button>
-    </div>
-    ${notes.length ? '' : '<div class="hint" style="margin-bottom:0">Empty — tap the red ＋ button (bottom right) to jot a quick note. It waits here until you act on it.</div>'}
-    <div class="rows">
-      ${notes
-        .map(
-          (n) => `
+  const saleNotes = notes.filter((n) => n.kind !== 'purchase');
+  const buyNotes = notes.filter((n) => n.kind === 'purchase');
+
+  const noteRow = (n) => `
         <div class="row note-open row-tap" data-id="${n.id}">
           <div class="row-main">
             <div class="row-title row-wrap" style="font-weight:500">${esc(n.note)}</div>
             <div class="row-sub">${fmtDate(n.created_at.slice(0, 10))} · tap to view &amp; decide</div>
           </div>
           <span class="chev">›</span>
-        </div>`
-        )
-        .join('')}
+        </div>`;
+
+  const inboxCard = `
+  <section class="card">
+    <div class="card-head-row">
+      <h3>Inbox — shop orders${saleNotes.length ? ` (${saleNotes.length})` : ''}</h3>
+      <button class="btn-small reminder-toggle ${reminderOn() ? 'on' : ''}" id="reminder-toggle">
+        ${reminderOn() ? '🔔 Reminder on' : '🔕 Morning reminder'}
+      </button>
     </div>
+    ${saleNotes.length ? '' : '<div class="hint" style="margin-bottom:0">Empty — tap the red ＋ button (bottom right) to jot what a shop asked for. It waits here until you act on it.</div>'}
+    <div class="rows">${saleNotes.map(noteRow).join('')}</div>
+  </section>`;
+
+  const buyInboxCard = `
+  <section class="card">
+    <div class="card-head-row">
+      <h3>Inbox — to buy${buyNotes.length ? ` (${buyNotes.length})` : ''}</h3>
+      <button class="btn-small" id="add-buy-note">＋ Note</button>
+    </div>
+    ${buyNotes.length ? '' : '<div class="hint" style="margin-bottom:0">Empty — note what you need to buy from vendors (e.g. 10 packets from @supplier). Convert it to a purchase when you buy.</div>'}
+    <div class="rows">${buyNotes.map(noteRow).join('')}</div>
   </section>`;
 
   const ordersCard = pendingOrders.length
@@ -902,6 +920,7 @@ async function viewHome() {
     <button class="qa-small" id="qa-payout">&#128184; Pay</button>
   </section>
   ${inboxCard}
+  ${buyInboxCard}
   ${ordersCard}
 
   <section class="card">
@@ -1801,19 +1820,21 @@ async function exportCsv() {
 /* Tap an inbox memo → view it, with two ways forward: convert it into an order,
    or leave it. Closing (or "Keep in inbox") returns to the inbox unchanged. */
 function noteDetailModal(note) {
+  const isBuy = note.kind === 'purchase';
   const { close } = infoModal(
     'Inbox note',
     `
     <div class="note-view">${esc(note.note)}</div>
-    <div class="row-sub" style="margin:0 0 14px">Added ${fmtDate(note.created_at.slice(0, 10))}</div>
-    <button type="button" class="btn-primary" id="nd-order">→ Convert to an order</button>
+    <div class="row-sub" style="margin:0 0 14px">Added ${fmtDate(note.created_at.slice(0, 10))}${isBuy ? ' · to buy' : ' · shop order'}</div>
+    <button type="button" class="btn-primary" id="nd-order">${isBuy ? '→ Convert to a purchase' : '→ Convert to an order'}</button>
     <button type="button" class="btn-small" id="nd-done">✓ Mark done &amp; clear from inbox</button>
     <button type="button" class="btn-small" id="nd-keep">Keep in inbox</button>
     <button type="button" class="btn-danger" id="nd-del">🗑 Delete</button>`
   );
   $('#nd-order').onclick = () => {
     close();
-    orderForm(note.note, note.id);
+    if (isBuy) purchaseForm(note.note, note.id);
+    else orderForm(note.note, note.id);
   };
   $('#nd-done').onclick = async () => {
     try {
@@ -1839,21 +1860,39 @@ function noteDetailModal(note) {
   };
 }
 
-function noteForm() {
+function noteForm(kind = 'sale') {
+  const m = kind === 'purchase' ? 'purchase' : 'sale';
   openModal(
     'Quick note',
     `
-    <label>What should you remember? <span class="muted" style="font-weight:400">(@ tags a shop · # picks an item)</span>
-      <textarea name="note" rows="3" placeholder="e.g. @Krishna Bakery wants 5 #Spice LD Cover 1 kg Friday"></textarea>
+    <label>This note is for</label>
+    <div class="seg-row pay-modes">
+      <button type="button" class="seg note-kind ${m === 'sale' ? 'active' : ''}" data-kind="sale">🛒 A shop order</button>
+      <button type="button" class="seg note-kind ${m === 'purchase' ? 'active' : ''}" data-kind="purchase">📦 To buy</button>
+    </div>
+    <input type="hidden" name="kind" value="${m}" />
+    <label>What should you remember? <span class="muted" style="font-weight:400">(@ tags a shop/vendor · # picks an item)</span>
+      <textarea name="note" rows="3" placeholder="e.g. Buy 10 #Spice LD Cover 1 kg from @supplier"></textarea>
     </label>
     <div class="mention-list hidden" data-mentions></div>`,
     async (fd, close) => {
-      await api('/api/notes', { method: 'POST', body: JSON.stringify({ note: fd.get('note') }) });
+      await api('/api/notes', {
+        method: 'POST',
+        body: JSON.stringify({ note: fd.get('note'), kind: fd.get('kind') }),
+      });
       close();
       toast('Noted ✓');
       render();
     }
   );
+  const hidden = $('#modal-root input[name="kind"]');
+  $$('#modal-root .note-kind').forEach((b) => {
+    b.onclick = () => {
+      $$('#modal-root .note-kind').forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      hidden.value = b.dataset.kind;
+    };
+  });
   wireMentions();
 }
 
@@ -2647,6 +2686,8 @@ function wireView() {
     });
     const remBtn = $('#reminder-toggle');
     if (remBtn) remBtn.onclick = () => (reminderOn() ? disableMorningReminder() : enableMorningReminder());
+    const addBuy = $('#add-buy-note');
+    if (addBuy) addBuy.onclick = () => noteForm('purchase');
     $$('.order-sale', view).forEach((b) => {
       b.onclick = () => {
         const o = (state.pendingOrders || []).find((x) => String(x.id) === b.dataset.id);
