@@ -1293,6 +1293,29 @@ export async function onRequest(context) {
       if (method === 'POST' && !id) return await setStockCount(db, await readBody())
     }
 
+    // full data backup (JSON of every table) — the owner downloading their own data
+    if (resource === 'export' && method === 'GET') {
+      const out = { app: 'simple-serve', version: 1, exported_at: new Date().toISOString() }
+      const BUSINESS = [
+        'customers', 'suppliers', 'products', 'sales', 'purchases',
+        'expenses', 'payments', 'orders', 'notes', 'stock_counts', 'settings',
+      ]
+      for (const t of BUSINESS) {
+        try {
+          out[t] = (await db.prepare(`SELECT * FROM ${t}`).all()).results
+        } catch {
+          out[t] = []
+        }
+      }
+      // account identity only — never the password hash / salt
+      try {
+        out.users = (await db.prepare('SELECT id, username, name, created_at FROM users').all()).results
+      } catch {
+        out.users = []
+      }
+      return json(out)
+    }
+
     // calculated profit for day / week / month / year-to-date
     if (resource === 'profit-summary' && method === 'GET') {
       const date = str(url.searchParams.get('date') || '')

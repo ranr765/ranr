@@ -129,6 +129,41 @@ function esc(s) {
   }[c]));
 }
 
+// add a show/hide (eye) toggle to every password field within root
+function addEyeToggles(root) {
+  $$('input[type="password"]', root).forEach((inp) => {
+    if (inp.closest('.pw-wrap')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'pw-wrap';
+    inp.parentNode.insertBefore(wrap, inp);
+    wrap.appendChild(inp);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'eye-toggle';
+    btn.textContent = '👁';
+    btn.setAttribute('aria-label', 'Show or hide password');
+    btn.onclick = () => {
+      const reveal = inp.type === 'password';
+      inp.type = reveal ? 'text' : 'password';
+      btn.textContent = reveal ? '🙈' : '👁';
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+// save some text as a downloaded file (used for the data backup)
+function downloadFile(filename, text, type = 'application/json') {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -198,6 +233,7 @@ function openModal(title, bodyHtml, onSubmit) {
       btn.disabled = false;
     }
   };
+  addEyeToggles(root);
   const first = $('input, select', root);
   if (first) first.focus();
   return { close };
@@ -2983,6 +3019,7 @@ function showAuthScreen(setupRequired) {
       btn.disabled = false;
     }
   };
+  addEyeToggles(view);
   const first = $('#auth-form input');
   if (first) first.focus();
 }
@@ -2993,6 +3030,8 @@ function accountModal() {
     `
     <div class="account-info">Logged in as <b>${esc(state.user.name || state.user.username)}</b> (${esc(state.user.username)})</div>
     <button type="button" class="btn-small" id="payment-settings-btn">&#128179; Payment QR &amp; UPI (shown on invoices)</button>
+    <button type="button" class="btn-small" id="backup-btn">&#128190; Download backup (all data)</button>
+    <div class="hint" style="margin:2px 0 0">Your password is stored encrypted and can't be shown. Use the eye 👁 to see it as you type, or set a new one below.</div>
     <label>Current password <input type="password" name="current" autocomplete="current-password" /></label>
     <label>New password <input type="password" name="next" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
     <label>Repeat new password <input type="password" name="next2" autocomplete="new-password" /></label>`,
@@ -3025,6 +3064,18 @@ function accountModal() {
   $('#payment-settings-btn').onclick = () => {
     $('#modal-root').innerHTML = '';
     paymentSettingsForm().catch((e) => toast(e.message, false));
+  };
+  $('#backup-btn').onclick = async () => {
+    const btn = $('#backup-btn');
+    btn.disabled = true;
+    try {
+      const data = await api('/api/export');
+      downloadFile(`simple-serve-backup-${todayStr()}.json`, JSON.stringify(data, null, 2));
+      toast('Backup downloaded ✓');
+    } catch (e) {
+      toast(e.message, false);
+    }
+    btn.disabled = false;
   };
 }
 

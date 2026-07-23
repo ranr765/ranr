@@ -69,6 +69,17 @@ jobs:
           sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
           echo "using database id $DB_ID"
 
+      - name: Back up the live database (before any migration)
+        run: npx wrangler@4 d1 export simple-serve-production --remote --output=backup.sql || echo "backup export skipped"
+
+      - name: Upload database backup artifact
+        if: hashFiles('backup.sql') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.sha }}
+          path: backup.sql
+          retention-days: 60
+
       - name: Apply database migrations
         run: npx wrangler@4 d1 migrations apply simple-serve-production --remote
 

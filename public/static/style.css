@@ -565,6 +565,21 @@ main {
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
 .item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { width: 100%; padding-right: 46px; }
+.eye-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
 .stock-row { cursor: pointer; }
 .stock-row .row-amount { flex-shrink: 0; text-align: right; font-size: 14px; }
 .stock-row .row-amount.pend { color: var(--pend); }
