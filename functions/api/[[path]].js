@@ -92,6 +92,17 @@ async function hashPassword(password, saltHex) {
   return toHex(bits)
 }
 
+// recovery code: unambiguous alphabet (no 0/O/1/I/L), format SS-XXXX-XXXX
+const RECOVERY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+function genRecoveryCode() {
+  const a = new Uint8Array(8)
+  crypto.getRandomValues(a)
+  const c = [...a].map((b) => RECOVERY_ALPHABET[b % RECOVERY_ALPHABET.length])
+  return 'SS-' + c.slice(0, 4).join('') + '-' + c.slice(4, 8).join('')
+}
+// normalize so entry is lenient about case, spaces and dashes
+const normalizeCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+
 // constant-time string comparison
 const safeEqual = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false
@@ -259,6 +270,45 @@ async function handleAuth(db, request, url, action) {
       .prepare('DELETE FROM sessions WHERE user_id = ? AND token != ?')
       .bind(user.id, user.token)
       .run()
+    return json({ ok: true })
+  }
+
+  // generate a one-time recovery code (only its hash is stored); returned once
+  if (action === 'recovery' && method === 'POST') {
+    const user = await currentUserFor(db, request)
+    if (!user) return json({ error: 'Unauthorized' }, 401)
+    const code = genRecoveryCode()
+    const salt = randHex(16)
+    const hash = await hashPassword(normalizeCode(code), salt)
+    await db
+      .prepare('UPDATE users SET recovery_hash = ?, recovery_salt = ? WHERE id = ?')
+      .bind(hash, salt, user.id)
+      .run()
+    return json({ code })
+  }
+
+  // reset password using the recovery code — reachable without a session
+  if (action === 'reset' && method === 'POST') {
+    const b = await readBody()
+    const username = str(b.username).toLowerCase()
+    const code = normalizeCode(b.code)
+    const next = typeof b.password === 'string' ? b.password : ''
+    if (next.length < 6) return json({ error: 'New password must be at least 6 characters' }, 400)
+    const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first()
+    // always hash (against a random salt if needed) so timing/response can't
+    // reveal whether the account exists or has a recovery code
+    const salt = user && user.recovery_salt ? user.recovery_salt : randHex(16)
+    const codeHash = await hashPassword(code, salt)
+    const okCode = !!(user && user.recovery_hash && code && safeEqual(codeHash, user.recovery_hash))
+    if (!okCode) return json({ error: 'Wrong username or recovery code' }, 401)
+    const newSalt = randHex(16)
+    const hash = await hashPassword(next, newSalt)
+    // single-use: clear the recovery code, and log out everywhere
+    await db
+      .prepare("UPDATE users SET password_hash = ?, salt = ?, recovery_hash = '', recovery_salt = '' WHERE id = ?")
+      .bind(hash, newSalt, user.id)
+      .run()
+    await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id).run()
     return json({ ok: true })
   }
 

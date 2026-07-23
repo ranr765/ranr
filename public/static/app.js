@@ -2979,6 +2979,7 @@ function showAuthScreen(setupRequired) {
         <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
         <button type="submit" class="btn-primary">Login</button>
       </form>
+      <button type="button" class="btn-small" id="forgot-btn" style="margin-top:10px">Forgot password?</button>
     </section>`;
   }
   $('#auth-form').onsubmit = async (e) => {
@@ -3019,8 +3020,55 @@ function showAuthScreen(setupRequired) {
       btn.disabled = false;
     }
   };
+  const forgot = $('#forgot-btn');
+  if (forgot) forgot.onclick = showResetScreen;
   addEyeToggles(view);
   const first = $('#auth-form input');
+  if (first) first.focus();
+}
+
+function showResetScreen() {
+  setAuthedChrome(false);
+  const view = $('#view');
+  view.innerHTML = `
+    <section class="card auth-card">
+      <h2>Reset password</h2>
+      <p class="hint">Enter your username and the recovery code you saved, then choose a new password.
+      (No recovery code? Log in and get one from the 👤 Account menu.)</p>
+      <form id="reset-form">
+        <label>Username <input name="username" required autocapitalize="none" autocomplete="username" /></label>
+        <label>Recovery code <input name="code" required placeholder="SS-XXXX-XXXX" autocapitalize="characters" autocomplete="off" /></label>
+        <label>New password <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
+        <label>Repeat new password <input type="password" name="password2" required autocomplete="new-password" /></label>
+        <button type="submit" class="btn-primary">Set new password</button>
+      </form>
+      <button type="button" class="btn-small" id="back-login" style="margin-top:10px">← Back to login</button>
+    </section>`;
+  addEyeToggles(view);
+  $('#back-login').onclick = () => showAuthScreen(false);
+  $('#reset-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = $('button[type="submit"]', e.target);
+    btn.disabled = true;
+    try {
+      if (fd.get('password') !== fd.get('password2')) throw new Error('Passwords do not match');
+      await api('/api/auth/reset', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: fd.get('username'),
+          code: fd.get('code'),
+          password: fd.get('password'),
+        }),
+      });
+      toast('Password reset — please log in with your new password ✓');
+      showAuthScreen(false);
+    } catch (err) {
+      toast(err.message, false);
+      btn.disabled = false;
+    }
+  };
+  const first = $('#reset-form input');
   if (first) first.focus();
 }
 
@@ -3031,6 +3079,7 @@ function accountModal() {
     <div class="account-info">Logged in as <b>${esc(state.user.name || state.user.username)}</b> (${esc(state.user.username)})</div>
     <button type="button" class="btn-small" id="payment-settings-btn">&#128179; Payment QR &amp; UPI (shown on invoices)</button>
     <button type="button" class="btn-small" id="backup-btn">&#128190; Download backup (all data)</button>
+    <button type="button" class="btn-small" id="recovery-btn">&#128273; Get a recovery code (for forgotten password)</button>
     <div class="hint" style="margin:2px 0 0">Your password is stored encrypted and can't be shown. Use the eye 👁 to see it as you type, or set a new one below.</div>
     <label>Current password <input type="password" name="current" autocomplete="current-password" /></label>
     <label>New password <input type="password" name="next" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" /></label>
@@ -3076,6 +3125,35 @@ function accountModal() {
       toast(e.message, false);
     }
     btn.disabled = false;
+  };
+  $('#recovery-btn').onclick = async () => {
+    const btn = $('#recovery-btn');
+    btn.disabled = true;
+    try {
+      const r = await api('/api/auth/recovery', { method: 'POST' });
+      infoModal(
+        '🔑 Your recovery code',
+        `
+        <div class="recovery-code">${esc(r.code)}</div>
+        <div class="hint">Write this down or save it now — it's shown only once. If you ever forget your
+        password, tap <b>"Forgot password?"</b> on the login screen and enter your username + this code to
+        set a new password. Generating a new code replaces this one.</div>
+        <button type="button" class="btn-small" id="copy-recovery">Copy code</button>`
+      );
+      const cp = $('#copy-recovery');
+      if (cp)
+        cp.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(r.code);
+            toast('Copied ✓');
+          } catch {
+            toast('Copy not supported — write it down', false);
+          }
+        };
+    } catch (e) {
+      toast(e.message, false);
+      btn.disabled = false;
+    }
   };
 }
 

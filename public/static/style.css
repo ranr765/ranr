@@ -565,6 +565,20 @@ main {
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
 .item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.recovery-code {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  color: var(--ink);
+  user-select: all;
+}
+
 .pw-wrap { position: relative; display: block; }
 .pw-wrap input { width: 100%; padding-right: 46px; }
 .eye-toggle {
