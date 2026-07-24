@@ -1004,6 +1004,74 @@ async function salesSummaryData(db, date) {
   return { date, day, week, month, ytd }
 }
 
+/**
+ * Day plan from history: for a weekday (0=Sun..6=Sat), which shops you usually
+ * serve that day and the items/quantities they typically take — so you know the
+ * route and what to load. Purely descriptive aggregation of past sales.
+ */
+async function dayPlanData(db, weekday) {
+  const [salesRes, custRes] = await Promise.all([
+    db.prepare('SELECT customer_id, customer_name, sale_date, items FROM sales').all(),
+    db.prepare('SELECT id, name, place, lat, lng FROM customers').all(),
+  ])
+  const custById = {}
+  for (const c of custRes.results) custById[c.id] = c
+  const dow = (d) => {
+    const [y, m, dd] = String(d).split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, dd)).getUTCDay()
+  }
+  const parse = (itemsStr) => {
+    const out = []
+    for (const part of String(itemsStr || '').split(/,\s*/)) {
+      const m = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+      if (m) out.push({ label: m[1].trim(), qty: parseFloat(m[2]) || 0 })
+    }
+    return out
+  }
+
+  const weekdayDates = new Set()
+  const shopDays = {} // customer_id -> Set(dates)
+  const shopLast = {} // customer_id -> last date
+  const itemTotals = {} // label -> total qty
+
+  for (const s of salesRes.results) {
+    if (!s.sale_date || dow(s.sale_date) !== weekday) continue
+    weekdayDates.add(s.sale_date)
+    if (s.customer_id) {
+      ;(shopDays[s.customer_id] = shopDays[s.customer_id] || new Set()).add(s.sale_date)
+      if (!shopLast[s.customer_id] || s.sale_date > shopLast[s.customer_id]) shopLast[s.customer_id] = s.sale_date
+    }
+    for (const l of parse(s.items)) itemTotals[l.label] = (itemTotals[l.label] || 0) + l.qty
+  }
+
+  const days = weekdayDates.size || 1
+  const shops = Object.keys(shopDays)
+    .map((cid) => {
+      const c = custById[cid] || {}
+      return {
+        id: Number(cid),
+        name: c.name || 'Shop',
+        place: c.place || '',
+        lat: c.lat != null ? c.lat : null,
+        lng: c.lng != null ? c.lng : null,
+        visits: shopDays[cid].size,
+        lastDate: shopLast[cid] || null,
+      }
+    })
+    .sort((a, b) => b.visits - a.visits || String(b.lastDate).localeCompare(String(a.lastDate)))
+
+  const carry = Object.entries(itemTotals)
+    .map(([label, total]) => ({
+      label,
+      total: round2(total),
+      suggest: Math.ceil(total / days),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 40)
+
+  return { weekday, days: weekdayDates.size, shops, carry }
+}
+
 // ---------- stock registry ----------
 
 const parseItemQtys = (itemsStr) => {
@@ -1371,6 +1439,13 @@ export async function onRequest(context) {
       const date = str(url.searchParams.get('date') || '')
       if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
       return json(await profitSummaryData(db, date))
+    }
+
+    // day plan (route + what to carry) for a weekday, from history
+    if (resource === 'dayplan' && method === 'GET') {
+      const w = Number(url.searchParams.get('weekday'))
+      if (!Number.isInteger(w) || w < 0 || w > 6) return json({ error: 'weekday 0-6 required' }, 400)
+      return json(await dayPlanData(db, w))
     }
 
     // one-round-trip bundles per screen

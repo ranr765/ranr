@@ -1812,6 +1812,12 @@ async function viewReport() {
   ${bars ? `<section class="card"><h3>Daily sales</h3>${bars}</section>` : ''}
 
   <section class="card">
+    <h3>Day plan &middot; route &amp; what to carry</h3>
+    <div class="hint">From your history: which shops you usually serve on a day, what they typically take, and what to load.</div>
+    <button type="button" class="btn-primary" id="dayplan-btn" style="margin-top:8px">🧭 Plan a day</button>
+  </section>
+
+  <section class="card">
     <div class="entries-head">
       <h3 style="margin:0">Route log</h3>
       <input type="date" id="daylog-date" value="${state.daylogDate}" />
@@ -2661,6 +2667,92 @@ function addPartyForm(kind) {
 
 /* ---------- route builder: multi-stop Google Maps link ---------- */
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+async function dayPlanModal(weekday) {
+  const w = weekday == null ? new Date().getDay() : weekday;
+  let data;
+  try {
+    data = await api(`/api/dayplan?weekday=${w}`);
+  } catch (e) {
+    return toast(e.message, false);
+  }
+  // stock balance by item label, to flag what you're short on
+  const stockByLabel = {};
+  for (const s of state.stock || []) stockByLabel[`${s.name} ${s.size}`.trim()] = s;
+
+  const dayTabs = WEEKDAYS.map(
+    (d, i) => `<button type="button" class="seg dayplan-day ${i === w ? 'active' : ''}" data-w="${i}">${d.slice(0, 3)}</button>`
+  ).join('');
+
+  const shopRows = data.shops.length
+    ? data.shops
+        .map(
+          (s) => `
+      <label class="route-row">
+        ${s.lat != null ? `<input type="checkbox" data-plan-id="${s.id}" checked />` : '<span style="width:18px"></span>'}
+        <span class="route-name">${esc(s.name)}${s.place ? ' · ' + esc(s.place) : ''}${s.lat != null ? ' 📍' : ''}</span>
+        <span class="muted" style="font-size:12px">${s.visits}×</span>
+      </label>`
+        )
+        .join('')
+    : '<div class="empty">No shops served on a ' + WEEKDAYS[w] + ' yet</div>';
+
+  const carryRows = data.carry.length
+    ? data.carry
+        .map((c) => {
+          const st = stockByLabel[c.label];
+          const short = st && st.tracked && st.balance < c.suggest;
+          const code = labelSku(c.label);
+          return `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-title">${code ? `<span class="li-code">${esc(code)}</span> ` : ''}${esc(c.label)}</div>
+            ${st && st.tracked ? `<div class="row-sub ${short ? 'bad' : 'muted'}">in stock: ${st.balance}${short ? ' — short!' : ''}</div>` : ''}
+          </div>
+          <div class="row-amount ${short ? 'bad' : 'good'}">${c.suggest}</div>
+        </div>`;
+        })
+        .join('')
+    : '<div class="empty">No item history for a ' + WEEKDAYS[w] + ' yet</div>';
+
+  infoModal(
+    `🧭 ${WEEKDAYS[w]} plan`,
+    `
+    <div class="seg-row" style="flex-wrap:wrap;gap:6px">${dayTabs}</div>
+    <div class="hint" style="margin:8px 0 0">Based on ${data.days} past ${WEEKDAYS[w]}${data.days === 1 ? '' : 's'}.</div>
+    <div class="dp-head">Shops usually served (${data.shops.length}) · ✓ = include in route</div>
+    <div class="rows">${shopRows}</div>
+    ${data.shops.some((s) => s.lat != null) ? '<button type="button" class="btn-primary" id="plan-route">🗺️ Open route in Google Maps</button>' : ''}
+    <div class="dp-head" style="margin-top:14px">Suggested to carry (typical for a ${WEEKDAYS[w]})</div>
+    <div class="rows">${carryRows}</div>`
+  );
+
+  $$('#modal-root .dayplan-day').forEach((b) => {
+    b.onclick = () => dayPlanModal(Number(b.dataset.w));
+  });
+  const rt = $('#plan-route');
+  if (rt)
+    rt.onclick = () => {
+      const chosen = $$('#modal-root [data-plan-id]:checked')
+        .map((el) => data.shops.find((s) => String(s.id) === el.dataset.planId))
+        .filter((s) => s && s.lat != null);
+      if (!chosen.length) return toast('Tick at least one located shop', false);
+      const order = [chosen[0]];
+      const rest = chosen.slice(1);
+      while (rest.length) {
+        const last = order[order.length - 1];
+        let bi = 0, bd = Infinity;
+        rest.forEach((c, i) => {
+          const d = (c.lat - last.lat) ** 2 + (c.lng - last.lng) ** 2;
+          if (d < bd) { bd = d; bi = i; }
+        });
+        order.push(rest.splice(bi, 1)[0]);
+      }
+      window.open('https://www.google.com/maps/dir/' + order.map((c) => `${c.lat},${c.lng}`).join('/'), '_blank');
+    };
+}
+
 function routeModal() {
   const located = state.customers.filter((c) => c.lat != null && c.lng != null);
   if (!located.length) {
@@ -2892,6 +2984,8 @@ function wireView() {
     $$('.unpriced-add', view).forEach((b) => {
       b.onclick = () => productForm(null, b.dataset.name);
     });
+    const dp = $('#dayplan-btn');
+    if (dp) dp.onclick = () => dayPlanModal(null);
     $('#export-csv').onclick = exportCsv;
     const dl = $('#daylog-date');
     if (dl) dl.onchange = (e) => { state.daylogDate = e.target.value; render(); };

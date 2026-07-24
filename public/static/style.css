@@ -565,6 +565,8 @@ main {
 .reminder-toggle.on { border-color: var(--good); color: var(--good); background: var(--good-soft); }
 
 .item-no { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dp-head { font-size: 13px; font-weight: 700; color: var(--muted); margin: 12px 0 4px; }
+
 .recovery-code {
   text-align: center;
   font-size: 26px;
