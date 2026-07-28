@@ -550,6 +550,92 @@ async function updatePurchase(db, id, b) {
  * remaining balance after applying pooled collections oldest-first (FIFO),
  * so the same rupee is never double-counted against two bills.
  */
+/**
+ * One shop's buying pattern: which weekdays it orders, how often, what it buys
+ * consistently (in most orders) vs occasionally, and its recent orders — so you
+ * can see what's regular and what changed week to week.
+ */
+async function customerPattern(db, customerId) {
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').bind(customerId).first()
+  if (!customer) return json({ error: 'Shop not found' }, 404)
+  const sales = (
+    await db
+      .prepare('SELECT sale_date, items, total_amount FROM sales WHERE customer_id = ? ORDER BY sale_date, id')
+      .bind(customerId)
+      .all()
+  ).results
+
+  const dow = (d) => {
+    const [y, m, dd] = String(d).split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, dd)).getUTCDay()
+  }
+  const daysBetween = (a, b) => {
+    const [ay, am, ad] = a.split('-').map(Number)
+    const [by, bm, bd] = b.split('-').map(Number)
+    return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000)
+  }
+  const parse = (s) => {
+    const out = []
+    for (const part of String(s || '').split(/,\s*/)) {
+      const m = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+      if (m) out.push({ label: m[1].trim(), qty: parseFloat(m[2]) || 0 })
+    }
+    return out
+  }
+
+  const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]
+  const itemStats = {} // label -> { orders, qty, lastDate }
+  for (const s of sales) {
+    if (!s.sale_date) continue
+    weekdayCounts[dow(s.sale_date)]++
+    const seen = new Set()
+    for (const l of parse(s.items)) {
+      const st = (itemStats[l.label] = itemStats[l.label] || { orders: 0, qty: 0, lastDate: null })
+      if (!seen.has(l.label)) {
+        st.orders++
+        seen.add(l.label)
+      }
+      st.qty += l.qty
+      if (!st.lastDate || s.sale_date > st.lastDate) st.lastDate = s.sale_date
+    }
+  }
+  const orderCount = sales.length
+  const items = Object.entries(itemStats)
+    .map(([label, st]) => ({
+      label,
+      orders: st.orders,
+      share: orderCount ? Math.round((st.orders / orderCount) * 100) : 0,
+      avgQty: st.orders ? Math.round((st.qty / st.orders) * 100) / 100 : 0,
+      lastDate: st.lastDate,
+    }))
+    .sort((a, b) => b.orders - a.orders || b.avgQty - a.avgQty)
+  const consistent = items.filter((i) => orderCount >= 2 && i.share >= 50)
+  const occasional = items.filter((i) => !(orderCount >= 2 && i.share >= 50))
+
+  const dates = [...new Set(sales.map((s) => s.sale_date).filter(Boolean))].sort()
+  let avgGap = null
+  if (dates.length >= 2) avgGap = Math.round(daysBetween(dates[0], dates[dates.length - 1]) / (dates.length - 1))
+  const topWeekday = weekdayCounts.some((c) => c > 0) ? weekdayCounts.indexOf(Math.max(...weekdayCounts)) : null
+
+  const recent = sales
+    .slice(-8)
+    .reverse()
+    .map((s) => ({ date: s.sale_date, weekday: dow(s.sale_date), items: s.items || '', total: num(s.total_amount) }))
+
+  return json({
+    customer: { id: customer.id, name: customer.name, place: customer.place },
+    orderCount,
+    orderDays: dates.length,
+    weekdayCounts,
+    topWeekday,
+    avgGap,
+    lastDate: dates.length ? dates[dates.length - 1] : null,
+    consistent,
+    occasional,
+    recent,
+  })
+}
+
 async function customerHistory(db, customerId) {
   const customer = await db
     .prepare('SELECT * FROM customers WHERE id = ?')
@@ -1194,6 +1280,8 @@ export async function onRequest(context) {
     // full dated history for one shop: /api/customers/:id/history
     if (resource === 'customers' && id && sub === 'history' && method === 'GET')
       return await customerHistory(db, id)
+    if (resource === 'customers' && id && sub === 'pattern' && method === 'GET')
+      return await customerPattern(db, id)
 
     // parties: /api/customers, /api/suppliers
     if (PARTY_TABLES[resource]) {

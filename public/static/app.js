@@ -1161,14 +1161,17 @@ async function viewParties() {
 /* ---------- shop → expandable dated history ---------- */
 
 function shopHistoryRows(data) {
-  if (!data.bills.length) return '<div class="empty">No bills yet for this shop</div>';
   const shopName = data.customer.name;
+  if (!data.bills.length)
+    return `<div class="empty">No bills yet for this shop</div>
+      <button type="button" class="btn-small hist-pattern" data-shop-id="${data.customer.id}" data-shop-name="${esc(shopName)}">📊 Buying pattern</button>`;
   return (
     `<div class="hist-summary">
       <span>Billed <b>${fmtMoney(data.totals.billed)}</b></span>
       <span class="${data.totals.outstanding > 0.005 ? 'good' : 'muted'}">Due <b>${fmtMoney(data.totals.outstanding)}</b></span>
       ${data.totals.advance > 0.005 ? `<span class="muted">Advance ${fmtMoney(data.totals.advance)}</span>` : ''}
-    </div>` +
+    </div>
+    <button type="button" class="btn-small hist-pattern" data-shop-id="${data.customer.id}" data-shop-name="${esc(shopName)}" style="margin-bottom:8px">📊 Buying pattern</button>` +
     data.bills
       .map((b) => {
         const itemLines =
@@ -1231,6 +1234,74 @@ function wireShopHistory(el) {
       if (bill) editSaleForm(bill, Number(b.dataset.shopId), b.dataset.shopName);
     };
   });
+  $$('.hist-pattern', el).forEach((b) => {
+    b.onclick = () => patternModal(b.dataset.shopId, b.dataset.shopName);
+  });
+}
+
+async function patternModal(customerId, name) {
+  let d;
+  try {
+    d = await api(`/api/customers/${customerId}/pattern`);
+  } catch (e) {
+    return toast(e.message, false);
+  }
+  if (!d.orderCount) {
+    return infoModal(`📊 ${name}`, '<div class="empty">No orders yet to find a pattern.</div>');
+  }
+  const daysAgo = d.lastDate ? Math.round((Date.now() - new Date(d.lastDate + 'T00:00:00Z')) / 86400000) : null;
+  const summary = [
+    `<b>${d.orderCount}</b> order${d.orderCount === 1 ? '' : 's'}`,
+    d.topWeekday != null ? `usually <b>${WEEKDAYS[d.topWeekday]}</b>` : '',
+    d.avgGap ? `about every <b>${d.avgGap}</b> days` : '',
+    d.lastDate ? `last ${fmtDate(d.lastDate)}${daysAgo != null ? ` (${daysAgo}d ago)` : ''}` : '',
+  ].filter(Boolean).join(' · ');
+
+  const maxW = Math.max(1, ...d.weekdayCounts);
+  const weekdayBars = WEEKDAYS.map((w, i) => `
+    <div class="chart-row">
+      <span class="chart-label" style="width:38px">${w.slice(0, 3)}</span>
+      <div class="mini-track"><div class="mini-bar trend-bar-pos" style="width:${Math.round((d.weekdayCounts[i] / maxW) * 100)}%"></div></div>
+      <span class="chart-val">${d.weekdayCounts[i] || ''}</span>
+    </div>`).join('');
+
+  const itemList = (arr, empty) =>
+    arr.length
+      ? arr.map((it) => {
+          const code = labelSku(it.label);
+          return `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-title">${code ? `<span class="li-code">${esc(code)}</span> ` : ''}${esc(it.label)}</div>
+            <div class="row-sub">${it.share}% of orders · ~${it.avgQty} each</div>
+          </div>
+          <div class="row-amount ${arr === d.consistent ? 'good' : 'muted'}">${it.orders}×</div>
+        </div>`;
+        }).join('')
+      : `<div class="empty">${empty}</div>`;
+
+  const recentRows = d.recent.map((r) => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${fmtDate(r.date)} · ${WEEKDAYS[r.weekday].slice(0, 3)}</div>
+          ${(r.items ? r.items.split(/,\s*/) : ['—']).map((li) => `<div class="row-sub row-wrap">• ${esc(li)}</div>`).join('')}
+        </div>
+        <div class="row-amount">${fmtMoney(r.total)}</div>
+      </div>`).join('');
+
+  infoModal(
+    `📊 ${name}`,
+    `
+    <div class="hint" style="margin:0 0 8px">${summary}</div>
+    <div class="dp-head">Order days</div>
+    ${weekdayBars}
+    <div class="dp-head" style="margin-top:12px">Buys consistently (in most orders)</div>
+    <div class="rows">${itemList(d.consistent, 'No regular item yet — needs a few more orders.')}</div>
+    <div class="dp-head" style="margin-top:12px">Buys occasionally</div>
+    <div class="rows">${itemList(d.occasional, 'Nothing occasional.')}</div>
+    <div class="dp-head" style="margin-top:12px">Recent orders</div>
+    <div class="rows">${recentRows}</div>`
+  );
 }
 
 /* Edit or delete one past sale (owner correcting their own record). */
