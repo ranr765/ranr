@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Standing">
+  <rect width="512" height="512" fill="#191c22"/>
+  <!-- Inside the 80% safe area, so nothing important is cropped by the mask. -->
+  <rect x="136" y="242" width="240" height="28" rx="14" fill="#3a3f49"/>
+  <rect x="136" y="242" width="148" height="28" rx="14" fill="#f2f1ed"/>
+  <rect x="278" y="224" width="10" height="64" rx="5" fill="#8c3b60"/>
+</svg>

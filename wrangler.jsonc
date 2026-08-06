@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "standing",
+  "compatibility_date": "2025-10-31",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "standing-production",
+      // Replaced with the real id by the deploy workflow.
+      "database_id": "placeholder-id"
+    }
+  ]
+}

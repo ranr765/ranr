@@ -1,0 +1,34 @@
+{
+  "name": "standing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:full": "wrangler pages dev --proxy 5173 -- npm run dev",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --experimental-sqlite --test shared/*.test.ts functions/api/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json",
+    "db:create": "wrangler d1 create standing-production",
+    "db:migrate:local": "wrangler d1 migrations apply standing-production --local",
+    "db:migrate:prod": "wrangler d1 migrations apply standing-production --remote"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.1.0",
+    "@fontsource-variable/inter": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "wrangler": "^4.4.0"
+  }
+}

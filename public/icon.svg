@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Standing">
+  <rect width="512" height="512" rx="112" fill="#191c22"/>
+  <!-- The pace bar: the day filling up, with the mark for where you stand. -->
+  <rect x="96" y="238" width="320" height="36" rx="18" fill="#3a3f49"/>
+  <rect x="96" y="238" width="196" height="36" rx="18" fill="#f2f1ed"/>
+  <rect x="286" y="214" width="12" height="84" rx="6" fill="#8c3b60"/>
+</svg>

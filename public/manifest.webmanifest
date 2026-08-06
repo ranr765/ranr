@@ -1,0 +1,16 @@
+{
+  "name": "Standing",
+  "short_name": "Standing",
+  "description": "Log a meal, know where you stand.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f1ed",
+  "theme_color": "#f2f1ed",
+  "categories": ["health", "lifestyle"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

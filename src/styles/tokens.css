@@ -1,0 +1,109 @@
+/*
+  Standing — design tokens.
+
+  Five named colours, everything else derived from them. The accent (Mulberry)
+  is reserved: it marks where you stand and nothing else. Protein carries it too,
+  because protein is the macro that matters most in a deficit — that is the one
+  place the palette is allowed to raise its voice.
+
+  Deliberately not: dark-with-acid-green, and not cream-with-serif-and-terracotta.
+  This is meant to read as a measuring instrument — paper, graphite, one ink.
+*/
+
+:root {
+  /* ---- the five ---- */
+  --ink:       #191c22;  /* text, and the dark-mode ground */
+  --paper:     #f2f1ed;  /* the light ground — neutral, not cream */
+  --mist:      #e3e1da;  /* hairlines, tracks, quiet surfaces */
+  --graphite:  #6c7078;  /* secondary text and non-accent data */
+  --mulberry:  #8c3b60;  /* the accent. Used sparingly, on purpose. */
+
+  /* ---- derived: surfaces ---- */
+  --bg:            var(--paper);
+  --bg-raised:     #fbfaf8;
+  --bg-sunken:     #eae8e2;
+  --line:          var(--mist);
+  --line-strong:   #cfccc3;
+
+  /* ---- derived: text ---- */
+  --text:          var(--ink);
+  --text-quiet:    var(--graphite);
+  --text-faint:    #92959b;
+  --text-on-accent:#fdfcfb;
+
+  /* ---- derived: accent ---- */
+  --accent:        var(--mulberry);
+  --accent-quiet:  #b57694;
+  --accent-wash:   #f0e4ea;
+
+  /* ---- macro tints, all from the palette ---- */
+  --macro-protein: var(--mulberry);
+  --macro-carbs:   #8e929a;
+  --macro-fat:     #b9bcc2;
+
+  /* ---- type ---- */
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque',
+                  ui-sans-serif, system-ui, sans-serif;
+  --font-body:    'Inter Variable', 'Inter', ui-sans-serif, system-ui,
+                  -apple-system, 'Segoe UI', sans-serif;
+  /* Numbers are the content here. A face with true tabular figures, so a
+     changing digit never shifts the ones beside it. */
+  --font-numeric: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---- scale ---- */
+  --step--1: 0.8125rem;
+  --step-0:  0.9375rem;
+  --step-1:  1.0625rem;
+  --step-2:  1.375rem;
+  --step-3:  1.875rem;
+  --step-4:  3.25rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius:    12px;
+  --radius-lg: 18px;
+
+  /* Big enough to hit one-handed, standing in a kitchen. */
+  --tap-min: 48px;
+
+  --shadow-sheet: 0 -8px 40px rgb(25 28 34 / 0.14);
+  --shadow-card:  0 1px 2px rgb(25 28 34 / 0.05);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #14161b;
+    --bg-raised:     #1c1f26;
+    --bg-sunken:     #101216;
+    --line:          #2a2e36;
+    --line-strong:   #3a3f49;
+
+    --text:          #eceae5;
+    --text-quiet:    #9aa0a8;
+    --text-faint:    #6c7078;
+
+    /* Lifted so it holds contrast on a dark ground. */
+    --accent:        #d98cb0;
+    --accent-quiet:  #8c5872;
+    --accent-wash:   #2a1d24;
+    --text-on-accent:#191c22;
+
+    --macro-protein: #d98cb0;
+    --macro-carbs:   #7d838d;
+    --macro-fat:     #4d525b;
+
+    --shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.5);
+    --shadow-card:  none;
+  }
+}

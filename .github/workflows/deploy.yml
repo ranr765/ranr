@@ -1,0 +1,84 @@
+name: Deploy
+
+# One-time setup: add two repository secrets under
+# Settings → Secrets and variables → Actions
+#   CLOUDFLARE_API_TOKEN   — token with Cloudflare Pages + D1 edit permissions
+#   CLOUDFLARE_ACCOUNT_ID  — from the Cloudflare dashboard sidebar
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check the Cloudflare secrets are configured
+        run: |
+          missing=""
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && missing="CLOUDFLARE_API_TOKEN"
+          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      - name: Create the D1 database (first run only)
+        run: npx wrangler@4 d1 create standing-production || echo "database already exists"
+
+      - name: Point wrangler.jsonc at the real database id
+        run: |
+          DB_ID=$(npx wrangler@4 d1 list --json | node -e "
+            let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const db=JSON.parse(s).find(d=>d.name==='standing-production');
+              if(!db){console.error('database not found');process.exit(1);}
+              console.log(db.uuid);
+            })")
+          sed -i "s/placeholder-id/$DB_ID/" wrangler.jsonc
+
+      # Personal records, so take a copy before every migration.
+      - name: Back up the database
+        run: npx wrangler@4 d1 export standing-production --remote --output=backup.sql || echo "no data to back up yet"
+
+      - name: Upload the backup
+        if: hashFiles('backup.sql') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.sha }}
+          path: backup.sql
+          retention-days: 60
+
+      - name: Apply migrations
+        run: npx wrangler@4 d1 migrations apply standing-production --remote
+
+      - name: Build
+        run: npm run build
+
+      - name: Create the Pages project (first run only)
+        run: npx wrangler@4 pages project create standing --production-branch=main || echo "project already exists"
+
+      - name: Deploy
+        run: npx wrangler@4 pages deploy dist --project-name standing --branch=main
