@@ -1239,6 +1239,123 @@ function wireShopHistory(el) {
   });
 }
 
+/* The numbers that should change what you do next week. All from history. */
+async function insightsModal() {
+  let d;
+  try {
+    d = await api(`/api/insights?date=${todayStr()}`);
+  } catch (e) {
+    return toast(e.message, false);
+  }
+  const R = d.receivables;
+  const C = d.concentration;
+
+  const maxB = Math.max(1, ...R.buckets.map((b) => b.amount));
+  const bucketRows = R.buckets
+    .filter((b) => b.amount > 0.5)
+    .map(
+      (b) => `
+    <div class="chart-row">
+      <span class="chart-label" style="width:58px">${b.label}d</span>
+      <div class="mini-track"><div class="mini-bar ${b.label === '60+' || b.label === '31-60' ? 'trend-bar-neg' : 'trend-bar-pos'}" style="width:${Math.round((b.amount / maxB) * 100)}%"></div></div>
+      <span class="chart-val">${fmtMoney(b.amount)}</span>
+    </div>`
+    ).join('') || '<div class="empty">Nothing outstanding</div>';
+
+  const overdueRows = R.overdue.length
+    ? R.overdue.map(
+        (o) => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${esc(o.name)}${o.place ? ` <span class="row-sub">${esc(o.place)}</span>` : ''}</div>
+          <div class="row-sub">oldest bill ${fmtDate(o.since)} · ${o.age} days · terms ${o.terms}d</div>
+        </div>
+        <div class="row-amount bad">${fmtMoney(o.amount)}</div>
+      </div>`
+      ).join('')
+    : '<div class="empty">Nothing past its terms — collections are clean.</div>';
+
+  const quietRows = d.quiet.length
+    ? d.quiet.map(
+        (q) => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${esc(q.name)}${q.place ? ` <span class="row-sub">${esc(q.place)}</span>` : ''}</div>
+          <div class="row-sub">usually every ~${q.every}d · silent ${q.silent}d · last ${fmtDate(q.last)} · ${fmtMoney(q.lifetime)} lifetime</div>
+        </div>
+        ${q.phone ? `<a class="row-amount" href="tel:${esc(q.phone)}">📞</a>` : ''}
+      </div>`
+      ).join('')
+    : '<div class="empty">Every regular shop is on schedule.</div>';
+
+  const priceRows = (arr, cls) =>
+    arr.length
+      ? arr.map(
+          (p) => `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-title">${labelSku(p.label) ? `<span class="li-code">${esc(labelSku(p.label))}</span> ` : ''}${esc(p.label)}</div>
+            <div class="row-sub">${fmtMoney(p.revenue)} sold → ${fmtMoney(p.gross)} gross · ${p.bills} bills</div>
+          </div>
+          <div class="row-amount ${cls}">${p.marginPct}%</div>
+        </div>`
+        ).join('')
+      : '<div class="empty">Not enough priced history yet.</div>';
+
+  const costRows = d.costs.byCat.map(
+    (c) => `
+    <div class="row">
+      <div class="row-main"><div class="row-title">${esc(c.category)}</div></div>
+      <div class="row-amount">${fmtMoney(c.amount)} <span class="row-sub">${c.pct}%</span></div>
+    </div>`
+  ).join('') || '<div class="empty">No expenses recorded</div>';
+
+  const maxW = Math.max(1, ...d.weeks.map((w) => w.revenue));
+  const weekRows = d.weeks.map(
+    (w) => `
+    <div class="chart-row">
+      <span class="chart-label" style="width:78px">${fmtDate(w.start)}</span>
+      <div class="mini-track"><div class="mini-bar trend-bar-pos" style="width:${Math.round((w.revenue / maxW) * 100)}%"></div></div>
+      <span class="chart-val">${fmtMoney(w.revenue)}</span>
+    </div>`
+  ).join('');
+  const lastW = d.weeks[3].revenue, prevW = d.weeks[2].revenue;
+  const wowPct = prevW > 0 ? Math.round(((lastW - prevW) / prevW) * 100) : null;
+
+  infoModal(
+    '📈 Insights',
+    `
+    <div class="dp-head">Money owed to you — how old is it</div>
+    <div class="hint" style="margin:0 0 6px">${fmtMoney(R.total)} outstanding · you owe suppliers ${fmtMoney(R.payable)} · net <b class="${R.net >= 0 ? 'good' : 'bad'}">${fmtMoney(R.net)}</b></div>
+    ${bucketRows}
+
+    <div class="dp-head" style="margin-top:14px">Past their terms — chase these ${R.overdueTotal > 0 ? `(${fmtMoney(R.overdueTotal)})` : ''}</div>
+    <div class="rows">${overdueRows}</div>
+
+    <div class="dp-head" style="margin-top:14px">Gone quiet — worth a visit or a call</div>
+    <div class="rows">${quietRows}</div>
+
+    <div class="dp-head" style="margin-top:14px">This week vs before</div>
+    ${weekRows}
+    ${wowPct != null ? `<div class="hint">Last week ${wowPct >= 0 ? 'up' : 'down'} <b class="${wowPct >= 0 ? 'good' : 'bad'}">${Math.abs(wowPct)}%</b> on the week before.</div>` : ''}
+
+    <div class="dp-head" style="margin-top:14px">Priced too thin — candidates for a rise</div>
+    <div class="rows">${priceRows(d.pricing.thin, 'bad')}</div>
+
+    <div class="dp-head" style="margin-top:14px">Your best earners</div>
+    <div class="rows">${priceRows(d.pricing.best, 'good')}</div>
+
+    <div class="dp-head" style="margin-top:14px">Where the money goes</div>
+    <div class="hint" style="margin:0 0 6px">${fmtMoney(d.costs.perMonth)} a month · ${d.costs.pctOfRevenue}% of everything billed</div>
+    <div class="rows">${costRows}</div>
+
+    <div class="dp-head" style="margin-top:14px">Risk &amp; reach</div>
+    <div class="hint">${C.shops} shops have bought, ${C.active30} in the last 30 days.
+    Your top 5 are <b>${C.top5Pct}%</b> of revenue, top 10 are <b>${C.top10Pct}%</b>${C.top5Pct >= 50 ? ' — that is concentrated; losing one hurts.' : '.'}
+    ${d.catalog.neverSold} of ${d.catalog.total} catalog items have never sold.</div>`
+  );
+}
+
 async function patternModal(customerId, name) {
   let d;
   try {
@@ -1881,6 +1998,12 @@ async function viewReport() {
   </section>
 
   ${bars ? `<section class="card"><h3>Daily sales</h3>${bars}</section>` : ''}
+
+  <section class="card">
+    <h3>Insights &middot; what needs a decision</h3>
+    <div class="hint">How old the unpaid money is, who has gone quiet, which items are priced too thin, and what the running costs eat.</div>
+    <button type="button" class="btn-primary" id="insights-btn" style="margin-top:8px">📈 Show insights</button>
+  </section>
 
   <section class="card">
     <h3>Day plan &middot; route &amp; what to carry</h3>
@@ -3057,6 +3180,8 @@ function wireView() {
     });
     const dp = $('#dayplan-btn');
     if (dp) dp.onclick = () => dayPlanModal(null);
+    const ib = $('#insights-btn');
+    if (ib) ib.onclick = () => insightsModal();
     $('#export-csv').onclick = exportCsv;
     const dl = $('#daylog-date');
     if (dl) dl.onchange = (e) => { state.daylogDate = e.target.value; render(); };

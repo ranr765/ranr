@@ -399,6 +399,13 @@ const addDays = (dateStr, days) => {
   return dt.toISOString().slice(0, 10)
 }
 
+/* Whole days from `a` to `b`, both 'YYYY-MM-DD'. Negative if b is earlier. */
+const daysApart = (a, b) => {
+  const [ay, am, ad] = String(a).split('-').map(Number)
+  const [by, bm, bd] = String(b).split('-').map(Number)
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000)
+}
+
 /**
  * Outstanding bills for one shop, with collections applied to the oldest
  * bills first (FIFO). Bills are due immediately; credit_days is only the
@@ -555,6 +562,174 @@ async function updatePurchase(db, id, b) {
  * consistently (in most orders) vs occasionally, and its recent orders — so you
  * can see what's regular and what changed week to week.
  */
+/**
+ * Decision-support numbers that the Report screen does not already show:
+ * how old the unpaid money is, who has gone quiet, which items are priced too
+ * thin, and what the running costs eat. All of it is read from history — no
+ * projections, no guessing.
+ */
+async function insightsData(db, today) {
+  const [custRes, salesRes, payInRes, payOutRes, purchRes, expRes, prodRes] = await Promise.all([
+    db.prepare('SELECT * FROM customers').all(),
+    db.prepare('SELECT * FROM sales ORDER BY sale_date, id LIMIT 5000').all(),
+    db.prepare(`SELECT party_id AS pid, COALESCE(SUM(amount),0) AS v FROM payments WHERE type = 'in' AND party_id IS NOT NULL GROUP BY party_id`).all(),
+    db.prepare(`SELECT COALESCE(SUM(amount),0) AS v FROM payments WHERE type = 'out'`).first(),
+    db.prepare('SELECT COALESCE(SUM(total_amount),0) AS t, COALESCE(SUM(paid_amount),0) AS p FROM purchases').first(),
+    db.prepare('SELECT category, expense_date, amount FROM expenses LIMIT 5000').all(),
+    db.prepare('SELECT name, size, sale_price, purchase_price FROM products').all(),
+  ])
+
+  const customers = custRes.results
+  const sales = salesRes.results.filter((s) => s.sale_date)
+  const collected = new Map(payInRes.results.map((r) => [r.pid, num(r.v)]))
+
+  // ---- receivables, aged, with collections applied oldest-first ----
+  const buckets = { '0-15': 0, '16-30': 0, '31-60': 0, '60+': 0 }
+  const overdue = []
+  let receivable = 0
+  const byCust = new Map()
+  for (const s of sales) if (s.customer_id != null) {
+    if (!byCust.has(s.customer_id)) byCust.set(s.customer_id, [])
+    byCust.get(s.customer_id).push(s)
+  }
+  for (const c of customers) {
+    const rows = byCust.get(c.id) || []
+    if (!rows.length) continue
+    const creditDays = c.credit_days === null || !Number.isFinite(num(c.credit_days)) ? 30 : num(c.credit_days)
+    let pool = collected.get(c.id) || 0
+    let owed = 0, past = 0, oldest = null
+    for (const s of rows) {
+      let bal = num(s.total_amount) - num(s.paid_amount)
+      if (bal <= 0.005) continue
+      const applied = Math.min(pool, bal)
+      pool -= applied
+      bal = round2(bal - applied)
+      if (bal <= 0.005) continue
+      owed += bal
+      const age = daysApart(s.sale_date, today)
+      if (age <= 15) buckets['0-15'] += bal
+      else if (age <= 30) buckets['16-30'] += bal
+      else if (age <= 60) buckets['31-60'] += bal
+      else buckets['60+'] += bal
+      if (addDays(s.sale_date, creditDays) < today) {
+        past += bal
+        if (!oldest) oldest = s.sale_date
+      }
+    }
+    receivable += owed
+    if (past > 0.5)
+      overdue.push({
+        id: c.id, name: c.name, place: c.place || '', phone: c.phone || '',
+        amount: round2(past), since: oldest, age: daysApart(oldest, today), terms: creditDays,
+      })
+  }
+  overdue.sort((a, b) => b.amount - a.amount)
+  const payable = round2(num(purchRes.t) - num(purchRes.p) - num(payOutRes.v))
+
+  // ---- who matters, and who has gone quiet ----
+  const rev = new Map(), cnt = new Map(), firstD = new Map(), lastD = new Map(), nameOf = new Map()
+  for (const s of sales) {
+    const k = s.customer_id != null ? s.customer_id : 'n:' + s.customer_name
+    rev.set(k, (rev.get(k) || 0) + num(s.total_amount))
+    cnt.set(k, (cnt.get(k) || 0) + 1)
+    if (!firstD.has(k) || s.sale_date < firstD.get(k)) firstD.set(k, s.sale_date)
+    if (!lastD.has(k) || s.sale_date > lastD.get(k)) lastD.set(k, s.sale_date)
+    if (!nameOf.has(k)) nameOf.set(k, s.customer_name || '')
+  }
+  for (const c of customers) if (nameOf.has(c.id)) nameOf.set(c.id, c.name)
+  const totalRev = [...rev.values()].reduce((a, v) => a + v, 0)
+  const ranked = [...rev.entries()].sort((a, b) => b[1] - a[1])
+  const share = (n) => (totalRev ? round2((ranked.slice(0, n).reduce((a, x) => a + x[1], 0) / totalRev) * 100) : 0)
+  const placeOf = new Map(customers.map((c) => [c.id, c.place || '']))
+  const phoneOf = new Map(customers.map((c) => [c.id, c.phone || '']))
+
+  const quiet = []
+  for (const [k, v] of ranked) {
+    const bills = cnt.get(k)
+    if (bills < 2) continue
+    const gap = daysApart(firstD.get(k), lastD.get(k)) / (bills - 1)
+    const silent = daysApart(lastD.get(k), today)
+    if (gap > 0 && silent > Math.max(gap * 2, 14))
+      quiet.push({
+        name: nameOf.get(k) || '', place: placeOf.get(k) || '', phone: phoneOf.get(k) || '',
+        every: Math.round(gap), silent, bills, lifetime: round2(v), last: lastD.get(k),
+      })
+  }
+  quiet.sort((a, b) => b.lifetime - a.lifetime)
+
+  // ---- item pricing ----
+  const book = {}
+  for (const p of prodRes.results) book[`${p.name} ${p.size}`.trim().toLowerCase()] = p
+  const stat = new Map()
+  for (const s of sales) {
+    for (const part of String(s.items || '').split(/,\s*/)) {
+      const mm = /^(.+?) x ([\d.]+) @ ₹([\d.]+)$/.exec(part.trim())
+      if (!mm) continue
+      const key = mm[1].trim().toLowerCase()
+      const p = book[key]
+      const qty = parseFloat(mm[2]), rate = parseFloat(mm[3])
+      if (!(qty > 0 && rate > 0)) continue
+      const st = stat.get(key) || { label: mm[1].trim(), qty: 0, revenue: 0, cost: 0, bills: 0, known: !!(p && num(p.purchase_price) > 0) }
+      st.qty += qty
+      st.revenue += qty * rate
+      st.bills++
+      if (p) st.cost += qty * num(p.purchase_price)
+      stat.set(key, st)
+    }
+  }
+  const priced = [...stat.values()]
+    .filter((i) => i.known && i.bills >= 3 && i.revenue > 0)
+    .map((i) => ({ label: i.label, revenue: round2(i.revenue), gross: round2(i.revenue - i.cost), qty: round2(i.qty), bills: i.bills, marginPct: round2(((i.revenue - i.cost) / i.revenue) * 100) }))
+  const thin = [...priced].sort((a, b) => a.marginPct - b.marginPct).slice(0, 6)
+  const best = [...priced].sort((a, b) => b.marginPct - a.marginPct).slice(0, 6)
+
+  // ---- running costs ----
+  const expenses = expRes.results
+  const expTotal = expenses.reduce((a, e) => a + num(e.amount), 0)
+  const byCat = new Map()
+  for (const e of expenses) byCat.set(e.category, (byCat.get(e.category) || 0) + num(e.amount))
+  const dates = sales.map((s) => s.sale_date).sort()
+  const spanDays = dates.length ? Math.max(1, daysApart(dates[0], today) + 1) : 1
+
+  // ---- week on week ----
+  const weekRev = (n) => {
+    const end = addDays(today, -7 * n), start = addDays(end, -6)
+    const rows = sales.filter((s) => s.sale_date >= start && s.sale_date <= end)
+    return { start, end, revenue: round2(rows.reduce((a, s) => a + num(s.total_amount), 0)), bills: rows.length }
+  }
+  const weeks = [weekRev(3), weekRev(2), weekRev(1), weekRev(0)]
+
+  return {
+    date: today,
+    receivables: {
+      total: round2(receivable),
+      buckets: Object.entries(buckets).map(([label, amount]) => ({ label, amount: round2(amount) })),
+      overdueTotal: round2(overdue.reduce((a, o) => a + o.amount, 0)),
+      overdue: overdue.slice(0, 15),
+      payable,
+      net: round2(receivable - payable),
+    },
+    concentration: {
+      shops: ranked.length,
+      active30: ranked.filter(([k]) => daysApart(lastD.get(k), today) <= 30).length,
+      top5Pct: share(5),
+      top10Pct: share(10),
+      top: ranked.slice(0, 8).map(([k, v]) => ({ name: nameOf.get(k) || '', revenue: round2(v), pct: totalRev ? round2((v / totalRev) * 100) : 0, bills: cnt.get(k), last: lastD.get(k) })),
+    },
+    quiet: quiet.slice(0, 10),
+    pricing: { thin, best },
+    catalog: { total: prodRes.results.length, sold: stat.size, neverSold: Math.max(0, prodRes.results.length - stat.size) },
+    costs: {
+      total: round2(expTotal),
+      perDay: round2(expTotal / spanDays),
+      perMonth: round2((expTotal / spanDays) * 30),
+      pctOfRevenue: totalRev ? round2((expTotal / totalRev) * 100) : 0,
+      byCat: [...byCat.entries()].sort((a, b) => b[1] - a[1]).map(([category, amount]) => ({ category, amount: round2(amount), pct: expTotal ? round2((amount / expTotal) * 100) : 0 })),
+    },
+    weeks,
+  }
+}
+
 async function customerPattern(db, customerId) {
   const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').bind(customerId).first()
   if (!customer) return json({ error: 'Shop not found' }, 404)
@@ -1534,6 +1709,13 @@ export async function onRequest(context) {
       const w = Number(url.searchParams.get('weekday'))
       if (!Number.isInteger(w) || w < 0 || w > 6) return json({ error: 'weekday 0-6 required' }, 400)
       return json(await dayPlanData(db, w))
+    }
+
+    // decision-support view: aged dues, quiet shops, thin prices, running costs
+    if (resource === 'insights' && method === 'GET') {
+      const date = str(url.searchParams.get('date') || '')
+      if (!isDate(date)) return json({ error: 'date=YYYY-MM-DD is required' }, 400)
+      return json(await insightsData(db, date))
     }
 
     // one-round-trip bundles per screen
