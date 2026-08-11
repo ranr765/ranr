@@ -29,5 +29,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# email-scheduler secrets
+email-scheduler/credentials.json
+email-scheduler/token.json
+email-scheduler/reports/
+
 # misc
 .DS_Store
